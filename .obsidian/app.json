@@ -1,0 +1,34 @@
+{
+  "theme": "obsidian",
+  "cssTheme": "default",
+  "legacyEditor": false,
+  "livePreview": true,
+  "vimMode": false,
+  "attachmentFolderPath": "attachments",
+  "newFileLocation": "folder",
+  "newFolderLocation": "current",
+  "defaultViewMode": "preview",
+  "showLineNumber": true,
+  "alwaysUpdateLinks": true,
+  "useMarkdownLinks": false,
+  "strictLineBreaks": false,
+  "spellcheck": false,
+  "showFrontmatter": true,
+  "promptDelete": true,
+  "readableLineLength": true,
+  "mobile": {
+    "toolbar": {
+      "actions": [
+        "editor:toggle-bold",
+        "editor:toggle-italic",
+        "editor:toggle-code",
+        "editor:toggle-heading",
+        "editor:toggle-blockquote",
+        "editor:toggle-bullet-list",
+        "editor:toggle-numbered-list",
+        "editor:toggle-checklist",
+        "editor:insert-link"
+      ]
+    }
+  }
+}

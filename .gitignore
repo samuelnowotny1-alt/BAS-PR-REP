@@ -1,0 +1,19 @@
+# Obsidian Vault Files
+.obsidian/workspace.json
+.obsidian/plugins/*
+.obsidian/themes/*
+*.log
+.DS_Store
+Thumbs.db
+
+# Generated artifacts
+generated/
+output/
+*.pdf
+*.docx
+*.xlsx
+
+# Environment
+.env
+.env.local
+*.secret
