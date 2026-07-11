@@ -164,6 +164,30 @@ def test_generation_post_handlers_render() -> None:
         assert response_text(response), handler.__name__
 
 
+def test_validate_page_includes_filters_and_export_link() -> None:
+    project_id = create_project()
+
+    response = run_async(main.validate_page(request(f"/project/{project_id}/validate"), project_id))
+
+    assert response.status_code == 200
+    text = response_text(response)
+    assert "No validation findings" in text or "Findings Explorer" in text
+    assert f'/project/{project_id}/validate/report.json' in text
+    assert "Re-run Validation" in text
+
+
+def test_validation_report_export_returns_json() -> None:
+    project_id = create_project()
+
+    response = run_async(main.validation_report_export(project_id))
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/json"
+    assert response.headers["content-disposition"] == (
+        f'attachment; filename="{project_id}-validation-report.json"'
+    )
+
+
 def test_import_data_without_uploaded_files_redirects() -> None:
     project_id = create_project()
 

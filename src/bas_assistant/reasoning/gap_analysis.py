@@ -8,7 +8,7 @@ from enum import Enum
 import json
 
 from ..models import (
-    Project, Equipment, Point, Controller, PointKind, EquipmentType,
+    Project, Equipment, Point, Controller, PointKind, EquipmentType, PointSource,
     ValidationSeverity, ValidationCategory
 )
 from ..validation import ValidationEngine, ValidationReport
@@ -400,9 +400,22 @@ class GapAnalyzer:
                     auto_fixable=True,
                 ))
 
-            # Missing Modbus config for Modbus points
-            is_modbus = ctrl and any("Modbus" in p.value for p in ctrl.protocols)
-            if is_modbus and not point.modbus_register:
+            # Missing Modbus config only for points that actually use Modbus.
+            controller_supports_modbus = bool(ctrl and any("Modbus" in p.value for p in ctrl.protocols))
+            controller_supports_bacnet = bool(ctrl and any("BACnet" in p.value for p in ctrl.protocols))
+            point_explicitly_uses_modbus = (
+                point.source == PointSource.MODBUS
+                or point.modbus_register is not None
+                or point.modbus_type is not None
+            )
+            point_implicitly_uses_modbus = (
+                controller_supports_modbus
+                and not controller_supports_bacnet
+                and point.bacnet_object_type is None
+                and point.bacnet_instance is None
+            )
+
+            if (point_explicitly_uses_modbus or point_implicitly_uses_modbus) and not point.modbus_register:
                 self._add_gap(Gap(
                     gap_id=self._new_gap_id(),
                     category=GapCategory.INCONSISTENT_CONFIG,
@@ -570,7 +583,7 @@ class GapAnalyzer:
                         fix_suggestion=f"equip.controller_id = 'MPC-1' (existing)",
                         metadata={"referenced_controller": equip.controller_id},
                     ))
-                elif equip.controller_id not in ctrl.serves_equipment_ids:
+                elif equip.id not in ctrl.serves_equipment_ids:
                     self._add_gap(Gap(
                         gap_id=self._new_gap_id(),
                         category=GapCategory.INCONSISTENT_CONFIG,

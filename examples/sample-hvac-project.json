@@ -3,18 +3,18 @@
     "project_id": "sample-hvac",
     "name": "Sample HVAC Project",
     "number": null,
-    "client": null,
-    "location": null,
+    "client": "Northbridge Commercial Properties",
+    "location": "1450 West Lake Street, Chicago, IL",
     "timezone": null,
     "unit_system": "IP",
     "created_at": "2026-07-11T13:20:52.279332",
     "updated_at": "2026-07-11T13:20:52.279336",
-    "design_phase": null,
+    "design_phase": "CD",
     "naming_standard": null,
     "bacnet_network_number": null,
-    "engineer_of_record": null,
-    "programmer": null,
-    "commissioning_agent": null
+    "engineer_of_record": "Apex Building Engineering, P.E.",
+    "programmer": "Samuel Nowotny",
+    "commissioning_agent": "Delta Commissioning Group"
   },
   "equipment": [
     {

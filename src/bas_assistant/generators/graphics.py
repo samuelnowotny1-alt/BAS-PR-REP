@@ -89,43 +89,489 @@ class GraphicDefinition:
 class GraphicsGenerator:
     """Generates graphics definitions from project data."""
 
-    # Standard symbol templates
+    # Standard symbol templates - detailed BAS equipment graphics
+# Standard symbol templates - detailed BAS equipment graphics
     SYMBOLS = {
         "ahu": {"width": 200, "height": 120, "elements": [
-            {"type": "rect", "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.6, "fill": "#e0e0e0", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
+            # AHU casing
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#f5f5f5", "stroke": "#333", "stroke_width": 2, "layer": "casing"},
+            # Supply fan (left side)
+            {"type": "circle", "x": 0.15, "y": 0.5, "radius": 0.12, "fill": "#e3f2fd", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "SF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Return fan (right side)
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.12, "fill": "#fff3e0", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "RF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Cooling coil (upper middle)
+            {"type": "rect", "x": 0.35, "y": 0.15, "width": 0.3, "height": 0.15, "fill": "#cce5ff", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.225, "text": "CC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Heating coil (lower middle)
+            {"type": "rect", "x": 0.35, "y": 0.7, "width": 0.3, "height": 0.15, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.775, "text": "HC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # OA Damper (top-left)
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # RA Damper (top-right)
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # EA Damper (bottom-right)
+            {"type": "rect", "x": 0.8, "y": 0.92, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.95, "x2": 0.95, "y2": 0.95, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.95, "text": "EA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Filter bank (left of cooling coil)
+            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.1, "height": 0.5, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.25, "y": 0.45, "text": "FILT", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Humidifier (right of heating coil)
+            {"type": "ellipse", "x": 0.7, "y": 0.75, "width": 0.15, "height": 0.1, "fill": "#e0f2f1", "stroke": "#009688", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.7, "y": 0.75, "text": "HUM", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Supply duct connection (right side)
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Return duct connection (right side)
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Equipment name
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
         ]},
         "vav": {"width": 80, "height": 60, "elements": [
-            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 10},
+            # VAV box casing
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#333", "stroke_width": 2, "layer": "casing"},
+            # Damper
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#e0e0e0", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Reheat coil
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Discharge air sensor
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#1976d2", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "\u2022", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Inlet duct
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            # Outlet duct
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Equipment name
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "rtu": {"width": 180, "height": 120, "elements": [
+            # RTU casing
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#f5f5f5", "stroke": "#333", "stroke_width": 2, "layer": "casing"},
+            # Supply fan
+            {"type": "circle", "x": 0.15, "y": 0.5, "radius": 0.12, "fill": "#e3f2fd", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "SF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # DX Cooling coil
+            {"type": "rect", "x": 0.35, "y": 0.15, "width": 0.3, "height": 0.2, "fill": "#cce5ff", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.25, "text": "DX CC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Gas heating section
+            {"type": "rect", "x": 0.35, "y": 0.65, "width": 0.3, "height": 0.2, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.75, "text": "GAS HT", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # OA/RA dampers
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Filter
+            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.1, "height": 0.5, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.25, "y": 0.45, "text": "FILT", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Duct connections
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
         ]},
         "chiller": {"width": 180, "height": 100, "elements": [
-            {"type": "ellipse", "x": 0.5, "y": 0.5, "width": 0.8, "height": 0.6, "fill": "#cce5ff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
+            # Chiller casing
+            {"type": "rect", "x": 0.05, "y": 0.15, "width": 0.9, "height": 0.7, "fill": "#e3f2fd", "stroke": "#1976d2", "stroke_width": 2, "layer": "casing"},
+            # Compressor
+            {"type": "ellipse", "x": 0.2, "y": 0.5, "width": 0.2, "height": 0.25, "fill": "#fff", "stroke": "#333", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.2, "y": 0.5, "text": "COMP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Evaporator
+            {"type": "rect", "x": 0.45, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#cce5ff", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "EVAP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Condenser
+            {"type": "rect", "x": 0.7, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.8, "y": 0.5, "text": "COND", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Expansion valve
+            {"type": "rect", "x": 0.45, "y": 0.15, "width": 0.08, "height": 0.1, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.45, "y1": 0.2, "x2": 0.53, "y2": 0.2, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.49, "y": 0.15, "text": "EXV", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Chilled water out
+            {"type": "line", "x1": 0.45, "y1": 0.5, "x2": 0.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.45, "text": "CHWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.45, "text": "CHWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Condenser water
+            {"type": "line", "x1": 0.7, "y1": 0.2, "x2": 0.7, "y2": 0.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.05, "text": "CWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.7, "y1": 0.8, "x2": 0.7, "y2": 1.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.95, "text": "CWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
         ]},
         "boiler": {"width": 140, "height": 90, "elements": [
-            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#ffe0b2", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
+            # Boiler casing
+            {"type": "rect", "x": 0.05, "y": 0.2, "width": 0.9, "height": 0.6, "fill": "#fff8e1", "stroke": "#ef6c00", "stroke_width": 2, "layer": "casing"},
+            # Burner
+            {"type": "ellipse", "x": 0.15, "y": 0.5, "width": 0.15, "height": 0.2, "fill": "#fff", "stroke": "#333", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "BURNER", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Heat exchanger
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "HX", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Flue
+            {"type": "rect", "x": 0.8, "y": 0.0, "width": 0.1, "height": 0.2, "fill": "#757575", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.1, "text": "FLUE", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Hot water supply/return
+            {"type": "line", "x1": 0.55, "y1": 0.3, "x2": 1.0, "y2": 0.3, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.25, "text": "HWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.7, "x2": 1.0, "y2": 0.7, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.65, "text": "HWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Gas connection
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.15, "y2": 0.5, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.45, "text": "GAS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
         ]},
         "pump": {"width": 60, "height": 60, "elements": [
-            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.4, "fill": "#fff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 10},
+            # Pump casing
+            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.3, "fill": "#e3f2fd", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            # Impeller
+            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.15, "fill": "#bbdefb", "stroke": "#1976d2", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.5, "text": "PMP", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Suction
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.2, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.1, "y": 0.45, "text": "SUC", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Discharge
+            {"type": "line", "x1": 0.8, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.9, "y": 0.45, "text": "DIS", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Suction valve
+            {"type": "rect", "x": 0.15, "y": 0.4, "width": 0.08, "height": 0.2, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.15, "y1": 0.5, "x2": 0.23, "y2": 0.5, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            # Discharge valve
+            {"type": "rect", "x": 0.77, "y": 0.4, "width": 0.08, "height": 0.2, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.77, "y1": 0.5, "x2": 0.85, "y2": 0.5, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            # Check valve
+            {"type": "line", "x1": 0.85, "y1": 0.45, "x2": 0.85, "y2": 0.55, "stroke": "#333", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.85, "y": 0.38, "text": "CV", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
         ]},
-        "fan": {"width": 60, "height": 60, "elements": [
-            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.4, "fill": "#f3e5f5", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "💨", "font_size": 16},
+        "cooling_tower": {"width": 100, "height": 100, "elements": [
+            # Tower casing
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#e0f2f1", "stroke": "#009688", "stroke_width": 2, "layer": "casing"},
+            # Fan
+            {"type": "circle", "x": 0.5, "y": 0.25, "radius": 0.2, "fill": "#f3e5f5", "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.25, "text": "FAN", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Fill media
+            {"type": "rect", "x": 0.2, "y": 0.5, "width": 0.6, "height": 0.3, "fill": "#b2dfdb", "stroke": "#009688", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.65, "text": "FILL", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # Basin
+            {"type": "rect", "x": 0.15, "y": 0.85, "width": 0.7, "height": 0.08, "fill": "#cce5ff", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.89, "text": "BASIN", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # CW supply/return
+            {"type": "line", "x1": 0.5, "y1": 0.0, "x2": 0.5, "y2": 0.1, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.5, "y": -0.02, "text": "CWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.1, "y1": 0.89, "x2": 0.0, "y2": 0.89, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": -0.02, "y": 0.87, "text": "CWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Makeup water
+            {"type": "line", "x1": 0.9, "y1": 0.89, "x2": 1.0, "y2": 0.89, "stroke": "#009688", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.87, "text": "MU", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Overflow
+            {"type": "line", "x1": 0.1, "y1": 0.95, "x2": 0.0, "y2": 1.0, "stroke": "#757575", "stroke_width": 1, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.98, "text": "OF", "font_size": 6, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.98, "text": "{name}", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+        ]},
+        
+        # Manufacturer-specific AHU templates
+        "ahu_trane": {"width": 200, "height": 120, "elements": [
+            # Trane-style AHU with specific component layout
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 2, "layer": "casing"},
+            # Supply fan - Trane style (twin fans)
+            {"type": "circle", "x": 0.12, "y": 0.4, "radius": 0.1, "fill": "#c5cae9", "stroke": "#3f51b5", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.12, "y": 0.4, "text": "SF1", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.12, "y": 0.6, "radius": 0.1, "fill": "#c5cae9", "stroke": "#3f51b5", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.12, "y": 0.6, "text": "SF2", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Return fan
+            {"type": "circle", "x": 0.88, "y": 0.5, "radius": 0.12, "fill": "#fff3e0", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.88, "y": 0.5, "text": "RF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            # Cooling coil (Trane dual-circuit)
+            {"type": "rect", "x": 0.32, "y": 0.15, "width": 0.36, "height": 0.18, "fill": "#bbdefb", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.24, "text": "CC-1/CC-2", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Heating coil
+            {"type": "rect", "x": 0.32, "y": 0.67, "width": 0.36, "height": 0.18, "fill": "#ffe0b2", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.76, "text": "HC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            # OA/RA/EA dampers
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.92, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.95, "x2": 0.95, "y2": 0.95, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.95, "text": "EA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Filters (Trane - high efficiency)
+            {"type": "rect", "x": 0.22, "y": 0.18, "width": 0.08, "height": 0.64, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.26, "y": 0.5, "text": "FILT\nMERV13", "font_size": 6, "font_family": "Arial", "layer": "labels"},
+            # Humidifier
+            {"type": "ellipse", "x": 0.72, "y": 0.75, "width": 0.15, "height": 0.1, "fill": "#e0f2f1", "stroke": "#009688", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.72, "y": 0.75, "text": "HUM", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            # Supply/Return connections
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            # Equipment name
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_trane": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#3f51b5", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#c5cae9", "stroke": "#3f51b5", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#3f51b5", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#3f51b5", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#3f51b5", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#3f51b5", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_carrier": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#e65100", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#fff3e0", "stroke": "#e65100", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#e65100", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#e65100", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#e65100", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#e65100", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "chiller_trane": {"width": 180, "height": 100, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.15, "width": 0.9, "height": 0.7, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 2, "layer": "casing"},
+            {"type": "ellipse", "x": 0.2, "y": 0.5, "width": 0.2, "height": 0.25, "fill": "#c5cae9", "stroke": "#3f51b5", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.2, "y": 0.5, "text": "COMP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.45, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#bbdefb", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "EVAP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.7, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.8, "y": 0.5, "text": "COND", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.45, "y": 0.15, "width": 0.08, "height": 0.1, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.45, "y1": 0.2, "x2": 0.53, "y2": 0.2, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.49, "y": 0.15, "text": "EXV", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.45, "y1": 0.5, "x2": 0.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.45, "text": "CHWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.45, "text": "CHWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.7, "y1": 0.2, "x2": 0.7, "y2": 0.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.05, "text": "CWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.7, "y1": 0.8, "x2": 0.7, "y2": 1.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.95, "text": "CWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "boiler_carrier": {"width": 140, "height": 90, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.2, "width": 0.9, "height": 0.6, "fill": "#fff3e0", "stroke": "#e65100", "stroke_width": 2, "layer": "casing"},
+            {"type": "ellipse", "x": 0.15, "y": 0.5, "width": 0.15, "height": 0.2, "fill": "#ffe0b2", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "BURNER", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "HX", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.0, "width": 0.1, "height": 0.2, "fill": "#757575", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.1, "text": "FLUE", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.3, "x2": 1.0, "y2": 0.3, "stroke": "#e65100", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.25, "text": "HWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.7, "x2": 1.0, "y2": 0.7, "stroke": "#e65100", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.65, "text": "HWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.15, "y2": 0.5, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.45, "text": "GAS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+
+        "ahu_siemens": {"width": 200, "height": 120, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#fce4ec", "stroke": "#c2185b", "stroke_width": 2, "layer": "casing"},
+            {"type": "circle", "x": 0.12, "y": 0.4, "radius": 0.1, "fill": "#f8bbd0", "stroke": "#c2185b", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.12, "y": 0.4, "text": "SF1", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.12, "y": 0.6, "radius": 0.1, "fill": "#f8bbd0", "stroke": "#c2185b", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.12, "y": 0.6, "text": "SF2", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.88, "y": 0.5, "radius": 0.12, "fill": "#fff3e0", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.88, "y": 0.5, "text": "RF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.32, "y": 0.15, "width": 0.36, "height": 0.18, "fill": "#f8bbd0", "stroke": "#c2185b", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.24, "text": "CC-1/CC-2", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.32, "y": 0.67, "width": 0.36, "height": 0.18, "fill": "#ffe0b2", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.76, "text": "HC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#c2185b", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#e65100", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.92, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.95, "x2": 0.95, "y2": 0.95, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.95, "text": "EA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.22, "y": 0.18, "width": 0.08, "height": 0.64, "fill": "#fce4ec", "stroke": "#c2185b", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.26, "y": 0.5, "text": "FILT\nMERV13", "font_size": 6, "font_family": "Arial", "layer": "labels"},
+            {"type": "ellipse", "x": 0.72, "y": 0.75, "width": 0.15, "height": 0.1, "fill": "#e0f2f1", "stroke": "#009688", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.72, "y": 0.75, "text": "HUM", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#c2185b", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#e65100", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_siemens": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#c2185b", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#f8bbd0", "stroke": "#c2185b", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#c2185b", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffe0b2", "stroke": "#e65100", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#c2185b", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#c2185b", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#c2185b", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "ahu_honeywell": {"width": 200, "height": 120, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#e3f2fd", "stroke": "#1565c0", "stroke_width": 2, "layer": "casing"},
+            {"type": "circle", "x": 0.15, "y": 0.5, "radius": 0.12, "fill": "#bbdefb", "stroke": "#1565c0", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "SF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.12, "fill": "#fff3e0", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "RF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.35, "y": 0.15, "width": 0.3, "height": 0.15, "fill": "#bbdefb", "stroke": "#1565c0", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.225, "text": "CC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.35, "y": 0.7, "width": 0.3, "height": 0.15, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.775, "text": "HC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#1565c0", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.92, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.95, "x2": 0.95, "y2": 0.95, "stroke": "#757575", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.95, "text": "EA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.22, "y": 0.2, "width": 0.08, "height": 0.5, "fill": "#e3f2fd", "stroke": "#1565c0", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.26, "y": 0.45, "text": "FILT", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "ellipse", "x": 0.72, "y": 0.75, "width": 0.15, "height": 0.1, "fill": "#e0f2f1", "stroke": "#009688", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.72, "y": 0.75, "text": "HUM", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#1565c0", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_honeywell": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#1565c0", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#bbdefb", "stroke": "#1565c0", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#1565c0", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#1565c0", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#1565c0", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1565c0", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "rtu_aaon": {"width": 180, "height": 120, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.1, "width": 0.9, "height": 0.8, "fill": "#f3e5f5", "stroke": "#7b1fa2", "stroke_width": 2, "layer": "casing"},
+            {"type": "circle", "x": 0.15, "y": 0.5, "radius": 0.12, "fill": "#e1bee7", "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.15, "y": 0.5, "text": "SF", "font_size": 10, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.35, "y": 0.15, "width": 0.3, "height": 0.2, "fill": "#e1bee7", "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.25, "text": "DX CC", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.35, "y": 0.65, "width": 0.3, "height": 0.2, "fill": "#ffe0b2", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.75, "text": "GAS HT", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.05, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.05, "y1": 0.05, "x2": 0.2, "y2": 0.05, "stroke": "#7b1fa2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.125, "y": 0.05, "text": "OA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.8, "y": 0.02, "width": 0.15, "height": 0.06, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.8, "y1": 0.05, "x2": 0.95, "y2": 0.05, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.875, "y": 0.05, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.1, "height": 0.5, "fill": "#f3e5f5", "stroke": "#7b1fa2", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.25, "y": 0.45, "text": "FILT", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.35, "x2": 1.0, "y2": 0.35, "stroke": "#7b1fa2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.3, "text": "SA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.95, "y1": 0.65, "x2": 1.0, "y2": 0.65, "stroke": "#ef6c00", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.98, "y": 0.6, "text": "RA", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_daikin": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#00695c", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#b2dfdb", "stroke": "#00695c", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#00695c", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffe0b2", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#00695c", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#00695c", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#00695c", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "vav_mitsubishi": {"width": 80, "height": 60, "elements": [
+            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#c62828", "stroke_width": 2, "layer": "casing"},
+            {"type": "rect", "x": 0.2, "y": 0.35, "width": 0.1, "height": 0.3, "fill": "#ffcdd2", "stroke": "#c62828", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.3, "y2": 0.5, "stroke": "#c62828", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.25, "y": 0.3, "text": "DMPR", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.4, "y": 0.3, "width": 0.3, "height": 0.4, "fill": "#ffe0b2", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "RH", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "circle", "x": 0.85, "y": 0.5, "radius": 0.05, "fill": "#fff", "stroke": "#c62828", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.85, "y": 0.5, "text": "•", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.0, "y1": 0.5, "x2": 0.1, "y2": 0.5, "stroke": "#c62828", "stroke_width": 2, "layer": "piping"},
+            {"type": "line", "x1": 0.9, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#c62828", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.95, "y": 0.45, "text": "SA", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+        ]},
+        "chiller_york": {"width": 180, "height": 100, "elements": [
+            {"type": "rect", "x": 0.05, "y": 0.15, "width": 0.9, "height": 0.7, "fill": "#e8eaf6", "stroke": "#3f51b5", "stroke_width": 2, "layer": "casing"},
+            {"type": "ellipse", "x": 0.2, "y": 0.5, "width": 0.2, "height": 0.25, "fill": "#c5cae9", "stroke": "#3f51b5", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.2, "y": 0.5, "text": "COMP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.45, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#bbdefb", "stroke": "#1976d2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.55, "y": 0.5, "text": "EVAP", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.7, "y": 0.3, "width": 0.2, "height": 0.4, "fill": "#ffccbc", "stroke": "#ef6c00", "stroke_width": 2, "layer": "equipment"},
+            {"type": "text", "x": 0.8, "y": 0.5, "text": "COND", "font_size": 9, "font_family": "Arial", "layer": "labels"},
+            {"type": "rect", "x": 0.45, "y": 0.15, "width": 0.08, "height": 0.1, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.45, "y1": 0.2, "x2": 0.53, "y2": 0.2, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.49, "y": 0.15, "text": "EXV", "font_size": 7, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.45, "y1": 0.5, "x2": 0.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 0.0, "y": 0.45, "text": "CHWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.55, "y1": 0.5, "x2": 1.0, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 3, "layer": "piping"},
+            {"type": "text", "x": 1.0, "y": 0.45, "text": "CHWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.7, "y1": 0.2, "x2": 0.7, "y2": 0.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.05, "text": "CWS", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "line", "x1": 0.7, "y1": 0.8, "x2": 0.7, "y2": 1.0, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.7, "y": 0.95, "text": "CWR", "font_size": 8, "font_family": "Arial", "layer": "labels"},
+            {"type": "text", "x": 0.5, "y": 0.95, "text": "{name}", "font_size": 12, "font_family": "Arial", "layer": "labels"},
+        ]},
+"fan": {"width": 60, "height": 60, "elements": [
+            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.35, "fill": "#f3e5f5", "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            # Fan blades
+            {"type": "line", "x1": 0.5, "y1": 0.15, "x2": 0.5, "y2": 0.85, "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "line", "x1": 0.15, "y1": 0.5, "x2": 0.85, "y2": 0.5, "stroke": "#7b1fa2", "stroke_width": 2, "layer": "equipment"},
+            {"type": "line", "x1": 0.25, "y1": 0.25, "x2": 0.75, "y2": 0.75, "stroke": "#7b1fa2", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.75, "y1": 0.25, "x2": 0.25, "y2": 0.75, "stroke": "#7b1fa2", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
         ]},
         "damper": {"width": 40, "height": 40, "elements": [
-            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.6, "height": 0.6, "fill": "#fff", "stroke": "#333"},
-            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.8, "y2": 0.5, "stroke": "#333", "stroke_width": 2},
+            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.6, "height": 0.6, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.2, "y1": 0.5, "x2": 0.8, "y2": 0.5, "stroke": "#1976d2", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
         ]},
         "valve": {"width": 40, "height": 40, "elements": [
-            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.6, "height": 0.6, "fill": "#fff", "stroke": "#333"},
-            {"type": "line", "x1": 0.5, "y1": 0.2, "x2": 0.5, "y2": 0.8, "stroke": "#333", "stroke_width": 2},
+            {"type": "rect", "x": 0.2, "y": 0.2, "width": 0.6, "height": 0.6, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "line", "x1": 0.5, "y1": 0.2, "x2": 0.5, "y2": 0.8, "stroke": "#ef6c00", "stroke_width": 2, "layer": "piping"},
+            {"type": "text", "x": 0.5, "y": 0.9, "text": "{name}", "font_size": 9, "font_family": "Arial", "layer": "labels"},
         ]},
         "sensor": {"width": 30, "height": 30, "elements": [
-            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.4, "fill": "#fff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "●", "font_size": 12},
+            {"type": "circle", "x": 0.5, "y": 0.5, "radius": 0.4, "fill": "#fff", "stroke": "#333", "stroke_width": 1, "layer": "equipment"},
+            {"type": "text", "x": 0.5, "y": 0.5, "text": "\u2022", "font_size": 12, "font_family": "Arial", "layer": "labels"},
         ]},
     }
 
@@ -146,7 +592,19 @@ class GraphicsGenerator:
     def _generate_equipment_graphic(self, equip: Equipment) -> GraphicDefinition:
         """Generate a standard equipment graphic."""
         points = self.project.get_points_for_equipment(equip.id)
+        # Check for manufacturer-specific template
+        manufacturer = getattr(equip, "manufacturer", None) or getattr(equip, "vendor", None)
         symbol_key = equip.type.value.lower()
+        
+        # Try manufacturer-specific template first
+        if manufacturer:
+            mfr_key = f"{symbol_key}_{manufacturer.lower().replace(' ', '_')}"
+            if mfr_key in self.SYMBOLS:
+                symbol_key = mfr_key
+        
+        # Fall back to standard template
+        if symbol_key not in self.SYMBOLS:
+            symbol_key = equip.type.value.lower()
 
         graphic = GraphicDefinition(
             graphic_id=f"graphic_{equip.id.lower()}",

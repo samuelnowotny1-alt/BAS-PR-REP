@@ -41,11 +41,11 @@
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_id }}</h3>
                     <div class="flex gap-2">
-                        <a href="/static/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.md" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.md" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-file-alt mr-1"></i>
                             MD
                         </a>
-                        <a href="/static/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.xlsx" class="btn-secondary text-sm" download>
+                        <a href="/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.xlsx" class="btn-secondary text-sm" download>
                             <i class="fas fa-file-excel mr-1"></i>
                             XLSX
                         </a>
@@ -63,7 +63,7 @@
         <!-- Index File -->
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mt-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Master Index</h3>
-            <a href="/static/output/{{ project.metadata.project_id }}/checkout/checkout_INDEX.md" target="_blank" class="btn-primary inline-flex">
+            <a href="/output/{{ project.metadata.project_id }}/checkout/checkout_md/checkout_INDEX.md" target="_blank" class="btn-primary inline-flex">
                 <i class="fas fa-list mr-2"></i>
                 View Master Index
             </a>

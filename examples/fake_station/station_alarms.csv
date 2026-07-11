@@ -1,0 +1,6 @@
+timestamp,alarm_name,point_name,severity,state,value,limit,message
+2026-07-10T07:15:00,AHU-2 Smoke Shutdown,AHU-2 SMK-ALM,high,active,1,1,Smoke shutdown alarm active during occupied mode
+2026-07-10T07:30:00,AHU-2 Smoke Shutdown,AHU-2 SMK-ALM,high,cleared,0,1,Smoke shutdown alarm cleared after reset
+2026-07-10T16:00:00,RTU-1 Unit Fault,RTU-1 FLT-ALM,medium,active,1,1,Rooftop unit reported compressor lockout
+2026-07-10T16:45:00,RTU-1 Unit Fault,RTU-1 FLT-ALM,medium,cleared,0,1,Rooftop unit fault cleared after manual reset
+2026-07-10T11:30:00,CHLR-1 Differential Pressure Low,CHLR-1 CHW-DP,medium,active,6.8,8.0,Chilled water differential pressure below expected limit

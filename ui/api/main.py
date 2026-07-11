@@ -1,12 +1,14 @@
 """BAS Assistant Web UI - FastAPI Application."""
 
-from pathlib import Path
-from typing import Optional, List
+import csv
 import json
 import shutil
+from io import StringIO
+from pathlib import Path
+from typing import Optional, List
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -84,6 +86,23 @@ def load_projects_from_disk() -> None:
                 projects[project.metadata.project_id] = project
             except Exception as e:
                 print(f"Failed to load project {project_file}: {e}")
+
+
+def serialize_validation_findings(report) -> list[dict[str, str]]:
+    findings = []
+    for finding in report.errors + report.warnings + report.infos:
+        findings.append(
+            {
+                "severity": finding.severity.value,
+                "object_type": finding.object_type,
+                "object_id": finding.object_id,
+                "rule_id": finding.rule_id,
+                "category": finding.category.value,
+                "field": finding.field or "",
+                "message": finding.message,
+            }
+        )
+    return findings
 
 
 # Load projects on startup
@@ -264,7 +283,45 @@ async def validate_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="validate.html", context={
         "project": project,
         "validation_report": report,
+        "validation_summary": report.summary,
+        "validation_findings": serialize_validation_findings(report),
     })
+
+
+@app.get("/project/{project_id}/validate/report.json")
+async def validation_report_export(project_id: str):
+    project = get_project(project_id)
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    return JSONResponse(
+        content=report.model_dump(mode="json"),
+        headers={
+            "Content-Disposition": f'attachment; filename="{project_id}-validation-report.json"'
+        },
+    )
+
+
+@app.get("/project/{project_id}/validate/report.csv")
+async def validation_report_csv_export(project_id: str):
+    project = get_project(project_id)
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report)
+
+    buffer = StringIO()
+    writer = csv.DictWriter(
+        buffer,
+        fieldnames=["severity", "object_type", "object_id", "rule_id", "category", "field", "message"],
+    )
+    writer.writeheader()
+    writer.writerows(findings)
+    return Response(
+        content=buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{project_id}-validation-report.csv"'
+        },
+    )
 
 
 @app.get("/project/{project_id}/gaps", response_class=HTMLResponse)

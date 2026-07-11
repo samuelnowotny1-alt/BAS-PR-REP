@@ -42,11 +42,11 @@
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
                     <div class="flex gap-2">
-                        <a href="/static/output/{{ project.metadata.project_id }}/logic/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/logic/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-code mr-1"></i>
                             JSON
                         </a>
-                        <a href="/static/output/{{ project.metadata.project_id }}/logic/{{ equip_name }}_niagara.json" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/logic/{{ equip_name }}_niagara.json" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-download mr-1"></i>
                             Niagara
                         </a>
@@ -66,7 +66,7 @@
         {% if logic_result.niagara %}
         <div class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Niagara Sequence Export</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-4">Import these JSON files into Niagara Workbench as sequence modules.</            <a href="/static/output/{{ project.metadata.project_id }}/logic/all_logic_diagrams.json" class="btn-primary" download>
+            <p class="text-gray-500 dark:text-gray-400 mb-4">Import these JSON files into Niagara Workbench as sequence modules.</            <a href="/output/{{ project.metadata.project_id }}/logic/all_logic_diagrams.json" class="btn-primary" download>
                 <i class="fas fa-download mr-2"></i>
                 Download All Niagara Sequences
             </a>

@@ -90,7 +90,11 @@ class Controller(BaseModel):
     def utilization_pct(self) -> Optional[float]:
         """Get I/O utilization percentage."""
         if self.io_capacity:
-            return self.io_capacity.utilization_pct()
+            total_points = self.io_capacity.total_points
+            if total_points == 0:
+                return 0.0
+            used_points = len(self.owned_point_names)
+            return (used_points / total_points) * 100
         return None
 
 

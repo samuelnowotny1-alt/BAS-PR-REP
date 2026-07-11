@@ -42,11 +42,11 @@
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
                     <div class="flex gap-2">
-                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-code mr-1"></i>
                             JSON
                         </a>
-                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ json_file.stem }}.svg" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.stem }}.svg" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-image mr-1"></i>
                             SVG
                         </a>
@@ -73,10 +73,10 @@
                         <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ svg_file.stem }}</h3>
                     </div>
                     <div class="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <img src="/static/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" alt="{{ svg_file.stem }}" class="w-full h-auto max-h-64">
+                        <img src="/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" alt="{{ svg_file.stem }}" class="w-full h-auto max-h-64">
                     </div>
                     <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 flex justify-end">
-                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" target="_blank" class="btn-secondary text-sm">
+                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-external-link-alt mr-1"></i>
                             Open SVG
                         </a>
@@ -90,7 +90,7 @@
         <!-- Niagara PX Export -->
         <div class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Niagara PX Export</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-4">Import this JSON into Niagara Workbench to create PX graphics pages with point bindings.</            <a href="/static/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" class="btn-primary" download>
+            <p class="text-gray-500 dark:text-gray-400 mb-4">Import this JSON into Niagara Workbench to create PX graphics pages with point bindings.</            <a href="/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" class="btn-primary" download>
                 <i class="fas fa-download mr-2"></i>
                 Download Niagara PX Export
             </a>
