@@ -1,0 +1,2 @@
+Point Name,Equipment ID,Point Kind,Direction,Units,Unit System,Range Min,Range Max,Controller ID,BACnet Object Type,BACnet Instance,Modbus Register,Modbus Type,Source,Source Reference,Description,Tags
+AHU-1 SAT,AHU-1,sensor,input,degF,IP,40,120,MPC-1,AI,1,,,point_list,Row 1,Supply Air Temperature,"temperature,supply,ahu"

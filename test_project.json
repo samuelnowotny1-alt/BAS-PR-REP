@@ -1,0 +1,131 @@
+{
+  "metadata": {
+    "project_id": "TEST-001",
+    "name": "Test Project",
+    "number": null,
+    "client": null,
+    "location": null,
+    "timezone": null,
+    "unit_system": "IP",
+    "created_at": "2026-07-10T11:54:59.731042",
+    "updated_at": "2026-07-10T11:54:59.731045",
+    "design_phase": null,
+    "naming_standard": null,
+    "bacnet_network_number": null,
+    "engineer_of_record": null,
+    "programmer": null,
+    "commissioning_agent": null
+  },
+  "equipment": [
+    {
+      "id": "AHU-1",
+      "type": "AHU",
+      "subtype": "VAV",
+      "building": "Main",
+      "floor": "1",
+      "room": "Mechanical",
+      "served_area": "Floor 1",
+      "parent_equipment_id": "nan",
+      "child_equipment_ids": [
+        "VAV-101",
+        "VAV-102"
+      ],
+      "relationships": [],
+      "controller_id": "MPC-1",
+      "point_names": [
+        "AHU-1 SAT",
+        "AHU-1 MAT",
+        "AHU-1 RAT",
+        "AHU-1 SF CMD"
+      ],
+      "template": null,
+      "sequence_ref": null,
+      "design_cfm": 10000.0,
+      "design_tonnage": 25.0,
+      "design_gpm": 50.0,
+      "design_kw": 15.0,
+      "voltage": "460",
+      "phase": 3,
+      "status": "design",
+      "tags": [],
+      "notes": "Main AHU for floor 1"
+    }
+  ],
+  "points": [],
+  "controllers": [
+    {
+      "id": "MPC-1",
+      "name": "Main Plant Controller 1",
+      "vendor": "Johnson Controls",
+      "model": "MPC-8000",
+      "firmware_version": "12.3",
+      "type": "MPC",
+      "protocols": [
+        "BACnet/IP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "192.168.1.10",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 16,
+        "digital_inputs": 8,
+        "analog_outputs": 4,
+        "digital_outputs": 8,
+        "total_points": 36
+      },
+      "serves_equipment_ids": [
+        "AHU-1",
+        "CHWP-1"
+      ],
+      "owned_point_names": [
+        "AHU-1 SAT",
+        "AHU-1 MAT",
+        "AHU-1 RAT",
+        "AHU-1 SF CMD"
+      ],
+      "panel_location": "Mechanical Room",
+      "electrical_panel": "MP-1",
+      "circuit": "12",
+      "status": "design",
+      "tags": [],
+      "notes": "Main plant controller"
+    }
+  ],
+  "source_documents": [
+    {
+      "id": "equip_schedule_1",
+      "name": "equipment_schedule.csv",
+      "type": "equipment_schedule",
+      "path": "examples/equipment_schedule.csv",
+      "version": null,
+      "imported_at": "2026-07-10T11:55:00.328022",
+      "hash": null
+    },
+    {
+      "id": "point_list_1",
+      "name": "point_list.csv",
+      "type": "point_list",
+      "path": "examples/point_list.csv",
+      "version": null,
+      "imported_at": "2026-07-10T11:55:00.331093",
+      "hash": null
+    },
+    {
+      "id": "ctrl_schedule_1",
+      "name": "controller_schedule.csv",
+      "type": "controller_schedule",
+      "path": "examples/controller_schedule.csv",
+      "version": null,
+      "imported_at": "2026-07-10T11:55:00.334679",
+      "hash": null
+    }
+  ],
+  "validation_status": "pending",
+  "last_validated": null
+}

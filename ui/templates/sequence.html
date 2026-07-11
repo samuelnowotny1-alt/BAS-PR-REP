@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block page_title %}Sequence Parser - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Sequence Parser</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Parse natural language sequences into structured logic requirements</p>
+    </div>
+
+    <!-- Parser Form -->
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-6">Parse Sequence</h2>
+
+        <form hx-post="/project/{{ project.metadata.project_id }}/sequence/parse" hx-target="#parse-result" hx-swap="innerHTML" class="space-y-6">
+            <div>
+                <label for="equipment_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Equipment</label>
+                <select id="equipment_id" name="equipment_id" required class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                    <option value="">Select equipment...</option>
+                    {% for equip in project.equipment %}
+                    <option value="{{ equip.id }}">{{ equip.id }} ({{ equip.type.value }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="sequence_text" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sequence of Operations Text</label>
+                <textarea id="sequence_text" name="sequence_text" required rows="15" class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm" placeholder="Paste or type the sequence of operations here..."></textarea>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Supports natural language sequences for AHU, VAV, Chiller, Boiler, Pump, RTU, Cooling Tower</p>
+            </div>
+
+            <div class="flex justify-end gap-4">
+                <button type="button" onclick="loadSample()" class="btn-secondary">
+                    <i class="fas fa-file-import mr-2"></i>
+                    Load Sample AHU Sequence
+                </button>
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-magic mr-2"></i>
+                    Parse Sequence
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Result -->
+    <div id="parse-result">
+        {% if parsed_sequence %}
+        <div class="space-y-8">
+            <!-- Summary -->
+            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Parsed Sequence</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="card bg-blue-50 dark:bg-blue-900/30 p-4 border border-blue-200 dark:border-blue-800">
+                        <p class="text-sm text-blue-700 dark:text-blue-300">Equipment Type</p>
+                        <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ parsed_sequence.equipment_type.value if parsed_sequence.equipment_type else 'Unknown' }}</p>
+                    </div>
+                    <div class="card bg-green-50 dark:bg-green-900/30 p-4 border border-green-200 dark:border-green-800">
+                        <p class="text-sm text-green-700 dark:text-green-300">Equipment ID</p>
+                        <p class="text-2xl font-bold text-green-700 dark:text-green-300">{{ parsed_sequence.equipment_id or 'Not specified' }}</p>
+                    </div>
+                    <div class="card bg-purple-50 dark:bg-purple-900/30 p-4 border border-purple-200 dark:border-purple-800">
+                        <p class="text-sm text-purple-700 dark:text-purple-300">Sections Found</p>
+                        <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ parsed_sequence.sections|length }}</p>
+                    </div>
+                    <div class="card bg-orange-50 dark:bg-orange-900/30 p-4 border border-orange-200 dark:border-orange-800">
+                        <p class="text-sm text-orange-700 dark:text-orange-300">Requirements</p>
+                        <p class="text-2xl font-bold text-orange-700 dark:text-orange-300">{{ parsed_sequence.requirements|length }}</p>
+                    </div>
+                </div>
+
+                <!-- Sections -->
+                <div class="space-y-4 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">Sections</h3>
+                    {% for section_type, content in parsed_sequence.sections.items() %}
+                    <div class="card bg-gray-50 dark:bg-gray-700/50 p-4 border border-gray-200 dark:border-gray-700">
+                        <h4 class="font-semibold text-gray-800 dark:text-white capitalize mb-2">{{ section_type.replace('_', ' ') }}</h4>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm">{{ content[:300] }}{% if content|length > 300 %}...{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Requirements -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">Logic Requirements ({{ parsed_sequence.requirements|length }})</h3>
+                    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {% for req in parsed_sequence.requirements %}
+                        <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                            <div class="flex items-start gap-3 mb-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
+                                    {% if req.requirement_type.value == 'mode' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                    {% elif req.requirement_type.value == 'pid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                    {% elif req.requirement_type.value == 'start_stop' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                                    {% elif req.requirement_type.value == 'interlock' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                    {% elif req.requirement_type.value == 'alarm' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                                    {{ req.requirement_type.value }}
+                                </span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ req.req_id }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">{{ req.description }}</p>
+                            {% if req.points_referenced %}
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2"><strong>Points:</strong> {{ req.points_referenced|join(', ') }}</p>
+                            {% endif %}
+                            {% if req.conditions %}
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mb-2"><strong>Conditions:</strong> {{ req.conditions|join('; ') }}</p>
+                            {% endif %}
+                            {% if req.actions %}
+                            <p class="text-xs text-gray-500 dark:text-gray-400"><strong>Actions:</strong> {{ req.actions|join('; ') }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button onclick="downloadParsed()" class="btn-secondary">
+                        <i class="fas fa-download mr-2"></i>
+                        Download JSON
+                    </button>
+                    <button onclick="generateLogic()" class="btn-primary">
+                        <i class="fas fa-sitemap mr-2"></i>
+                        Generate Logic Diagrams
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
+            <i class="fas fa-file-alt text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+            <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Sequence Parsed Yet</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">Paste a sequence of operations above and click Parse to extract structured logic requirements.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function loadSample() {
+        document.getElementById('equipment_id').value = 'AHU-1';
+        document.getElementById('sequence_text').value = `AHU-1 Sequence of Operations
+
+General
+The air handling unit serves the first floor VAV zones. The unit consists of a supply fan, return fan, cooling coil, heating coil, economizer dampers, and filter section.
+
+Occupancy
+The unit operates on a time schedule. During occupied hours, the supply fan runs continuously. During unoccupied hours, the unit is off unless a night setback condition requires heating.
+
+Fan Control
+The supply fan VFD modulates to maintain duct static pressure setpoint of 1.5 inWC.
+The return fan tracks the supply fan at 90% speed.
+Fan status is monitored via differential pressure switch.
+
+Temperature Control
+The supply air temperature is controlled via a PID loop. 
+Cooling coil valve modulates 0-100% to maintain SAT setpoint of 55°F.
+Heating coil valve modulates 0-100% when cooling valve is at 0% and SAT < setpoint.
+
+Economizer
+When outside air temperature is below 65°F and outside air enthalpy is less than return air enthalpy,
+the economizer dampers modulate to maintain 55°F mixed air temperature.
+High limit lockout at 70°F outside air temperature.
+
+Safeties
+Freeze stat at 35°F stops fans and opens heating valve 100%.
+High static pressure at 3.0 inWC stops supply fan.
+Duct smoke detector stops all fans.`;
+    }
+
+    function downloadParsed() {
+        const data = {{ parsed_sequence.to_dict()|tojson if parsed_sequence else '{}' }};
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'parsed_sequence.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function generateLogic() {
+        htmx.ajax('POST', '/project/{{ project.metadata.project_id }}/logic/generate', {
+            target: 'body',
+            swap: 'innerHTML'
+        });
+    }
+</script>
+{% endblock %}

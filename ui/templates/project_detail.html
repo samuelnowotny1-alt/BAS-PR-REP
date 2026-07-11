@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ project.metadata.name }} - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Project Header -->
+    <div class="mb-8">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white">{{ project.metadata.name }}</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.project_id }}</p>
+                <div class="flex flex-wrap gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                    {% if project.metadata.client %}
+                    <span><i class="fas fa-building mr-1"></i>{{ project.metadata.client }}</span>
+                    {% endif %}
+                    {% if project.metadata.location %}
+                    <span><i class="fas fa-map-marker-alt mr-1"></i>{{ project.metadata.location }}</span>
+                    {% endif %}
+                    <span><i class="fas fa-ruler-combined mr-1"></i>{{ project.metadata.unit_system.value }}</span>
+                    {% if project.metadata.design_phase %}
+                    <span><i class="fas fa-calendar-alt mr-1"></i>{{ project.metadata.design_phase }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
+                    {% if project.validation_status == 'valid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                    {% elif project.validation_status == 'warning' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                    {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
+                    {{ project.validation_status|capitalize }}
+                </span>
+                <a href="/project/{{ project.metadata.project_id }}/validate" class="btn-secondary">
+                    <i class="fas fa-sync mr-2"></i>
+                    Re-validate
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Equipment</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">{{ project.equipment|length }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Points</p>
+            <p class="text-3xl font-bold text-blue-500 mt-1">{{ project.points|length }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Controllers</p>
+            <p class="text-3xl font-bold text-green-500 mt-1">{{ project.controllers|length }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Source Docs</p>
+            <p class="text-3xl font-bold text-purple-500 mt-1">{{ project.source_documents|length }}</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <a href="/project/{{ project.metadata.project_id }}/import" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-upload text-3xl text-orange-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Import Data</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">CSV upload for equipment, points, controllers</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/validate" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-check-circle text-3xl text-blue-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Validate</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Run validation rules</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/gaps" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-search text-3xl text-orange-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Gap Analysis</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Find missing data & issues</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/checkout" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-clipboard-check text-3xl text-orange-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Checkout Sheets</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Generate commissioning sheets</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/reports" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-file-alt text-3xl text-blue-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Reports</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submittal package generation</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/graphics" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-chart-area text-3xl text-purple-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Graphics</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">PX page generation</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/logic" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-sitemap text-3xl text-green-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Logic</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Control logic diagrams</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/export" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+            <i class="fas fa-download text-3xl text-orange-500 mb-2"></i>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Export</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Vendor formats (Niagara, BACnet, etc.)</p>
+        </a>
+    </div>
+
+    <!-- Equipment Table -->
+    {% if project.equipment %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Equipment</h2>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ project.equipment|length }} items</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Building</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Controller</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Points</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for equip in project.equipment %}
+                    <tr class="table-row">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">{{ equip.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type.value }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.building or '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.controller_id or '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.point_names|length }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if equip.status == 'operational' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                                {% elif equip.status == 'commissioned' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                {% elif equip.status == 'installed' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                                {{ equip.status|capitalize }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Validation Status -->
+    {% if project.validation_status != 'valid' %}
+    <div class="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+            <div>
+                <h3 class="font-semibold text-yellow-800 dark:text-yellow-200">Validation Issues Found</h3>
+                <p class="text-yellow-700 dark:text-yellow-300">Project has validation issues. <a href="/project/{{ project.metadata.project_id }}/validate" class="underline">View details</a> or <a href="/project/{{ project.metadata.project_id }}/gaps" class="underline">run gap analysis</a>.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}

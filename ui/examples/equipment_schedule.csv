@@ -1,0 +1,2 @@
+Equipment ID,Equipment Type,Subtype,Building,Floor,Room,Served Area,Controller ID,Parent Equipment,Child Equipment,Points,Design CFM,Design Tonnage,Design GPM,Design kW,Voltage,Phase,Status,Notes
+AHU-1,AHU,VAV,Main,1,Mechanical,Floor 1,MPC-1,,"VAV-101,VAV-102","AHU-1 SAT,AHU-1 MAT,AHU-1 RAT,AHU-1 SF CMD",10000,25,50,15,460,3,design,Main AHU for floor 1

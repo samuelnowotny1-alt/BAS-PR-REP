@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block page_title %}Gap Analysis - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Gap Analysis</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+    </div>
+
+    {% if gap_report %}
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Total Gaps</p>
+            <p class="text-3xl font-bold text-gray-800 dark:text-white">{{ gap_report.total_count }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Critical</p>
+            <p class="text-3xl font-bold text-red-500">{{ gap_report.critical_count }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">High</p>
+            <p class="text-3xl font-bold text-orange-500">{{ gap_report.high_count }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Medium</p>
+            <p class="text-3xl font-bold text-yellow-500">{{ gap_report.medium_count }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Low</p>
+            <p class="text-3xl font-bold text-blue-500">{{ gap_report.low_count }}</p>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Info</p>
+            <p class="text-3xl font-bold text-gray-500">{{ gap_report.info_count }}</p>
+        </div>
+    </div>
+
+    <!-- Generation Readiness -->
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Generation Readiness</h2>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">Project is {% if gap_report.generation_ready %}<span class="text-green-500 font-semibold">READY</span>{% else %}<span class="text-red-500 font-semibold">NOT READY</span>{% endif %} for output generation</p>
+            </div>
+            {% if not gap_report.generation_ready %}
+            <span class="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-2 rounded-lg font-medium">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Fix critical and high severity gaps before generating outputs
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Gaps by Category -->
+    <div class="space-y-8">
+        {% for category, gaps in gap_report.gaps_by_category.items() %}
+        {% if gaps %}
+        <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white capitalize">{{ category.value.replace('_', ' ') }} ({{ gaps|length }})</h2>
+            </div>
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                {% for gap in gaps %}
+                <div class="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="text-lg font-semibold text-gray-800 dark:text-white">{{ gap.title }}</span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                    {% if gap.severity.value == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
+                                    {% elif gap.severity.value == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
+                                    {% elif gap.severity.value == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                                    {% elif gap.severity.value == 'low' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
+                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
+                                    {{ gap.severity.value|upper }}
+                                </span>
+                                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ gap.gap_id }}</span>
+                            </div>
+                            <p class="text-gray-600 dark:text-gray-400 mb-2">{{ gap.description }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-2"><strong>Affects:</strong> {{ gap.affected_object_type }} "{{ gap.affected_object_id }}"</p>
+                            <p class="text-sm text-orange-600 dark:text-orange-400 mb-2"><strong>Recommendation:</strong> {{ gap.recommendation }}</p>
+                            {% if gap.fix_suggestion %}
+                            <p class="text-sm text-green-600 dark:text-green-400 mb-2"><strong>Auto-fix:</strong> {{ gap.fix_suggestion }}</p>
+                            {% endif %}
+                            {% if gap.related_gaps %}
+                            <p class="text-sm text-gray-500 dark:text-gray-400"><strong>Related:</strong> {{ gap.related_gaps|join(', ') }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="flex gap-2">
+                            {% if gap.auto_fixable %}
+                            <button class="btn-secondary text-sm" hx-post="/api/gap/{{ gap.gap_id }}/fix" hx-target="closest div">
+                                <i class="fas fa-magic mr-1"></i> Auto-fix
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
+        <button hx-post="/project/{{ project.metadata.project_id }}/gaps" hx-target="body" class="btn-primary">
+            <i class="fas fa-search mr-2"></i>
+            Run Gap Analysis
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

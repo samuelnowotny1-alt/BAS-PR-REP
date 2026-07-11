@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block page_title %}Reports - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Submittal Reports</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+    </div>
+
+    {% if report_paths %}
+    <!-- Summary -->
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Generated Report Package</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Complete submittal package with equipment schedules, point schedules, controller schedules, and validation report.</p>
+    </div>
+
+    <!-- Report Files -->
+    <div class="space-y-4">
+        {% for name, path in report_paths.items() %}
+        <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        {% if path.name.endswith('.xlsx') %}
+                        <i class="fas fa-file-excel text-blue-500 text-xl"></i>
+                        {% elif path.name.endswith('.md') %}
+                        <i class="fas fa-file-alt text-blue-500 text-xl"></i>
+                        {% else %}
+                        <i class="fas fa-file text-blue-500 text-xl"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-800 dark:text-white">{{ name|replace('_', ' ')|title }}</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ path }}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/output/{{ project.metadata.project_id }}/reports/{{ path.name }}" target="_blank" class="btn-secondary">
+                        <i class="fas fa-eye mr-1"></i>
+                        View
+                    </a>
+                    <a href="/output/{{ project.metadata.project_id }}/reports/{{ path.name }}" download class="btn-secondary">
+                        <i class="fas fa-download mr-1"></i>
+                        Download
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mt-8">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Package Contents</h3>
+        <ul class="space-y-2">
+            <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                <i class="fas fa-check text-green-500"></i>
+                <span><strong>00_Project_Summary.md</strong> - Project overview, counts, and metadata</span>
+            </li>
+            <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                <i class="fas fa-check text-green-500"></i>
+                <span><strong>01_Equipment_Schedule.xlsx</strong> - Equipment list with design data, points summary</span>
+            </li>
+            <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                <i class="fas fa-check text-green-500"></i>
+                <span><strong>02_Point_Schedule.xlsx</strong> - Complete point list with BACnet/Modbus config, pivots</span>
+            </li>
+            <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                <i class="fas fa-check text-green-500"></i>
+                <span><strong>03_Controller_Schedule.xlsx</strong> - Controller details, network addresses, I/O capacity</span>
+            </li>
+            <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                <i class="fas fa-check text-green-500"></i>
+                <span><strong>04_Validation_Report.md</strong> - Validation status, errors, warnings</span>
+            </li>
+        </ul>
+    </div>
+
+    {% else %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
+        <i class="fas fa-file-alt text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Reports Generated</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Generate a complete submittal package with equipment schedules, point schedules, controller schedules, and validation reports.</p>
+        <button hx-post="/project/{{ project.metadata.project_id }}/reports/generate" hx-target="body" class="btn-primary">
+            <i class="fas fa-magic mr-2"></i>
+            Generate Report Package
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

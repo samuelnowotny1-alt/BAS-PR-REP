@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block page_title %}Import Data - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Import Data</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Upload CSV files to populate project data</p>
+    </div>
+
+    <form hx-post="/project/{{ project.metadata.project_id }}/import" hx-target="#import-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
+        <div class="grid gap-6">
+            <!-- Equipment Schedule -->
+            <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-building text-orange-500 mr-2"></i>
+                    Equipment Schedule
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Equipment ID, Equipment Type. Optional: Subtype, Building, Floor, Room, Served Area, Controller ID, Parent/Child Equipment, Points, Design CFM/Tonnage/GPM/kW, Voltage, Phase, Status, Notes</p>
+                <input type="file" name="equipment_file" accept=".csv" class="input-field w-full">
+            </div>
+
+            <!-- Point List -->
+            <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-list text-orange-500 mr-2"></i>
+                    Point List
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Point Name, Equipment ID, Point Kind, Direction. Optional: Units, Range Min/Max, Controller ID, BACnet/Modbus config, Source, Description, Tags</p>
+                <input type="file" name="points_file" accept=".csv" class="input-field w-full">
+            </div>
+
+            <!-- Controller Schedule -->
+            <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-server text-orange-500 mr-2"></i>
+                    Controller Schedule
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Controller ID. Optional: Name, Vendor, Model, Firmware, Type, Protocols, IP Address, Panel Location, Serves Equipment, Owned Points, I/O Capacity, Status, Notes</p>
+                <input type="file" name="controllers_file" accept=".csv" class="input-field w-full">
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-end gap-4">
+            <a href="/project/{{ project.metadata.project_id }}" class="btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back
+            </a>
+            <button type="submit" class="btn-primary" disabled>
+                <i class="fas fa-upload mr-2"></i>
+                Import Data
+            </button>
+        </div>
+    </form>
+
+    <div id="import-result"></div>
+
+    <!-- Sample Data Section -->
+    <div class="mt-12 card bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Need Sample CSV Templates?</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-4">Generate sample CSV files with the correct column structure to use as starting templates.</p>
+        <button hx-post="/api/sample-data" hx-target="#sample-result" class="btn-secondary">
+            <i class="fas fa-download mr-2"></i>
+            Generate Sample CSVs
+        </button>
+        <div id="sample-result" class="mt-4"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Enable submit button when at least one file is selected
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const hasFile = Array.from(document.querySelectorAll('input[type="file"]')).some(i => i.files.length > 0);
+            document.querySelector('button[type="submit"]').disabled = !hasFile;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,2 @@
+Controller ID,Name,Vendor,Model,Firmware,Type,Protocols,IP Address,Panel Location,Electrical Panel,Circuit,Serves Equipment,Owned Points,Universal Inputs,Digital Inputs,Analog Outputs,Digital Outputs,Total Points,Status,Notes
+MPC-1,Main Plant Controller 1,Johnson Controls,MPC-8000,12.3,MPC,BACnet/IP,192.168.1.10,Mechanical Room,MP-1,12,"AHU-1,CHWP-1","AHU-1 SAT,AHU-1 MAT,AHU-1 RAT,AHU-1 SF CMD",16,8,4,8,36,design,Main plant controller

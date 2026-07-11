@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block page_title %}Export - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Vendor Export</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+    </div>
+
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Select Vendor Formats</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Choose which vendor-specific formats to export. Each vendor format includes all project data in their native format.</p>
+
+        <form hx-post="/project/{{ project.metadata.project_id }}/export" hx-target="#export-result" hx-swap="innerHTML" class="space-y-4">
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <!-- Niagara -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="niagara" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-cubes text-orange-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">Niagara / Tridium</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">.wxf, .bog, PX graphics, stations</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- BACnet -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="bacnet" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-network-wired text-blue-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">BACnet</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">EDE XML, CSV, device/object lists</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Tridium -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="tridium" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-project-diagram text-purple-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">Tridium / Fox</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">.bog, .fox, station archives</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- JCI -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="jci" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-building text-blue-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">Johnson Controls</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Metasys ADS/NAE, XML, points DB</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Siemens -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="siemens" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-industry text-green-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">Siemens</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Desigo/Apogee CSV, PX graphics</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- Honeywell -->
+                <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">
+                    <input type="checkbox" name="vendors" value="honeywell" class="hidden" checked>
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-home text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="font-semibold text-gray-800 dark:text-white">Honeywell</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">EBI/Excel 5000, CSV point DB</p>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex justify-end gap-4">
+                    <button type="button" onclick="document.querySelectorAll('input[name=\"vendors\"]').forEach(c => c.checked = true)" class="btn-secondary">
+                        <i class="fas fa-check-double mr-2"></i>
+                        Select All
+                    </button>
+                    <button type="button" onclick="document.querySelectorAll('input[name=\"vendors\"]').forEach(c => c.checked = false)" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>
+                        Deselect All
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-download mr-2"></i>
+                        Export Selected
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div id="export-result"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Visual feedback for vendor option selection
+    document.querySelectorAll('.vendor-option').forEach(option => {
+        const checkbox = option.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('change', () => {
+            option.classList.toggle('ring-2', checkbox.checked);
+            option.classList.toggle('ring-orange-400', checkbox.checked);
+            option.classList.toggle('border-orange-300', checkbox.checked);
+        });
+        // Initial state
+        if (checkbox.checked) {
+            option.classList.add('ring-2', 'ring-orange-400', 'border-orange-300');
+        }
+    });
+</script>
+{% endblock %}

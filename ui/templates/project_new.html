@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block page_title %}New Project - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Create New Project</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Set up a new BAS programming project</p>
+    </div>
+
+    <form method="post" action="/project/new" hx-post="/api/project/new" hx-target="#form-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700">
+        <div class="grid gap-6">
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label for="project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project ID *</label>
+                    <input type="text" id="project_id" name="project_id" required
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="PROJ-001">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Unique identifier (e.g., PROJ-001, HOSP-2024-01)</p>
+                </div>
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project Name *</label>
+                    <input type="text" id="name" name="name" required
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="Main Hospital BAS Upgrade">
+                </div>
+            </div>
+
+            <div>
+                <label for="client" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client</label>
+                <input type="text" id="client" name="client"
+                       class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                       placeholder="Memorial Health System">
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+                    <input type="text" id="location" name="location"
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="100 Medical Center Dr, City, State">
+                </div>
+                <div>
+                    <label for="unit_system" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unit System</label>
+                    <select id="unit_system" name="unit_system"
+                            class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="IP">Imperial (IP) - °F, CFM, inWC, GPM</option>
+                        <option value="SI">Metric (SI) - °C, LPS, Pa, LPS</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <div>
+                    <label for="design_phase" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Design Phase</label>
+                    <select id="design_phase" name="design_phase"
+                            class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">Select phase</option>
+                        <option value="SD">Schematic Design (SD)</option>
+                        <option value="DD">Design Development (DD)</option>
+                        <option value="CD">Construction Documents (CD)</option>
+                        <option value="CA">Construction Administration (CA)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="engineer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Engineer of Record</label>
+                    <input type="text" id="engineer" name="engineer"
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="Jane Smith, PE">
+                </div>
+                <div>
+                    <label for="programmer" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Programmer</label>
+                    <input type="text" id="programmer" name="programmer"
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="John Doe, BAS Programmer">
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <label for="cx_agent" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Commissioning Agent</label>
+                    <input type="text" id="cx_agent" name="cx_agent"
+                           class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                           placeholder="Cx Associates">
+                </div>
+                <div>
+                    <label for="naming_standard" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Naming Standard</label>
+                    <select id="naming_standard" name="naming_standard"
+                            class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                        <option value="">Select standard</option>
+                        <option value="ASHRAE-135">ASHRAE 135 (BACnet)</option>
+                        <option value="PROJECT-SPECIFIC">Project Specific</option>
+                        <option value="CUSTOM">Custom</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex justify-end gap-4">
+                    <a href="/" class="btn-secondary">
+                        <i class="fas fa-times mr-2"></i>
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Create Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <div id="form-result"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+        if (e.detail.target.id === 'form-result') {
+            // Redirect on success
+            const redirect = e.detail.target.querySelector('[data-redirect]');
+            if (redirect) {
+                window.location.href = redirect.dataset.redirect;
+            }
+        }
+    });
+</script>
+{% endblock %}

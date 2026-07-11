@@ -1,0 +1,61 @@
+[project]
+name = "bas-assistant"
+version = "0.1.0"
+description = "BAS Programming Assistant - deterministic import, validation, and generation for building automation systems"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.8",
+    "pydantic-settings>=2.3",
+    "pyyaml>=6.0",
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "pyreadstat>=1.2",
+    "click>=8.1",
+    "rich>=13.7",
+    "jsonschema>=4.22",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pre-commit>=3.7",
+]
+
+[build-system]
+requires = ["setuptools>=70", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "UP", "W", "C90", "ANN", "T20", "TCH", "SIM", "RET", "PTH", "ERA", "PD", "PL", "TRY", "NPY", "RSE", "FLY", "LOG", "ICN", "DTZ", "ARG", "PT", "TID", "RUF", "FA", "ISC", "PD", "PGH", "PIE", "TKA", "TRY", "NPY", "RET", "SIM", "TCH", "TID", "UP", "W"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+addopts = "-v --tb=short"
+
+[project.scripts]
+bas = "bas_assistant.cli:main"

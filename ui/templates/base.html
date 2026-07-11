@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BAS Assistant{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#fef7ee',
+                            100: '#fdedd6',
+                            200: '#fad6ac',
+                            300: '#f6b97a',
+                            400: '#f19346',
+                            500: '#ed741d',
+                            600: '#e05910',
+                            700: '#bc4110',
+                            800: '#963614',
+                            900: '#782f13',
+                        }
+                    }
+                }
+            }
+        }
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+    <style>
+        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+        .sidebar-link { transition: all 0.2s ease; }
+        .sidebar-link:hover { background-color: #fed7aa; padding-left: 1.5rem; }
+        .dark .sidebar-link:hover { background-color: #9a3412; }
+        .card { transition: box-shadow 0.2s ease; }
+        .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .table-row:hover { background-color: #fef7ee; }
+        .dark .table-row:hover { background-color: #7c2d12; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0" id="sidebar">
+        <div class="flex flex-col h-full">
+            <!-- Logo -->
+            <div class="flex items-center justify-center h-16 border-b border-gray-200 dark:border-gray-700">
+                <a href="/" class="flex items-center space-x-2">
+                    <i class="fas fa-fan text-2xl text-orange-500"></i>
+                    <span class="text-xl font-bold text-gray-800 dark:text-white">BAS Assistant</span>
+                </a>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                {% if project %}
+                <a href="/project/{{ project.metadata.project_id }}" 
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-home"></i>
+                    <span>Overview</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/import"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-upload"></i>
+                    <span>Import Data</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/validate"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Validate</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/gaps"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-search"></i>
+                    <span>Gap Analysis</span>
+                </a>
+
+                <hr class="border-gray-200 dark:border-gray-700 my-2">
+
+                <a href="/project/{{ project.metadata.project_id }}/checkout"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Checkout Sheets</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/reports"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Reports</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/graphics"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-chart-area"></i>
+                    <span>Graphics</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/logic"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-sitemap"></i>
+                    <span>Logic Diagrams</span>
+                </a>
+
+                <hr class="border-gray-200 dark:border-gray-700 my-2">
+
+                <a href="/project/{{ project.metadata.project_id }}/export"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/sequence"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Sequence Parser</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/troubleshoot"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-tools"></i>
+                    <span>Troubleshooting</span>
+                </a>
+
+                <a href="/project/{{ project.metadata.project_id }}/assumptions"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Assumptions</span>
+                </a>
+                {% else %}
+                <a href="/project/new"
+                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Project</span>
+                </a>
+                {% endif %}
+            </nav>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-info-circle"></i>
+                    <span>BAS Assistant v0.1.0</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div class="fixed inset-0 z-40 bg-black bg-opacity-50 hidden lg:hidden" id="sidebar-overlay"></div>
+
+    <!-- Main Content -->
+    <main class="flex-1 lg:ml-64 min-h-screen">
+        <!-- Top Bar -->
+        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
+            <div class="flex items-center justify-between px-4 py-3">
+                <div class="flex items-center space-x-4">
+                    <button type="button" class="lg:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" id="sidebar-toggle">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-xl font-bold text-gray-800 dark:text-white">
+                        {% block page_title %}BAS Assistant{% endblock %}
+                    </h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if project %}
+                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                        {{ project.metadata.project_id }}
+                    </span>
+                    {% endif %}
+                    <button type="button" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" id="theme-toggle">
+                        <i class="fas fa-sun text-xl dark:hidden"></i>
+                        <i class="fas fa-moon text-xl hidden dark:block"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="p-4 lg:p-6">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        // Sidebar toggle for mobile
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        sidebarToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        });
+        
+        overlay.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        });
+
+        // Re-initialize mermaid on HTMX content swap
+        document.body.addEventListener('htmx:afterSwap', (e) => {
+            if (window.mermaid) {
+                mermaid.init(undefined, e.target.querySelectorAll('.mermaid'));
+            }
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

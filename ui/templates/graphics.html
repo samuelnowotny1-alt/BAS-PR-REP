@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block page_title %}Graphics - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Graphics Definitions</h1>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+    </div>
+
+    {% if graphics_result %}
+    <!-- Summary -->
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="card bg-purple-50 dark:bg-purple-900/30 p-4 border border-purple-200 dark:border-purple-800">
+                <p class="text-sm text-purple-700 dark:text-purple-300">Equipment Graphics</p>
+                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ graphics_result.json|length }}</p>
+            </div>
+            <div class="card bg-blue-50 dark:bg-blue-900/30 p-4 border border-blue-200 dark:border-blue-800">
+                <p class="text-sm text-blue-700 dark:text-blue-300">SVG Previews</p>
+                <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ graphics_result.svg|length }}</p>
+            </div>
+            <div class="card bg-orange-50 dark:bg-orange-900/30 p-4 border border-orange-200 dark:border-orange-800">
+                <p class="text-sm text-orange-700 dark:text-orange-300">Niagara PX</p>
+                <p class="text-2xl font-bold text-orange-700 dark:text-orange-300">1</p>
+            </div>
+            <div class="card bg-gray-50 dark:bg-gray-700 p-4 border border-gray-200 dark:border-gray-700">
+                <p class="text-sm text-gray-700 dark:text-gray-300">Output Directory</p>
+                <p class="text-sm font-mono text-gray-500 dark:text-gray-400 truncate">{{ graphics_result.niagara }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Equipment Graphics -->
+    <div class="space-y-6">
+        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Equipment Graphics</h2>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {% for json_file in graphics_result.json %}
+            {% set equip_name = json_file.stem.replace('graphic_', '').replace('graphic_system_', '') %}
+            <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
+                    <div class="flex gap-2">
+                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
+                            <i class="fas fa-code mr-1"></i>
+                            JSON
+                        </a>
+                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ json_file.stem }}.svg" target="_blank" class="btn-secondary text-sm">
+                            <i class="fas fa-image mr-1"></i>
+                            SVG
+                        </a>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-auto text-sm font-mono text-gray-700 dark:text-gray-300">
+                        {% set json_content = json_file.read_text() %}
+                        {{ json_content[:1500] }}{% if json_content|length > 1500 %}...{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- SVG Previews -->
+        {% if graphics_result.svg %}
+        <div class="mt-8">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">SVG Previews</h2>
+            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {% for svg_file in graphics_result.svg %}
+                <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ svg_file.stem }}</h3>
+                    </div>
+                    <div class="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <img src="/static/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" alt="{{ svg_file.stem }}" class="w-full h-auto max-h-64">
+                    </div>
+                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 flex justify-end">
+                        <a href="/static/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" target="_blank" class="btn-secondary text-sm">
+                            <i class="fas fa-external-link-alt mr-1"></i>
+                            Open SVG
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Niagara PX Export -->
+        <div class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Niagara PX Export</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-4">Import this JSON into Niagara Workbench to create PX graphics pages with point bindings.</            <a href="/static/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" class="btn-primary" download>
+                <i class="fas fa-download mr-2"></i>
+                Download Niagara PX Export
+            </a>
+        </div>
+
+    {% else %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
+        <i class="fas fa-chart-area text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
+        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Graphics Generated</h2>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Generate PX page definitions with equipment symbols, point bindings, and navigation for Niagara Workbench.
+        <button hx-post="/project/{{ project.metadata.project_id }}/graphics/generate" hx-target="body" class="btn-primary">
+            <i class="fas fa-magic mr-2"></i>
+            Generate Graphics
+        </button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
