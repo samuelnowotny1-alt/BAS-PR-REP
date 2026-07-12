@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "project_id": "pytest-project",
+    "name": "Pytest Project",
+    "number": null,
+    "client": "Test Client",
+    "location": "Test Lab",
+    "timezone": null,
+    "unit_system": "IP",
+    "created_at": "2026-07-12T03:22:33.796288",
+    "updated_at": "2026-07-12T03:22:33.796291",
+    "design_phase": "CD",
+    "naming_standard": "ASHRAE-135",
+    "bacnet_network_number": null,
+    "engineer_of_record": "Test Engineer",
+    "programmer": "Test Programmer",
+    "commissioning_agent": "Test Cx"
+  },
+  "equipment": [],
+  "points": [],
+  "controllers": [],
+  "source_documents": [],
+  "validation_status": "pending",
+  "last_validated": null
+}

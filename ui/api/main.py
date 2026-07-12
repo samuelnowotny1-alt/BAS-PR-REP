@@ -35,15 +35,20 @@ from bas_assistant.reasoning import (
 )
 
 # Paths
+import os
 BASE_DIR = Path(__file__).parent.parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
-OUTPUT_DIR = BASE_DIR / "output"
+
+# Use environment variables for data directories (Docker-friendly)
+DATA_DIR = Path(os.environ.get("BAS_DATA_DIR", BASE_DIR / "data"))
+OUTPUT_DIR = Path(os.environ.get("BAS_OUTPUT_DIR", BASE_DIR / "output"))
 
 # Ensure directories exist
 STATIC_DIR.mkdir(exist_ok=True)
-OUTPUT_DIR.mkdir(exist_ok=True)
-(OUTPUT_DIR / "projects").mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+(OUTPUT_DIR / "projects").mkdir(parents=True, exist_ok=True)
 
 # In-memory project store
 projects: dict[str, Project] = {}
@@ -69,14 +74,14 @@ def get_project(project_id: str) -> Project:
 def save_project(project: Project) -> None:
     projects[project.metadata.project_id] = project
     # Save to disk
-    project_dir = OUTPUT_DIR / "projects" / project.metadata.project_id
+    project_dir = DATA_DIR / "projects" / project.metadata.project_id
     project_dir.mkdir(parents=True, exist_ok=True)
     with open(project_dir / "project.json", "w") as f:
         f.write(project.model_dump_json(indent=2))
 
 
 def load_projects_from_disk() -> None:
-    project_dir = OUTPUT_DIR / "projects"
+    project_dir = DATA_DIR / "projects"
     if project_dir.exists():
         for project_file in project_dir.glob("*/project.json"):
             try:
@@ -513,6 +518,115 @@ async def assumptions_page(request: Request, project_id: str):
 async def api_create_sample_data():
     create_sample_csvs(BASE_DIR / "examples")
     return {"message": "Sample CSVs created in /examples"}
+
+
+@app.post("/api/load-demo")
+async def api_load_demo():
+    """Load the demo HVAC project with all pre-generated outputs."""
+    from pathlib import Path
+    from bas_assistant.models import Project, ProjectMetadata, UnitSystem
+    from bas_assistant.importers import CSVImporter, create_sample_csvs
+    from bas_assistant.generators import (
+        generate_checkout_sheets, generate_reports, generate_graphics, generate_logic
+    )
+    from bas_assistant.exporters import (
+        NiagaraExporter, BACnetExporter, TridiumExporter,
+        JCIExporter, SiemensExporter, HoneywellExporter
+    )
+    from bas_assistant.validation import ValidationEngine
+    from bas_assistant.reasoning import analyze_gaps
+
+    project_id = "demo-hvac-project"
+    
+    # Check if already loaded
+    if project_id in projects:
+        return RedirectResponse(url=f"/project/{project_id}", status_code=303)
+    
+    # Create project
+    metadata = ProjectMetadata(
+        project_id=project_id,
+        name="Demo HVAC Project",
+        client="Demo Client",
+        location="Demo Building",
+        unit_system=UnitSystem.IP,
+        design_phase="Design Development",
+        engineer_of_record="Demo Engineer",
+        programmer="Demo Programmer",
+        commissioning_agent="Demo CxA",
+        naming_standard="ASHRAE 135",
+    )
+    project = Project(metadata=metadata)
+    
+    # Import sample data
+    importer = CSVImporter(project)
+    create_sample_csvs(BASE_DIR / "examples")
+    
+    equip_file = BASE_DIR / "examples" / "equipment_schedule.csv"
+    if equip_file.exists():
+        importer.import_equipment_schedule(equip_file, "equip_schedule_demo")
+    
+    points_file = BASE_DIR / "examples" / "point_list.csv"
+    if points_file.exists():
+        importer.import_point_list(points_file, "point_list_demo")
+    
+    ctrl_file = BASE_DIR / "examples" / "controller_schedule.csv"
+    if ctrl_file.exists():
+        importer.import_controller_schedule(ctrl_file, "ctrl_schedule_demo")
+    
+    # Save project
+    save_project(project)
+    
+    # Generate all outputs
+    output_dir = OUTPUT_DIR / project_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Validation
+    engine = ValidationEngine()
+    engine.validate(project)
+    
+    # Gap analysis
+    analyze_gaps(project)
+    
+    # Checkout sheets
+    checkout_dir = output_dir / "checkout"
+    checkout_dir.mkdir(parents=True, exist_ok=True)
+    generate_checkout_sheets(project, checkout_dir)
+    
+    # Reports
+    reports_dir = output_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    generate_reports(project, reports_dir)
+    
+    # Graphics
+    graphics_dir = output_dir / "graphics"
+    graphics_dir.mkdir(parents=True, exist_ok=True)
+    generate_graphics(project, graphics_dir)
+    
+    # Logic
+    logic_dir = output_dir / "logic"
+    logic_dir.mkdir(parents=True, exist_ok=True)
+    generate_logic(project, logic_dir)
+    
+    # Exports
+    exports_dir = output_dir / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    
+    vendor_map = {
+        "niagara": NiagaraExporter,
+        "bacnet": BACnetExporter,
+        "tridium": TridiumExporter,
+        "jci": JCIExporter,
+        "siemens": SiemensExporter,
+        "honeywell": HoneywellExporter,
+    }
+    
+    for vendor_name, exporter_class in vendor_map.items():
+        vendor_dir = exports_dir / vendor_name
+        vendor_dir.mkdir(parents=True, exist_ok=True)
+        exporter = exporter_class(project)
+        exporter.export(vendor_dir)
+    
+    return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
 
 @app.get("/api/project/{project_id}/summary")

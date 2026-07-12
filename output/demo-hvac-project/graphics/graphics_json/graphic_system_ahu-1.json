@@ -1,0 +1,81 @@
+{
+  "graphic_id": "graphic_system_ahu-1",
+  "name": "AHU-1 System",
+  "type": "system",
+  "equipment_id": "AHU-1",
+  "width": 1600,
+  "height": 1000,
+  "background": "white",
+  "elements": [
+    {
+      "type": "rect",
+      "x": 0.1,
+      "y": 0.3,
+      "width": 0.25,
+      "height": 0.4,
+      "rotation": 0,
+      "fill": "#e0e0e0",
+      "stroke": "#333",
+      "stroke_width": 2,
+      "text": null,
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "equipment"
+    },
+    {
+      "type": "text",
+      "x": 0.225,
+      "y": 0.5,
+      "width": 0,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": null,
+      "stroke_width": 1,
+      "text": "AHU-1",
+      "font_size": 16,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "labels"
+    },
+    {
+      "type": "line",
+      "x": 0.35,
+      "y": 0.5,
+      "width": 0.3,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": "#1976d2",
+      "stroke_width": 3,
+      "text": null,
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "piping"
+    },
+    {
+      "type": "line",
+      "x": 0.35,
+      "y": 0.7,
+      "width": 0.3,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": "#ef6c00",
+      "stroke_width": 3,
+      "text": null,
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "piping"
+    }
+  ],
+  "bindings": [],
+  "navigation": [],
+  "metadata": {
+    "system_type": "AHU",
+    "ahu": "AHU-1"
+  }
+}

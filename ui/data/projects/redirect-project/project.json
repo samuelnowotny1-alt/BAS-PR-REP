@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "project_id": "redirect-project",
+    "name": "Redirect Project",
+    "number": null,
+    "client": "Client",
+    "location": "Lab",
+    "timezone": null,
+    "unit_system": "IP",
+    "created_at": "2026-07-12T03:22:33.304063",
+    "updated_at": "2026-07-12T03:22:33.304067",
+    "design_phase": "DD",
+    "naming_standard": "ASHRAE-135",
+    "bacnet_network_number": null,
+    "engineer_of_record": "Engineer",
+    "programmer": "Programmer",
+    "commissioning_agent": "Cx"
+  },
+  "equipment": [],
+  "points": [],
+  "controllers": [],
+  "source_documents": [],
+  "validation_status": "pending",
+  "last_validated": null
+}

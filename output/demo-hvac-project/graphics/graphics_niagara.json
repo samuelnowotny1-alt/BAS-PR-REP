@@ -1,0 +1,291 @@
+{
+  "pages": [
+    {
+      "name": "graphic_ahu-1",
+      "title": "AHU-1 - AHU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 60,
+          "y": 80,
+          "width": 1080,
+          "height": 640,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "ellipse",
+          "x": 180,
+          "y": 400,
+          "width": 288,
+          "height": 192,
+          "background": "#e3f2fd",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 180,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "SF"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 288,
+          "height": 192,
+          "background": "#fff3e0",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RF"
+        },
+        {
+          "type": "rectangle",
+          "x": 420,
+          "y": 120,
+          "width": 360,
+          "height": 120,
+          "background": "#cce5ff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 180,
+          "width": 0,
+          "height": 0,
+          "text": "CC"
+        },
+        {
+          "type": "rectangle",
+          "x": 420,
+          "y": 560,
+          "width": 360,
+          "height": 120,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 620,
+          "width": 0,
+          "height": 0,
+          "text": "HC"
+        },
+        {
+          "type": "rectangle",
+          "x": 60,
+          "y": 16,
+          "width": 180,
+          "height": 48,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 60,
+          "y": 40,
+          "width": 180,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 150,
+          "y": 40,
+          "width": 0,
+          "height": 0,
+          "text": "OA"
+        },
+        {
+          "type": "rectangle",
+          "x": 960,
+          "y": 16,
+          "width": 180,
+          "height": 48,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 960,
+          "y": 40,
+          "width": 179,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 1050,
+          "y": 40,
+          "width": 0,
+          "height": 0,
+          "text": "RA"
+        },
+        {
+          "type": "rectangle",
+          "x": 960,
+          "y": 736,
+          "width": 180,
+          "height": 48,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 960,
+          "y": 760,
+          "width": 179,
+          "height": 0,
+          "borderColor": "#757575"
+        },
+        {
+          "type": "label",
+          "x": 1050,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "text": "EA"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 120,
+          "height": 400,
+          "background": "#e8eaf6",
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "FILT"
+        },
+        {
+          "type": "ellipse",
+          "x": 840,
+          "y": 600,
+          "width": 180,
+          "height": 80,
+          "background": "#e0f2f1",
+          "borderColor": "#009688"
+        },
+        {
+          "type": "label",
+          "x": 840,
+          "y": 600,
+          "width": 0,
+          "height": 0,
+          "text": "HUM"
+        },
+        {
+          "type": "line",
+          "x": 1140,
+          "y": 280,
+          "width": 60,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1176,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "line",
+          "x": 1140,
+          "y": 520,
+          "width": 60,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 1176,
+          "y": 480,
+          "width": 0,
+          "height": 0,
+          "text": "RA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "text": "AHU-1"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "AHU-1 SAT",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_system_ahu-1",
+      "title": "AHU-1 System",
+      "width": 1600,
+      "height": 1000,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 160,
+          "y": 300,
+          "width": 400,
+          "height": 400,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 360,
+          "y": 500,
+          "width": 0,
+          "height": 0,
+          "text": "AHU-1"
+        },
+        {
+          "type": "line",
+          "x": 560,
+          "y": 500,
+          "width": 480,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 560,
+          "y": 700,
+          "width": 480,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        }
+      ],
+      "bindings": []
+    }
+  ]
+}

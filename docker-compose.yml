@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  bas-assistant:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bas-assistant
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent project data
+      - bas_data:/app/data
+      # Persistent generated outputs (checkout, reports, graphics, exports)
+      - bas_output:/app/ui/output
+      # Optional: mount examples for demo loading
+      - ./examples:/app/examples:ro
+    environment:
+      - BAS_DATA_DIR=/app/data
+      - BAS_OUTPUT_DIR=/app/ui/output
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bas_data:
+  bas_output:
