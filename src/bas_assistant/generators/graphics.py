@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 import json
 
+from datetime import datetime
 from ..models import Project, Equipment, Point, PointKind, EquipmentType
 
 
@@ -1140,6 +1141,104 @@ def generate_graphics(project: Project, output_dir: Path) -> dict:
         "svg": generator.to_svg(output_dir / "graphics_svg"),
         "niagara": generator.to_niagara_json(output_dir / "graphics_niagara.json"),
     }
+
+
+
+    def _graphic_to_niagara_px(self, graphic: GraphicDefinition) -> dict:
+        """Convert graphic to proper Niagara PX page format (.ord/.px structure)."""
+        # Build components with proper Niagara structure
+        components = []
+        
+        for elem in graphic.elements:
+            x = int(elem.x * graphic.width) if elem.x <= 1 else int(elem.x)
+            y = int(elem.y * graphic.height) if elem.y <= 1 else int(elem.y)
+            w = int(elem.width * graphic.width) if elem.width <= 1 else int(elem.width)
+            h = int(elem.height * graphic.height) if elem.height <= 1 else int(elem.height)
+            
+            comp = {
+                "ord": f"px:{graphic.graphic_id}:{elem.element_type}_{id(elem)}",
+                "type": self._element_to_niagara_type(elem),
+                "x": x, "y": y,
+                "width": w, "height": h,
+                "background": elem.fill or "#ffffff",
+                "borderColor": elem.stroke or "#000000",
+                "borderWidth": elem.stroke_width or 1,
+                "slots": {}
+            }
+            
+            if elem.element_type == "text" and elem.text:
+                comp["slots"]["text"] = {
+                    "value": elem.text,
+                    "fontSize": elem.font_size or 12,
+                    "fontFamily": elem.font_family or "Arial"
+                }
+            
+            components.append(comp)
+        
+        # Add bindings as point components
+        for binding in graphic.bindings:
+            bx = int(binding.x * graphic.width)
+            by = int(binding.y * graphic.height)
+            
+            comp = {
+                "ord": f"px:{graphic.graphic_id}:binding_{binding.point_name}",
+                "type": "point",
+                "x": bx, "y": by,
+                "width": 24, "height": 24,
+                "background": "#2196f3",
+                "borderColor": "#1976d2",
+                "slots": {
+                    "pointName": {"value": binding.point_name},
+                    "pointType": {"value": binding.binding_type.value},
+                    "format": {"value": binding.format},
+                    "label": {"value": binding.label or binding.point_name}
+                }
+            }
+            
+            if binding.color_map:
+                comp["slots"]["colorMap"] = {"value": binding.color_map}
+            
+            components.append(comp)
+        
+        # Build PX page with proper Niagara structure
+        page = {
+            "ord": f"px:{graphic.graphic_id}",
+            "name": graphic.graphic_id,
+            "displayName": graphic.name,
+            "width": graphic.width,
+            "height": graphic.height,
+            "backgroundColor": graphic.background,
+            "components": components,
+            "navigation": graphic.navigation,
+            "metadata": graphic.metadata,
+            "facets": {
+                "displayName": {"value": graphic.name, "type": "String"},
+                "description": {"value": f"BAS Assistant generated: {graphic.metadata.get('equipment_type', 'Equipment')}", "type": "String"}
+            }
+        }
+        
+        return page
+
+    def to_niagara_px_json(self, output_dir: Path) -> Path:
+        """Export graphics as proper Niagara PX JSON format."""
+        output_dir.mkdir(parents=True, exist_ok=True)
+        path = output_dir / "graphics_px.json"
+        
+        pages = []
+        for graphic in self.graphics.values():
+            pages.append(self._graphic_to_niagara_px(graphic))
+        
+        px_data = {
+            "version": "4.12",
+            "timestamp": datetime.now().isoformat(),
+            "generator": "BAS Assistant",
+            "pages": pages
+        }
+        
+        with open(path, "w") as f:
+            json.dump(px_data, f, indent=2, default=str)
+        
+        return path
 
 
 __all__ = [

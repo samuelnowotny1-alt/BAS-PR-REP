@@ -1,59 +1,59 @@
-"""Niagara Framework exporter - WXF (Workbench Export Format) and station archive."""
+"""Niagara Framework exporter - Niagara-like JSON station structure and archive."""
 
 from __future__ import annotations
 
 import json
-import zipfile
-from pathlib import Path
-from typing import Optional
-from datetime import datetime
+import re
 import uuid
+import zipfile
+from datetime import datetime
+from pathlib import Path
+from xml.etree import ElementTree as ET
 
-from ..models import Project, Equipment, Point, Controller, PointKind, EquipmentType
-from .base import BaseExporter, ExportResult, ExportContext
+from ..models import Controller, Equipment, EquipmentType, Point, PointKind, Project
+from .base import BaseExporter, ExportResult
 
 
 class NiagaraExporter(BaseExporter):
-    """Exports BAS project to Niagara WXF format and station archive (.bog)."""
+    """Export a BAS project into a Niagara-inspired station structure."""
 
     vendor_name = "Niagara"
     file_extension = ".wxf"
 
     SYMBOLS = {
-        "ahu": {"elements": [
-            {"type": "rect", "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.6, "fill": "#e0e0e0", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
-        ]},
-        "vav": {"elements": [
-            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#fff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 10},
-        ]},
-        "chiller": {"elements": [
-            {"type": "ellipse", "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.6, "fill": "#cce5ff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
-        ]},
-        "boiler": {"elements": [
-            {"type": "rect", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.8, "fill": "#ffe0b2", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 14},
-        ]},
-        "pump": {"elements": [
-            {"type": "circle", "x": 0.1, "y": 0.1, "radius": 0.4, "fill": "#fff", "stroke": "#333"},
-            {"type": "text", "x": 0.5, "y": 0.5, "text": "{name}", "font_size": 10},
-        ]},
+        "ahu": [
+            {"type": "rect", "x": 120, "y": 130, "width": 300, "height": 190, "fill": "#e0e0e0", "stroke": "#333"},
+            {"type": "text", "x": 270, "y": 225, "text": "{name}", "fontSize": 18},
+        ],
+        "vav": [
+            {"type": "rect", "x": 160, "y": 120, "width": 220, "height": 160, "fill": "#ffffff", "stroke": "#333"},
+            {"type": "text", "x": 270, "y": 200, "text": "{name}", "fontSize": 14},
+        ],
+        "chiller": [
+            {"type": "ellipse", "x": 120, "y": 130, "width": 300, "height": 190, "fill": "#cce5ff", "stroke": "#333"},
+            {"type": "text", "x": 270, "y": 225, "text": "{name}", "fontSize": 18},
+        ],
+        "boiler": [
+            {"type": "rect", "x": 120, "y": 130, "width": 300, "height": 190, "fill": "#ffe0b2", "stroke": "#333"},
+            {"type": "text", "x": 270, "y": 225, "text": "{name}", "fontSize": 18},
+        ],
+        "pump": [
+            {"type": "circle", "x": 190, "y": 120, "radius": 85, "fill": "#ffffff", "stroke": "#333"},
+            {"type": "text", "x": 275, "y": 210, "text": "{name}", "fontSize": 14},
+        ],
     }
 
-    # Niagara slot types mapping
     POINT_KIND_TO_SLOT = {
-        PointKind.SENSOR: "numericSensor",
-        PointKind.ACTUATOR: "numericActuator",
-        PointKind.SETPOINT: "numericSetpoint",
-        PointKind.STATUS: "booleanSensor",
-        PointKind.ALARM: "alarm",
-        PointKind.TREND: "trend",
-        PointKind.SCHEDULE: "schedule",
-        PointKind.CALCULATED: "numericSensor",
-        PointKind.PARAMETER: "numericSetpoint",
-        PointKind.DERIVED: "numericSensor",
+        PointKind.SENSOR: "control:NumericPoint",
+        PointKind.ACTUATOR: "control:NumericWritable",
+        PointKind.SETPOINT: "control:NumericWritable",
+        PointKind.STATUS: "control:BooleanPoint",
+        PointKind.ALARM: "alarm:AlarmSourceExt",
+        PointKind.TREND: "history:BooleanTrendExt",
+        PointKind.SCHEDULE: "schedule:SchedulePoint",
+        PointKind.CALCULATED: "control:NumericPoint",
+        PointKind.PARAMETER: "control:NumericWritable",
+        PointKind.DERIVED: "control:NumericPoint",
     }
 
     EQUIPMENT_TYPE_TO_NAV = {
@@ -71,307 +71,433 @@ class NiagaraExporter(BaseExporter):
 
     def __init__(self, project: Project):
         super().__init__(project)
-        self._uids = {}  # Map from model IDs to Niagara UIDs
+        self._uids: dict[str, str] = {}
 
     def _uid(self, prefix: str, key: str) -> str:
-        """Generate deterministic UUID for an object."""
         if key not in self._uids:
-            # Deterministic UUID based on prefix + key
-            namespace = uuid.UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
+            namespace = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
             self._uids[key] = str(uuid.uuid5(namespace, f"{prefix}:{key}"))
         return self._uids[key]
 
+    def _sanitize_name(self, value: str) -> str:
+        cleaned = re.sub(r"[^A-Za-z0-9_:-]+", "_", value.strip())
+        cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+        return cleaned or "unnamed"
+
+    def _slot_path(self, *segments: str) -> str:
+        normalized = [self._sanitize_name(segment) for segment in segments if segment]
+        return "/" + "/".join(normalized)
+
+    def _ord(self, *segments: str) -> str:
+        return f"station:|slot:{self._slot_path(*segments)}"
+
+    def _facet_block(
+        self,
+        *,
+        units: str | None = None,
+        precision: int | None = None,
+        writable: bool | None = None,
+        summary: str | None = None,
+    ) -> dict[str, object]:
+        facets: dict[str, object] = {
+            "BFacets": True,
+            "summary": summary or "",
+        }
+        if units:
+            facets["units"] = units
+        if precision is not None:
+            facets["precision"] = precision
+        if writable is not None:
+            facets["writable"] = writable
+        return facets
+
+    def _action_block(self, view_ord: str | None = None) -> list[dict[str, str]]:
+        actions = [{"name": "open", "displayName": "Open"}]
+        if view_ord:
+            actions.append({"name": "pxView", "displayName": "Open Px", "ord": view_ord})
+        return actions
+
+    def _component_node(
+        self,
+        *,
+        name: str,
+        slot_type: str,
+        slot_path: str,
+        display_name: str,
+        parent_path: str | None,
+        facets: dict[str, object] | None = None,
+        annotations: dict[str, object] | None = None,
+        actions: list[dict[str, str]] | None = None,
+        extra: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        node = {
+            "id": self._uid("slot", slot_path),
+            "name": self._sanitize_name(name),
+            "displayName": display_name,
+            "slotType": slot_type,
+            "slotPath": slot_path,
+            "ord": f"station:|slot:{slot_path}",
+            "parentSlotPath": parent_path,
+            "parentOrd": f"station:|slot:{parent_path}" if parent_path else None,
+            "facets": facets or self._facet_block(summary=display_name),
+            "actions": actions or self._action_block(),
+            "annotations": annotations or {},
+            "children": [],
+        }
+        if extra:
+            node.update(extra)
+        return node
+
+    def _point_ord(self, point: Point) -> str:
+        controller_name = point.controller_id or "Unassigned"
+        return self._ord("Drivers", "BacnetNetwork", controller_name, "Points", point.name)
+
+    def _point_slot_path(self, point: Point) -> str:
+        controller_name = point.controller_id or "Unassigned"
+        return self._slot_path("Drivers", "BacnetNetwork", controller_name, "Points", point.name)
+
+    def _equipment_slot_path(self, equip: Equipment) -> str:
+        return self._slot_path(
+            "Config",
+            "Equipment",
+            equip.building or "DefaultBuilding",
+            equip.floor or "DefaultFloor",
+            equip.id,
+        )
+
+    def _equipment_page_ord(self, equip: Equipment) -> str:
+        return self._ord("Px", "Equipment", equip.id)
+
     def export(self, output_dir: Path, **kwargs) -> ExportResult:
-        """Export to Niagara WXF format."""
         self._ensure_output_dir(output_dir)
-        errors = []
-        warnings = []
-        files = []
+        errors: list[str] = []
+        warnings: list[str] = []
+        files: list[Path] = []
 
         try:
-            # Generate WXF files
             wxf_dir = output_dir / f"{self.project.metadata.project_id}_wxf"
             wxf_dir.mkdir(exist_ok=True)
 
-            # 1. Export stations
-            station_file = self._export_station(wxf_dir)
-            files.append(station_file)
+            exporters = [
+                self._export_station,
+                self._export_navigation,
+                self._export_points,
+                self._export_devices,
+                self._export_alarms,
+                self._export_schedules,
+                self._export_trends,
+            ]
+            for exporter in exporters:
+                exporter(wxf_dir)
 
-            # 2. Export equipment navigation
-            nav_file = self._export_navigation(wxf_dir)
-            files.append(nav_file)
+            self._export_graphics(wxf_dir)
 
-            # 3. Export points
-            points_file = self._export_points(wxf_dir)
-            files.append(points_file)
+            files.extend(sorted(path for path in wxf_dir.rglob("*") if path.is_file()))
 
-            # 4. Export controllers (devices)
-            devices_file = self._export_devices(wxf_dir)
-            files.append(devices_file)
-
-            # 5. Export alarms
-            alarms_file = self._export_alarms(wxf_dir)
-            files.append(alarms_file)
-
-            # 6. Export schedules
-            schedules_file = self._export_schedules(wxf_dir)
-            files.append(schedules_file)
-
-            # 7. Export histories/trends
-            trends_file = self._export_trends(wxf_dir)
-            files.append(trends_file)
-
-            # 8. Export graphics (PX pages)
-            graphics_dir = self._export_graphics(wxf_dir)
-            files.extend(graphics_dir)
-
-            # Create station archive (.bog)
             bog_path = output_dir / f"{self.project.metadata.project_id}.bog"
             self._create_bog_archive(wxf_dir, bog_path)
             files.append(bog_path)
-
-        except Exception as e:
-            errors.append(f"Export failed: {e}")
+        except Exception as exc:
+            errors.append(f"Export failed: {exc}")
 
         return ExportResult(
             success=len(errors) == 0,
-            message=f"Niagara export {'completed' if len(errors) == 0 else 'failed'}",
+            message=f"Niagara export {'completed' if not errors else 'failed'}",
             files=files,
             errors=errors,
             warnings=warnings,
         )
 
     def _export_station(self, output_dir: Path) -> Path:
-        """Export station.json - root station configuration."""
+        root_components = [
+            self._component_node(
+                name="Drivers",
+                slot_type="driver:DriverContainer",
+                slot_path=self._slot_path("Drivers"),
+                display_name="Drivers",
+                parent_path="/",
+                facets=self._facet_block(summary="Protocol driver container"),
+                annotations={"role": "drivers"},
+            ),
+            self._component_node(
+                name="Config",
+                slot_type="baja:Folder",
+                slot_path=self._slot_path("Config"),
+                display_name="Config",
+                parent_path="/",
+                facets=self._facet_block(summary="Station configuration"),
+                annotations={"role": "config"},
+            ),
+            self._component_node(
+                name="Px",
+                slot_type="px:PxContainer",
+                slot_path=self._slot_path("Px"),
+                display_name="Px",
+                parent_path="/",
+                facets=self._facet_block(summary="Px page container"),
+                annotations={"role": "px"},
+            ),
+            self._component_node(
+                name="Alarms",
+                slot_type="alarm:AlarmService",
+                slot_path=self._slot_path("Services", "Alarms"),
+                display_name="Alarms",
+                parent_path="/",
+                facets=self._facet_block(summary="Alarm service"),
+                annotations={"role": "alarms"},
+            ),
+            self._component_node(
+                name="Schedules",
+                slot_type="schedule:ScheduleService",
+                slot_path=self._slot_path("Services", "Schedules"),
+                display_name="Schedules",
+                parent_path="/",
+                facets=self._facet_block(summary="Schedule service"),
+                annotations={"role": "schedules"},
+            ),
+            self._component_node(
+                name="Histories",
+                slot_type="history:HistoryService",
+                slot_path=self._slot_path("Services", "Histories"),
+                display_name="Histories",
+                parent_path="/",
+                facets=self._facet_block(summary="History service"),
+                annotations={"role": "histories"},
+            ),
+        ]
+
         station = {
             "station": {
                 "name": self.project.metadata.name,
                 "id": self._uid("station", self.project.metadata.project_id),
+                "ord": "station:|slot:/",
+                "slotPath": "/",
                 "description": self.project.metadata.client or "",
                 "timezone": self.project.metadata.timezone or "UTC",
-                "created": self.project.metadata.created_at.isoformat() if self.project.metadata.created_at else datetime.now().isoformat(),
-                "modified": self.project.metadata.updated_at.isoformat() if self.project.metadata.updated_at else datetime.now().isoformat(),
+                "created": self.project.metadata.created_at.isoformat(),
+                "modified": self.project.metadata.updated_at.isoformat(),
                 "version": "4.12",
                 "vendor": "Tridium",
                 "application": "BAS Assistant",
+                "facets": self._facet_block(summary="Niagara station root"),
+                "slots": root_components,
             }
         }
 
-        path = output_dir / "station.json"
-        with open(path, "w") as f:
-            json.dump(station, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(base_path=output_dir / "station", payload=station)
 
     def _export_navigation(self, output_dir: Path) -> Path:
-        """Export navigation tree (nav.json) - equipment hierarchy."""
-        nav = {
+        nav_root = {
             "navigation": {
                 "name": "Navigation",
                 "id": self._uid("nav", "root"),
-                "children": []
+                "slotPath": self._slot_path("Config", "Navigation"),
+                "ord": self._ord("Config", "Navigation"),
+                "slotType": "nav:NavContainer",
+                "children": [],
             }
         }
 
-        # Group equipment by building/floor
-        buildings = {}
+        grouped: dict[tuple[str, str], list[Equipment]] = {}
         for equip in self.project.equipment:
-            bldg = equip.building or "Default Building"
-            floor = equip.floor or "Default Floor"
-            key = (bldg, floor)
-            if key not in buildings:
-                buildings[key] = {"building": bldg, "floor": floor, "equipment": []}
-            buildings[key]["equipment"].append(equip)
+            key = (equip.building or "Default Building", equip.floor or "Default Floor")
+            grouped.setdefault(key, []).append(equip)
 
-        for (bldg, floor), data in buildings.items():
-            bldg_id = self._uid("building", bldg)
-            floor_id = self._uid("floor", f"{bldg}:{floor}")
+        for (building, floor), equipment_items in grouped.items():
+            building_path = self._slot_path("Config", "Equipment", building)
+            building_node = self._component_node(
+                name=building,
+                slot_type="nav:NavFolder",
+                slot_path=building_path,
+                display_name=building,
+                parent_path=self._slot_path("Config", "Navigation"),
+                facets=self._facet_block(summary=f"Building folder for {building}"),
+                annotations={"level": "building"},
+            )
 
-            # Building folder
-            building_node = {
-                "name": data["building"],
-                "id": bldg_id,
-                "type": "folder",
-                "children": []
-            }
+            floor_path = self._slot_path("Config", "Equipment", building, floor)
+            floor_node = self._component_node(
+                name=floor,
+                slot_type="nav:NavFolder",
+                slot_path=floor_path,
+                display_name=floor,
+                parent_path=building_path,
+                facets=self._facet_block(summary=f"Floor folder for {floor}"),
+                annotations={"level": "floor"},
+            )
 
-            # Floor folder
-            floor_node = {
-                "name": f"Floor {data['floor']}",
-                "id": floor_id,
-                "type": "folder",
-                "children": []
-            }
+            for equip in equipment_items:
+                equip_path = self._equipment_slot_path(equip)
+                equip_node = self._component_node(
+                    name=equip.id,
+                    slot_type=f"equip:{self.EQUIPMENT_TYPE_TO_NAV.get(equip.type, 'equipment')}",
+                    slot_path=equip_path,
+                    display_name=equip.id,
+                    parent_path=floor_path,
+                    facets=self._facet_block(summary=equip.served_area or equip.type.value),
+                    annotations={
+                        "level": "equipment",
+                        "equipmentType": equip.type.value,
+                        "pxPageOrd": self._equipment_page_ord(equip),
+                    },
+                    actions=self._action_block(self._equipment_page_ord(equip)),
+                    extra={
+                        "navOrd": self._ord("Config", "Navigation", building, floor, equip.id),
+                        "pxPageRef": {
+                            "ord": self._equipment_page_ord(equip),
+                            "displayName": f"{equip.id} Px Page",
+                        },
+                    },
+                )
 
-            # Equipment
-            for equip in data["equipment"]:
-                equip_id = self._uid("equip", equip.id)
-                nav_type = self.EQUIPMENT_TYPE_TO_NAV.get(equip.type, "equipment")
-                equip_node = {
-                    "name": equip.id,
-                    "id": equip_id,
-                    "type": nav_type,
-                    "displayName": equip.id,
-                    "description": equip.served_area or "",
-                    "children": []
-                }
-
-                # Add point children
-                points = self.project.get_points_for_equipment(equip.id)
-                for point in points:
-                    point_id = self._uid("point", point.name)
-                    point_node = {
-                        "name": point.name,
-                        "id": point_id,
-                        "type": "point",
-                        "pointType": point.kind.value,
-                        "units": point.units or "",
-                    }
+                for point in self.project.get_points_for_equipment(equip.id):
+                    point_path = self._point_slot_path(point)
+                    point_node = self._component_node(
+                        name=point.name,
+                        slot_type="control:ControlPoint",
+                        slot_path=point_path,
+                        display_name=point.name,
+                        parent_path=equip_path,
+                        facets=self._facet_block(
+                            units=point.units,
+                            precision=self._display_precision(point),
+                            writable=point.direction.value in ("output", "bidirectional"),
+                            summary=point.description or point.name,
+                        ),
+                        annotations={
+                            "kind": point.kind.value,
+                            "pointOrd": self._point_ord(point),
+                            "equipmentOrd": self._ord(*equip_path.strip("/").split("/")),
+                        },
+                    )
                     equip_node["children"].append(point_node)
 
                 floor_node["children"].append(equip_node)
 
             building_node["children"].append(floor_node)
-            nav["navigation"]["children"].append(building_node)
+            nav_root["navigation"]["children"].append(building_node)
 
-        path = output_dir / "navigation.json"
-        with open(path, "w") as f:
-            json.dump(nav, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(base_path=output_dir / "navigation", payload=nav_root)
 
     def _export_points(self, output_dir: Path) -> Path:
-        """Export all points as Niagara numeric/boolean points."""
-        points_data = {"points": []}
+        payload: dict[str, list[dict[str, object]]] = {"points": []}
 
         for point in self.project.points:
             equip = self.project.get_equipment(point.equipment_id)
-            ctrl = self.project.get_controller(point.controller_id) if point.controller_id else None
+            controller = self.project.get_controller(point.controller_id) if point.controller_id else None
+            slot_path = self._point_slot_path(point)
+            point_data = self._component_node(
+                name=point.name,
+                slot_type=self.POINT_KIND_TO_SLOT.get(point.kind, "control:NumericPoint"),
+                slot_path=slot_path,
+                display_name=point.name,
+                parent_path=self._slot_path("Drivers", "BacnetNetwork", point.controller_id or "Unassigned", "Points"),
+                facets=self._facet_block(
+                    units=point.units,
+                    precision=self._display_precision(point),
+                    writable=point.direction.value in ("output", "bidirectional"),
+                    summary=point.description or point.name,
+                ),
+                annotations={
+                    "kind": point.kind.value,
+                    "direction": point.direction.value,
+                    "equipmentOrd": self._ord(*self._equipment_slot_path(equip).strip("/").split("/")) if equip else "",
+                    "controllerOrd": self._device_ord(controller) if controller else "",
+                },
+                extra={
+                    "proxyExt": self._point_proxy(point, controller),
+                    "pointBinding": {
+                        "ord": self._point_ord(point),
+                        "slotPath": slot_path,
+                        "navName": point.name,
+                    },
+                    "range": {
+                        "min": point.range_min,
+                        "max": point.range_max,
+                    },
+                },
+            )
+            payload["points"].append(point_data)
 
-            slot_type = self.POINT_KIND_TO_SLOT.get(point.kind, "numericSensor")
-            point_id = self._uid("point", point.name)
-
-            point_data = {
-                "name": point.name,
-                "id": point_id,
-                "type": slot_type,
-                "description": point.description or "",
-                "units": point.units or "",
-                "equipment": equip.id if equip else "",
-                "controller": ctrl.id if ctrl else "",
-                "writable": point.direction.value in ("output", "bidirectional"),
-            }
-
-            # Add BACnet configuration
-            if point.bacnet_object_type:
-                point_data["bacnet"] = {
-                    "objectType": point.bacnet_object_type,
-                    "instance": point.bacnet_instance,
-                    "deviceInstance": ctrl.bacnet_device_instance if ctrl and hasattr(ctrl, 'bacnet_device_instance') else 0,
-                }
-
-            # Add Modbus configuration
-            if point.modbus_register:
-                point_data["modbus"] = {
-                    "register": point.modbus_register,
-                    "type": point.modbus_type or "holding_register",
-                    "slaveId": ctrl.modbus_slave_id if ctrl and hasattr(ctrl, 'modbus_slave_id') else 1,
-                }
-
-            # Range limits
-            if point.range_min is not None or point.range_max is not None:
-                point_data["range"] = {
-                    "min": point.range_min,
-                    "max": point.range_max,
-                }
-
-            points_data["points"].append(point_data)
-
-        path = output_dir / "points.json"
-        with open(path, "w") as f:
-            json.dump(points_data, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(base_path=output_dir / "points", payload=payload)
 
     def _export_devices(self, output_dir: Path) -> Path:
-        """Export controllers as Niagara devices."""
-        devices_data = {"devices": []}
+        payload: dict[str, list[dict[str, object]]] = {"devices": []}
 
-        for ctrl in self.project.controllers:
-            device_id = self._uid("device", ctrl.id)
-            device_data = {
-                "name": ctrl.id,
-                "id": device_id,
-                "type": "device",
-                "vendor": ctrl.vendor or "Generic",
-                "model": ctrl.model or "",
-                "firmware": ctrl.firmware_version or "",
-                "protocol": [p.value for p in ctrl.protocols],
-                "points": [p for p in ctrl.owned_point_names],
-            }
+        for controller in self.project.controllers:
+            device_path = self._device_slot_path(controller)
+            point_children = [
+                {
+                    "name": self._sanitize_name(point.name),
+                    "displayName": point.name,
+                    "ord": self._point_ord(point),
+                    "slotPath": self._point_slot_path(point),
+                    "parentOrd": self._device_ord(controller),
+                }
+                for point in self.project.get_points_for_controller(controller.id)
+            ]
+            device = self._component_node(
+                name=controller.id,
+                slot_type="bacnet:BacnetDevice",
+                slot_path=device_path,
+                display_name=controller.name or controller.id,
+                parent_path=self._slot_path("Drivers", "BacnetNetwork"),
+                facets=self._facet_block(summary=controller.vendor or controller.type),
+                annotations={
+                    "vendor": controller.vendor or "Generic",
+                    "model": controller.model or "",
+                    "panelLocation": controller.panel_location or "",
+                },
+                extra={
+                    "protocols": [protocol.value for protocol in controller.protocols],
+                    "points": point_children,
+                    "networkExt": self._device_network_ext(controller),
+                    "children": point_children,
+                },
+            )
+            payload["devices"].append(device)
 
-            # Network addresses
-            for addr in ctrl.network_addresses:
-                if addr.protocol.value == "BACnet/IP":
-                    device_data["bacnet"] = {
-                        "ip": addr.address,
-                        "port": 47808,
-                        "deviceInstance": addr.network_number or 0,
-                    }
-                elif addr.protocol.value == "Modbus/TCP":
-                    device_data["modbus"] = {
-                        "ip": addr.address,
-                        "port": 502,
-                        "slaveId": 1,
-                    }
-
-            devices_data["devices"].append(device_data)
-
-        path = output_dir / "devices.json"
-        with open(path, "w") as f:
-            json.dump(devices_data, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(base_path=output_dir / "devices", payload=payload)
 
     def _export_alarms(self, output_dir: Path) -> Path:
-        """Export alarm configuration."""
-        alarms_data = {"alarms": []}
-
-        # Generate alarms from points with alarm kind or ranges
+        alarms: list[dict[str, object]] = []
         for point in self.project.points:
-            if point.kind == PointKind.ALARM or point.range_min is not None or point.range_max is not None:
-                alarm_id = self._uid("alarm", f"{point.name}_alm")
-                alarm_data = {
+            if point.kind != PointKind.ALARM and point.range_min is None and point.range_max is None:
+                continue
+            deadband = None
+            if point.range_min is not None and point.range_max is not None:
+                deadband = (point.range_max - point.range_min) * 0.01
+            alarms.append(
+                {
+                    "id": self._uid("alarm", f"{point.name}:alarm"),
                     "name": f"{point.name}_Alarm",
-                    "id": alarm_id,
-                    "point": point.name,
-                    "type": "limit",
-                    "priority": 3,
+                    "ord": self._ord("Services", "Alarms", f"{point.name}_Alarm"),
+                    "sourceOrd": self._point_ord(point),
+                    "slotType": "alarm:AlarmExt",
+                    "facets": self._facet_block(summary=f"Alarm ext for {point.name}"),
+                    "limits": {
+                        "low": point.range_min,
+                        "high": point.range_max,
+                        "deadband": deadband,
+                    },
                     "ackRequired": True,
+                    "priority": 3,
                 }
+            )
 
-                if point.range_min is not None:
-                    alarm_data["lowLimit"] = point.range_min
-                if point.range_max is not None:
-                    alarm_data["highLimit"] = point.range_max
-                if point.range_min is not None and point.range_max is not None:
-                    alarm_data["deadband"] = (point.range_max - point.range_min) * 0.01
-
-                alarms_data["alarms"].append(alarm_data)
-
-        path = output_dir / "alarms.json"
-        with open(path, "w") as f:
-            json.dump(alarms_data, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(
+            base_path=output_dir / "alarms",
+            payload={"alarms": alarms},
+        )
 
     def _export_schedules(self, output_dir: Path) -> Path:
-        """Export schedule configuration."""
-        schedules_data = {"schedules": []}
-
-        # Create default occupancy schedule
-        schedule_id = self._uid("schedule", "occupancy_default")
-        schedule_data = {
+        schedule = {
+            "id": self._uid("schedule", "occupancy_default"),
             "name": "Occupancy_Default",
-            "id": schedule_id,
-            "type": "schedule",
-            "description": "Default occupancy schedule",
-            "schedule": {
+            "ord": self._ord("Services", "Schedules", "Occupancy_Default"),
+            "slotType": "schedule:WeeklySchedule",
+            "facets": self._facet_block(summary="Default occupancy schedule"),
+            "entries": {
                 "monday": {"occupied": "07:00", "unoccupied": "19:00"},
                 "tuesday": {"occupied": "07:00", "unoccupied": "19:00"},
                 "wednesday": {"occupied": "07:00", "unoccupied": "19:00"},
@@ -382,456 +508,749 @@ class NiagaraExporter(BaseExporter):
                 "holiday": {"occupied": "", "unoccupied": ""},
             },
         }
-        schedules_data["schedules"].append(schedule_data)
 
-        path = output_dir / "schedules.json"
-        with open(path, "w") as f:
-            json.dump(schedules_data, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(
+            base_path=output_dir / "schedules",
+            payload={"schedules": [schedule]},
+        )
 
     def _export_trends(self, output_dir: Path) -> Path:
-        """Export trend log configuration."""
-        trends_data = {"trends": []}
-
+        trends: list[dict[str, object]] = []
         for point in self.project.points:
-            if point.kind in (PointKind.SENSOR, PointKind.TREND):
-                trend_id = self._uid("trend", f"{point.name}_trend")
-                trend_data = {
+            if point.kind not in (PointKind.SENSOR, PointKind.TREND):
+                continue
+            trends.append(
+                {
+                    "id": self._uid("trend", f"{point.name}:trend"),
                     "name": f"{point.name}_Trend",
-                    "id": trend_id,
-                    "point": point.name,
-                    "interval": "15m",
-                    "retention": "30d",
-                    "enabled": True,
-                    "type": "interval",
+                    "ord": self._ord("Services", "Histories", f"{point.name}_Trend"),
+                    "slotType": "history:NumericTrendExt",
+                    "sourceOrd": self._point_ord(point),
+                    "facets": self._facet_block(units=point.units, summary=f"Trend for {point.name}"),
+                    "historyConfig": {
+                        "interval": "15m",
+                        "retention": "30d",
+                        "enabled": True,
+                    },
                 }
-                trends_data["trends"].append(trend_data)
+            )
 
-        path = output_dir / "trends.json"
-        with open(path, "w") as f:
-            json.dump(trends_data, f, indent=2)
-        return path
+        return self._write_parallel_artifacts(
+            base_path=output_dir / "trends",
+            payload={"trends": trends},
+        )
 
     def _export_graphics(self, output_dir: Path) -> list[Path]:
-        """Export graphics as PX page definitions."""
         graphics_dir = output_dir / "graphics"
         graphics_dir.mkdir(exist_ok=True)
-        files = []
+        files: list[Path] = []
+
+        dashboard = self._dashboard_page()
+        dashboard_path = graphics_dir / "dashboard_main.json"
+        dashboard_path.write_text(json.dumps(dashboard, indent=2))
+        self._write_xml_payload(dashboard, graphics_dir / "dashboard_main.px", artifact_name="dashboard_main")
+        files.append(dashboard_path)
 
         for equip in self.project.equipment:
             points = self.project.get_points_for_equipment(equip.id)
             if not points:
                 continue
-
-            graphic_id = self._uid("graphic", f"g_{equip.id}")
-            graphic = {
-                "name": f"g_{equip.id}",
-                "id": graphic_id,
-                "type": "px",
-                "equipment": equip.id,
-                "title": equip.id,
-                "width": 1200,
-                "height": 800,
-                "components": [],
-                "bindings": [],
-                "navigation": [
-                    f"g_{equip.id}",
-                    "dashboard_main",
-                ],
-                "metadata": {"equipment_type": equip.type.value, "generated_by": "BAS Assistant"},
-            }
-
-            # Use template or generic
-            symbol_key = equip.type.value.lower()
-            if symbol_key in self.SYMBOLS:
-                self._apply_symbol_template(graphic, equip, symbol_key)
-            else:
-                self._apply_generic_template(graphic, equip, points)
-
-            # Add standard navigation
-            graphic["navigation"].extend([
-                f"g_{equip.id}",
-                "dashboard_main",
-            ])
-
-            path = graphics_dir / f"{graphic_id}.json"
-            with open(path, "w") as f:
-                json.dump(graphic, f, indent=2)
-            files.append(path)
+            graphic = self._equipment_page(equip, points)
+            graphic_name = self._sanitize_name(equip.id)
+            graphic_path = graphics_dir / f"{graphic_name}.json"
+            graphic_path.write_text(json.dumps(graphic, indent=2))
+            self._write_xml_payload(graphic, graphics_dir / f"{graphic_name}.px", artifact_name=graphic_name)
+            files.append(graphic_path)
 
         return files
 
-    def _apply_symbol_template(self, graphic: dict, equip: Equipment, symbol_key: str) -> None:
-        """Apply a symbol template to the graphic."""
-        template = self.SYMBOLS[symbol_key]
+    def _dashboard_page(self) -> dict[str, object]:
+        children = []
+        bindings = []
+        x = 40
+        y = 40
+        for index, equip in enumerate(self.project.equipment):
+            if index and index % 3 == 0:
+                x = 40
+                y += 140
+            children.append(
+                {
+                    "id": self._uid("px:widget", f"dashboard:{equip.id}:card"),
+                    "name": f"{self._sanitize_name(equip.id)}_card",
+                    "parentId": "root",
+                    "slotType": "px:LinkButton",
+                    "displayName": equip.id,
+                    "position": {"x": x, "y": y, "width": 220, "height": 90},
+                    "facets": self._facet_block(summary=f"Navigation card for {equip.id}"),
+                    "navigation": {"targetOrd": self._equipment_page_ord(equip), "displayName": equip.id},
+                }
+            )
+            bindings.append(
+                {
+                    "id": self._uid("binding", f"dashboard:{equip.id}"),
+                    "widgetId": self._uid("px:widget", f"dashboard:{equip.id}:card"),
+                    "bindingType": "navigation",
+                    "targetOrd": self._equipment_page_ord(equip),
+                }
+            )
+            x += 250
 
-        # Add symbol elements
-        for elem_data in template["elements"]:
-            elem = self._create_element_from_template(elem_data, equip.id)
-            graphic["components"].append(elem)
-
-        # Add point bindings around the symbol
-        self._add_point_bindings(graphic, equip)
-
-    def _apply_generic_template(self, graphic: dict, equip: Equipment, points: list) -> None:
-        """Apply generic equipment template."""
-        # Equipment box
-        graphic["components"].append({
-            "type": "rect", "x": 0.1, "y": 0.2, "width": 0.8, "height": 0.6,
-            "fill": "#e0e0e0", "stroke": "#333", "strokeWidth": 2, "layer": "equipment",
-        })
-        # Equipment name
-        graphic["components"].append({
-            "type": "text", "x": 0.5, "y": 0.5, "text": equip.id,
-            "fontSize": 16, "fontFamily": "Arial", "layer": "labels",
-        })
-        # Type label
-        graphic["components"].append({
-            "type": "text", "x": 0.5, "y": 0.7, "text": equip.type.value,
-            "fontSize": 12, "fontFamily": "Arial", "layer": "labels",
-        })
-
-        self._add_point_bindings(graphic, equip)
-
-    def _create_element_from_template(self, elem_data: dict, equip_id: str) -> dict:
-        """Create a GraphicElement from template data."""
-        elem_type = elem_data["type"]
-
-        if elem_type == "rect":
-            return {
-                "type": "rect",
-                "x": elem_data["x"], "y": elem_data["y"],
-                "width": elem_data["width"], "height": elem_data["height"],
-                "fill": elem_data.get("fill"), "stroke": elem_data.get("stroke"),
-                "strokeWidth": elem_data.get("stroke_width", 1),
-                "layer": "symbol",
+        return {
+            "pxPage": {
+                "id": self._uid("px", "dashboard_main"),
+                "name": "dashboard_main",
+                "slotType": "px:PxPage",
+                "slotPath": self._slot_path("Px", "Dashboard", "dashboard_main"),
+                "ord": self._ord("Px", "Dashboard", "dashboard_main"),
+                "navigationOrd": self._ord("Config", "Navigation"),
+                "facets": self._facet_block(summary="Main station dashboard"),
+                "navigation": {"home": True, "children": [self._equipment_page_ord(equip) for equip in self.project.equipment]},
+                "components": {
+                    "root": {
+                        "id": "root",
+                        "slotType": "px:CanvasPane",
+                        "children": children,
+                    }
+                },
+                "bindings": bindings,
             }
-        elif elem_type == "circle":
-            return {
-                "type": "circle",
-                "x": elem_data["x"], "y": elem_data["y"],
-                "width": elem_data["radius"] * 2, "height": elem_data["radius"] * 2,
-                "fill": elem_data.get("fill"), "stroke": elem_data.get("stroke"),
-                "strokeWidth": elem_data.get("stroke_width", 1),
-                "layer": "symbol",
-            }
-        elif elem_type == "ellipse":
-            return {
-                "type": "ellipse",
-                "x": elem_data["x"], "y": elem_data["y"],
-                "width": elem_data["width"], "height": elem_data["height"],
-                "fill": elem_data.get("fill"), "stroke": elem_data.get("stroke"),
-                "strokeWidth": elem_data.get("stroke_width", 1),
-                "layer": "symbol",
-            }
-        elif elem_type == "line":
-            return {
-                "type": "line",
-                "x": elem_data["x1"], "y": elem_data["y1"],
-                "width": elem_data["x2"] - elem_data["x1"],
-                "height": elem_data["y2"] - elem_data["y1"],
-                "stroke": elem_data.get("stroke", "#333"),
-                "strokeWidth": elem_data.get("stroke_width", 1),
-                "layer": "symbol",
-            }
-        elif elem_type == "text":
-            return {
-                "type": "text",
-                "x": elem_data["x"], "y": elem_data["y"],
-                "text": elem_data["text"].format(name=equip_id),
-                "fontSize": elem_data.get("font_size", 12),
-                "fontFamily": elem_data.get("font_family", "Arial"),
-                "layer": "labels",
-            }
-        return {"type": "rect", "x": 0, "y": 0, "width": 0, "height": 0, "layer": "symbol"}
-
-    def _add_point_bindings(self, graphic: dict, equip: Equipment) -> None:
-        """Add point bindings around equipment symbol."""
-        points = self.project.get_points_for_equipment(equip.id)
-
-        # Group points by kind for layout
-        sensors = [p for p in points if p.kind == PointKind.SENSOR]
-        actuators = [p for p in points if p.kind == PointKind.ACTUATOR]
-        setpoints = [p for p in points if p.kind == PointKind.SETPOINT]
-        status = [p for p in points if p.kind == PointKind.STATUS]
-        alarms = [p for p in points if p.kind == PointKind.ALARM]
-
-        positions = {
-            "sensors": {"start": (0.05, 0.3), "step": (0, 0.1)},
-            "actuators": {"start": (0.95, 0.3), "step": (0, 0.1)},
-            "setpoints": {"start": (0.3, 0.05), "step": (0.15, 0)},
-            "status": {"start": (0.3, 0.95), "step": (0.15, 0)},
-            "alarms": {"start": (0.05, 0.95), "step": (0.1, 0)},
         }
 
-        # Add sensor bindings (left side)
-        for i, point in enumerate(sensors):
-            pos = positions["sensors"]
-            x = pos["start"][0] + i * pos["step"][0]
-            y = pos["start"][1] + i * pos["step"][1]
-            graphic["bindings"].append({
-                "point_name": point.name,
-                "binding_type": "value",
-                "x": x, "y": y,
-                "label": point.name,
-                "format": self._get_format(point),
-                "min_max": (point.range_min, point.range_max) if point.range_min is not None and point.range_max is not None else None,
-            })
+    def _equipment_page(self, equip: Equipment, points: list[Point]) -> dict[str, object]:
+        page_id = self._uid("px", equip.id)
+        components: list[dict[str, object]] = []
+        bindings: list[dict[str, object]] = []
 
-        # Add actuator bindings (right side)
-        for i, point in enumerate(actuators):
-            pos = positions["actuators"]
-            x = pos["start"][0] + i * pos["step"][0]
-            y = pos["start"][1] + i * pos["step"][1]
-            graphic["bindings"].append({
-                "point_name": point.name,
-                "binding_type": "command" if point.direction.value == "output" else "value",
-                "x": x, "y": y,
-                "label": point.name,
-                "format": self._get_format(point),
-            })
+        symbol_key = self._symbol_key(equip)
+        for element in self.SYMBOLS.get(symbol_key, self.SYMBOLS["ahu"]):
+            components.append(self._px_component_from_symbol(element, equip, page_id))
 
-        # Add setpoint bindings (top)
-        for i, point in enumerate(setpoints):
-            pos = positions["setpoints"]
-            x = pos["start"][0] + i * pos["step"][0]
-            y = pos["start"][1] + i * pos["step"][1]
-            graphic["bindings"].append({
-                "point_name": point.name,
-                "binding_type": "setpoint",
-                "x": x, "y": y,
-                "label": point.name,
-                "format": self._get_format(point),
-            })
-
-        # Add status bindings (bottom)
-        for i, point in enumerate(status):
-            pos = positions["status"]
-            x = pos["start"][0] + i * pos["step"][0]
-            y = pos["start"][1] + i * pos["step"][1]
-            graphic["bindings"].append({
-                "point_name": point.name,
-                "binding_type": "status",
-                "x": x, "y": y,
-                "label": point.name,
-                "format": "on/off",
-                "color_map": {"on": "#4caf50", "off": "#f44336", "open": "#4caf50", "closed": "#f44336"},
-            })
-
-        # Add alarm bindings (bottom-left)
-        for i, point in enumerate(alarms):
-            pos = positions["alarms"]
-            x = pos["start"][0] + i * pos["step"][0]
-            y = pos["start"][1] + i * pos["step"][1]
-            graphic["bindings"].append({
-                "point_name": point.name,
-                "binding_type": "alarm",
-                "x": x, "y": y,
-                "label": f"⚠ {point.name}",
-                "color_map": {"normal": "#4caf50", "alarm": "#f44336", "fault": "#ff9800"},
-            })
-
-    def _get_format(self, point: Point) -> str:
-        """Get display format for a point."""
-        if point.units:
-            if "deg" in point.units.lower() or "temp" in point.units.lower():
-                return ".1f"
-            if any(u in point.units.lower() for u in ["cfm", "gpm", "lps", "flow"]):
-                return ".0f"
-            if any(u in point.units.lower() for u in ["inwc", "wc", "psi", "pa", "kpa", "pressure"]):
-                return ".2f"
-            if "%" in point.units:
-                return ".0f"
-        return ".1f"
-
-    def _export_system_graphics(self) -> None:
-        """Generate system-level graphics (AHU systems, plant, etc.)."""
-        # Group equipment by type for system graphics
-        ahu_systems = {}
-        for equip in self.project.equipment:
-            if equip.type == EquipmentType.AHU:
-                # Find children (VAVs, etc.)
-                children = [e for e in self.project.equipment
-                            if e.parent_equipment_id == equip.id]
-                ahu_systems[equip.id] = {
-                    "ahu": equip,
-                    "children": children,
-                }
-
-        for ahu_id, system in ahu_systems.items():
-            self._generate_ahu_system_graphic(system)
-
-    def _generate_ahu_system_graphic(self, system: dict) -> GraphicDefinition:
-        """Generate AHU system graphic with VAVs."""
-        ahu = system["ahu"]
-        children = system["children"]
-
-        graphic = GraphicDefinition(
-            graphic_id=f"graphic_system_{ahu.id.lower()}",
-            name=f"{ahu.id} System",
-            graphic_type=GraphicType.SYSTEM,
-            equipment_id=ahu.id,
-            width=1600,
-            height=1000,
-            metadata={"system_type": "AHU", "ahu": ahu.id},
+        components.append(
+            {
+                "id": self._uid("px:widget", f"{equip.id}:title"),
+                "name": "title",
+                "parentId": "root",
+                "slotType": "px:Label",
+                "displayName": equip.id,
+                "position": {"x": 40, "y": 30, "width": 520, "height": 30},
+                "facets": self._facet_block(summary=f"Equipment title for {equip.id}"),
+            }
         )
 
-        # AHU symbol (center-left)
-        graphic.elements.append(GraphicElement(
-            element_type="rect", x=0.1, y=0.3, width=0.25, height=0.4,
-            fill="#e0e0e0", stroke="#333", stroke_width=2, layer="equipment",
-        ))
-        graphic.elements.append(GraphicElement(
-            element_type="text", x=0.225, y=0.5, text=ahu.id,
-            font_size=16, layer="labels",
-        ))
-
-        # Supply duct line
-        graphic.elements.append(GraphicElement(
-            element_type="line", x=0.35, y=0.5, width=0.3, height=0,
-            stroke="#1976d2", stroke_width=3, layer="piping",
-        ))
-
-        # VAV boxes along duct
-        for i, vav in enumerate(children):
-            y = 0.2 + (i * 0.6 / max(len(children), 1))
-            # VAV box
-            graphic.elements.append(GraphicElement(
-                element_type="rect", x=0.7, y=y, width=0.15, height=0.1,
-                fill="#fff", stroke="#333", stroke_width=1, layer="equipment",
-            ))
-            graphic.elements.append(GraphicElement(
-                element_type="text", x=0.775, y=y + 0.05, text=vav.id,
-                font_size=10, layer="labels",
-            ))
-            # Duct connection
-            graphic.elements.append(GraphicElement(
-                element_type="line", x=0.65, y=y + 0.05, width=0.05, height=0,
-                stroke="#1976d2", stroke_width=2, layer="piping",
-            ))
-
-            # Add VAV point bindings
-            vav_points = self.project.get_points_for_equipment(vav.id)
-            for point in vav_points:
-                if point.kind in (PointKind.SENSOR, PointKind.SETPOINT):
-                    graphic.bindings.append(GraphicBinding(
-                        point_name=point.name,
-                        binding_type=BindingType.VALUE if point.kind == PointKind.SENSOR else BindingType.SETPOINT,
-                        x=0.7 + 0.15, y=y + 0.05,
-                        label=point.name,
-                        format=self._get_format(point),
-                    ))
-
-        # Return duct
-        graphic.elements.append(GraphicElement(
-            element_type="line", x=0.35, y=0.7, width=0.3, height=0,
-            stroke="#ef6c00", stroke_width=3, layer="piping",
-        ))
-
-        return graphic
-
-    def _element_to_niagara_type(self, elem: GraphicElement) -> str:
-        """Map element type to Niagara component type."""
-        mapping = {
-            "rect": "rectangle",
-            "circle": "ellipse",
-            "ellipse": "ellipse",
-            "line": "line",
-            "text": "label",
+        grouped = {
+            "sensor": (40, 390),
+            "actuator": (600, 390),
+            "setpoint": (40, 520),
+            "status": (600, 520),
+            "alarm": (40, 650),
         }
-        return mapping.get(elem.element_type, "rectangle")
+        counts = {key: 0 for key in grouped}
 
-    def _export_alarms(self, output_dir: Path) -> Path:
-        """Export alarm configuration."""
-        path = output_dir / "alarms.json"
-
-        alarms_data = {"alarms": []}
-        for point in self.project.points:
-            if point.kind == PointKind.ALARM or point.range_min is not None or point.range_max is not None:
-                alarm_id = self._uid("alarm", f"{point.name}_alm")
-                alarm_data = {
-                    "name": f"{point.name}_Alarm",
-                    "id": alarm_id,
-                    "point": point.name,
-                    "type": "limit",
-                    "priority": 3,
-                    "ackRequired": True,
+        for point in points:
+            family = self._binding_family(point)
+            base_x, base_y = grouped.get(family, (40, 390))
+            offset = counts.get(family, 0)
+            counts[family] = offset + 1
+            widget_id = self._uid("px:widget", f"{equip.id}:{point.name}:widget")
+            components.append(
+                {
+                    "id": widget_id,
+                    "name": self._sanitize_name(point.name),
+                    "parentId": "root",
+                    "slotType": "px:BoundLabel",
+                    "displayName": point.name,
+                    "position": {"x": base_x, "y": base_y + offset * 34, "width": 260, "height": 28},
+                    "facets": self._facet_block(
+                        units=point.units,
+                        precision=self._display_precision(point),
+                        writable=point.direction.value in ("output", "bidirectional"),
+                        summary=point.description or point.name,
+                    ),
+                    "annotations": {"equipmentId": equip.id, "pointOrd": self._point_ord(point)},
                 }
+            )
+            bindings.append(
+                {
+                    "id": self._uid("binding", f"{equip.id}:{point.name}"),
+                    "widgetId": widget_id,
+                    "bindingType": family,
+                    "label": point.name,
+                    "sourceOrd": self._point_ord(point),
+                    "slotPath": self._point_slot_path(point),
+                    "format": self._display_format(point),
+                    "actions": self._action_block(self._point_ord(point)),
+                }
+            )
 
-                if point.range_min is not None:
-                    alarm_data["lowLimit"] = point.range_min
-                if point.range_max is not None:
-                    alarm_data["highLimit"] = point.range_max
-                if point.range_min is not None and point.range_max is not None:
-                    alarm_data["deadband"] = (point.range_max - point.range_min) * 0.01
+        return {
+            "pxPage": {
+                "id": page_id,
+                "name": self._sanitize_name(equip.id),
+                "displayName": equip.id,
+                "slotType": "px:PxPage",
+                "slotPath": self._slot_path("Px", "Equipment", equip.id),
+                "ord": self._equipment_page_ord(equip),
+                "equipmentOrd": self._ord(*self._equipment_slot_path(equip).strip("/").split("/")),
+                "navigationOrd": self._ord("Config", "Navigation", equip.building or "Default Building", equip.floor or "Default Floor", equip.id),
+                "navigation": {
+                    "back": self._ord("Px", "Dashboard", "dashboard_main"),
+                    "breadcrumbs": [
+                        self._ord("Config", "Navigation"),
+                        self._ord("Config", "Navigation", equip.building or "Default Building"),
+                        self._ord("Config", "Navigation", equip.building or "Default Building", equip.floor or "Default Floor"),
+                        self._equipment_page_ord(equip),
+                    ],
+                },
+                "facets": self._facet_block(summary=f"Px page for {equip.id}"),
+                "components": {
+                    "root": {
+                        "id": "root",
+                        "slotType": "px:CanvasPane",
+                        "children": components,
+                    }
+                },
+                "bindings": bindings,
+            }
+        }
 
-                alarms_data["alarms"].append(alarm_data)
-
-        with open(output_dir / "alarms.json", "w") as f:
-            json.dump(alarms_data, f, indent=2)
-        return output_dir / "alarms.json"
-
-    def _export_schedules(self, output_dir: Path) -> Path:
-        """Export schedule configuration."""
-        path = output_dir / "schedules.json"
-
-        schedules_data = {"schedules": []}
-
-        # Default occupancy schedule
-        schedule_id = self._uid("schedule", "occupancy_default")
-        schedule_data = {
-            "name": "Occupancy_Default",
-            "id": schedule_id,
-            "type": "schedule",
-            "description": "Default occupancy schedule",
-            "schedule": {
-                "monday": {"occupied": "07:00", "unoccupied": "19:00"},
-                "tuesday": {"occupied": "07:00", "unoccupied": "19:00"},
-                "wednesday": {"occupied": "07:00", "unoccupied": "19:00"},
-                "thursday": {"occupied": "07:00", "unoccupied": "19:00"},
-                "friday": {"occupied": "07:00", "unoccupied": "19:00"},
-                "saturday": {"occupied": "08:00", "unoccupied": "14:00"},
-                "sunday": {"occupied": "", "unoccupied": ""},
-                "holiday": {"occupied": "", "unoccupied": ""},
+    def _px_component_from_symbol(self, element: dict[str, object], equip: Equipment, page_id: str) -> dict[str, object]:
+        element_type = str(element["type"])
+        widget_id = self._uid("px:widget", f"{page_id}:{equip.id}:{element_type}:{element.get('x')}:{element.get('y')}")
+        if element_type == "circle":
+            position = {
+                "x": element["x"],
+                "y": element["y"],
+                "width": element["radius"] * 2,
+                "height": element["radius"] * 2,
+            }
+        else:
+            position = {
+                "x": element["x"],
+                "y": element["y"],
+                "width": element.get("width", 0),
+                "height": element.get("height", 0),
+            }
+        return {
+            "id": widget_id,
+            "name": self._sanitize_name(f"{equip.id}_{element_type}_{element.get('x')}_{element.get('y')}"),
+            "parentId": "root",
+            "slotType": f"px:{element_type.title()}",
+            "displayName": str(element.get("text", "")).format(name=equip.id) or equip.id,
+            "position": position,
+            "style": {
+                "fill": element.get("fill"),
+                "stroke": element.get("stroke"),
+                "fontSize": element.get("fontSize"),
             },
+            "facets": self._facet_block(summary=f"{element_type} widget for {equip.id}"),
         }
-        schedules_data["schedules"].append(schedule_data)
 
-        with open(output_dir / "schedules.json", "w") as f:
-            json.dump(schedules_data, f, indent=2)
-        return output_dir / "schedules.json"
+    def _point_proxy(self, point: Point, controller: Controller | None) -> dict[str, object]:
+        proxy = {
+            "pointOrd": self._point_ord(point),
+            "slotPath": self._point_slot_path(point),
+            "driverRef": self._device_ord(controller) if controller else self._ord("Drivers", "BacnetNetwork", "Unassigned"),
+        }
+        if point.bacnet_object_type:
+            proxy["bacnetProxyExt"] = {
+                "objectType": point.bacnet_object_type,
+                "instance": point.bacnet_instance,
+                "deviceOrd": self._device_ord(controller) if controller else "",
+            }
+        if point.modbus_register:
+            proxy["modbusProxyExt"] = {
+                "register": point.modbus_register,
+                "registerType": point.modbus_type or "holding_register",
+                "deviceOrd": self._device_ord(controller) if controller else "",
+            }
+        return proxy
 
-    def _export_trends(self, output_dir: Path) -> Path:
-        """Export trend log configuration."""
-        path = output_dir / "trends.json"
+    def _device_slot_path(self, controller: Controller) -> str:
+        return self._slot_path("Drivers", "BacnetNetwork", controller.id)
 
-        trends_data = {"trends": []}
-        for point in self.project.points:
-            if point.kind in (PointKind.SENSOR, PointKind.TREND):
-                trend_id = self._uid("trend", f"{point.name}_trend")
-                trend_data = {
-                    "name": f"{point.name}_Trend",
-                    "id": trend_id,
-                    "point": point.name,
-                    "interval": "15m",
-                    "retention": "30d",
-                    "enabled": True,
-                    "type": "interval",
+    def _device_ord(self, controller: Controller) -> str:
+        return self._ord("Drivers", "BacnetNetwork", controller.id)
+
+    def _device_network_ext(self, controller: Controller) -> dict[str, object]:
+        ext: dict[str, object] = {"addresses": []}
+        for address in controller.network_addresses:
+            ext["addresses"].append(
+                {
+                    "protocol": address.protocol.value,
+                    "address": address.address,
+                    "networkNumber": address.network_number,
+                    "subnetMask": address.subnet_mask,
+                    "gateway": address.gateway,
                 }
-                trends_data["trends"].append(trend_data)
+            )
+        return ext
 
-        with open(path, "w") as f:
-            json.dump(trends_data, f, indent=2)
-        return path
+    def _symbol_key(self, equip: Equipment) -> str:
+        if equip.type in (EquipmentType.PUMP_CHW, EquipmentType.PUMP_CW, EquipmentType.PUMP_HW):
+            return "pump"
+        return equip.type.value.lower()
+
+    def _binding_family(self, point: Point) -> str:
+        if point.kind == PointKind.ACTUATOR:
+            return "actuator"
+        if point.kind == PointKind.SETPOINT:
+            return "setpoint"
+        if point.kind == PointKind.STATUS:
+            return "status"
+        if point.kind == PointKind.ALARM:
+            return "alarm"
+        return "sensor"
+
+    def _display_precision(self, point: Point) -> int:
+        units = (point.units or "").lower()
+        if any(token in units for token in ("temp", "deg", "°")):
+            return 1
+        if any(token in units for token in ("cfm", "gpm", "lps", "%")):
+            return 0
+        if any(token in units for token in ("inwc", "psi", "pa", "kpa")):
+            return 2
+        return 1
+
+    def _display_format(self, point: Point) -> str:
+        precision = self._display_precision(point)
+        return f".{precision}f"
 
     def _create_bog_archive(self, wxf_dir: Path, bog_path: Path) -> None:
-        """Create Niagara station archive (.bog) from WXF directory."""
-        import zipfile
-        with zipfile.ZipFile(bog_path, 'w', zipfile.ZIP_DEFLATED) as bog:
+        with zipfile.ZipFile(bog_path, "w", zipfile.ZIP_DEFLATED) as archive:
             for file_path in wxf_dir.rglob("*"):
                 if file_path.is_file():
-                    arcname = file_path.relative_to(wxf_dir)
-                    bog.write(file_path, arcname)
+                    archive.write(file_path, file_path.relative_to(wxf_dir))
+
+    def _write_parallel_artifacts(
+        self,
+        *,
+        base_path: Path,
+        payload: dict[str, object],
+        xml_suffix: str = ".wxf",
+    ) -> Path:
+        json_path = base_path.with_suffix(".json")
+        json_path.write_text(json.dumps(payload, indent=2))
+        xml_path = base_path.with_suffix(xml_suffix)
+        self._write_xml_payload(payload, xml_path, artifact_name=base_path.name)
+        return json_path
+
+    def _write_xml_payload(self, payload: dict[str, object], path: Path, artifact_name: str | None = None) -> None:
+        root_key, root_value = next(iter(payload.items()))
+        if root_key == "station":
+            root = self._station_xml(root_value)
+        elif root_key == "navigation":
+            root = self._navigation_xml(root_value)
+        elif root_key == "points":
+            root = self._points_xml(root_value)
+        elif root_key == "devices":
+            root = self._devices_xml(root_value)
+        elif root_key == "alarms":
+            root = self._alarms_xml(root_value)
+        elif root_key == "schedules":
+            root = self._schedules_xml(root_value)
+        elif root_key == "trends":
+            root = self._trends_xml(root_value)
+        elif root_key == "pxPage":
+            root = self._px_page_xml(root_value, artifact_name or path.stem)
+        else:
+            root = ET.Element(root_key)
+            self._xml_append_generic(root, root_value)
+        tree = ET.ElementTree(root)
+        ET.indent(tree, space="  ")
+        tree.write(path, encoding="utf-8", xml_declaration=True)
+
+    def _xml_append_generic(self, parent: ET.Element, value: object, key: str | None = None) -> None:
+        if isinstance(value, dict):
+            for child_key, child_value in value.items():
+                if isinstance(child_value, list):
+                    list_node = ET.SubElement(parent, child_key)
+                    for item in child_value:
+                        item_node = ET.SubElement(list_node, "item")
+                        self._xml_append_generic(item_node, item)
+                else:
+                    child = ET.SubElement(parent, child_key)
+                    self._xml_append_generic(child, child_value)
+            return
+        if isinstance(value, list):
+            for item in value:
+                item_node = ET.SubElement(parent, key or "item")
+                self._xml_append_generic(item_node, item)
+            return
+        if value is None:
+            parent.text = ""
+            return
+        if isinstance(value, bool):
+            parent.text = str(value).lower()
+            return
+        parent.text = str(value)
+
+    def _text_child(self, parent: ET.Element, tag: str, value: object | None) -> ET.Element:
+        child = ET.SubElement(parent, tag)
+        if value is None:
+            child.text = ""
+        elif isinstance(value, bool):
+            child.text = str(value).lower()
+        else:
+            child.text = str(value)
+        return child
+
+    def _xml_facets(self, parent: ET.Element, facets: dict[str, object]) -> None:
+        facets_node = ET.SubElement(parent, "facets")
+        for key, value in facets.items():
+            facet_node = ET.SubElement(facets_node, "facet", name=key)
+            facet_node.text = "" if value is None else str(value).lower() if isinstance(value, bool) else str(value)
+
+    def _xml_annotations(self, parent: ET.Element, annotations: dict[str, object]) -> None:
+        annotations_node = ET.SubElement(parent, "annotations")
+        for key, value in annotations.items():
+            annotation = ET.SubElement(annotations_node, "annotation", name=key)
+            annotation.text = "" if value is None else str(value)
+
+    def _xml_actions(self, parent: ET.Element, actions: list[dict[str, str]]) -> None:
+        actions_node = ET.SubElement(parent, "actions")
+        for action in actions:
+            attrs = {"name": action.get("name", ""), "displayName": action.get("displayName", "")}
+            if action.get("ord"):
+                attrs["ord"] = action["ord"]
+            ET.SubElement(actions_node, "action", attrs)
+
+    def _slot_xml_attrs(self, slot: dict[str, object]) -> dict[str, str]:
+        attrs = {
+            "name": str(slot.get("name", "")),
+            "displayName": str(slot.get("displayName", "")),
+            "type": str(slot.get("slotType", "")),
+            "ord": str(slot.get("ord", "")),
+            "slotPath": str(slot.get("slotPath", "")),
+        }
+        if slot.get("parentOrd"):
+            attrs["parentOrd"] = str(slot["parentOrd"])
+        return attrs
+
+    def _append_slot_metadata(self, node: ET.Element, slot: dict[str, object]) -> None:
+        self._text_child(node, "id", slot.get("id"))
+        if isinstance(slot.get("facets"), dict):
+            self._xml_facets(node, slot["facets"])
+        if isinstance(slot.get("annotations"), dict):
+            self._xml_annotations(node, slot["annotations"])
+        if isinstance(slot.get("actions"), list):
+            self._xml_actions(node, slot["actions"])
+
+    def _xml_slot(self, slot: dict[str, object], *, tag: str = "slot") -> ET.Element:
+        node = ET.Element(tag, self._slot_xml_attrs(slot))
+        self._append_slot_metadata(node, slot)
+        return node
+
+    def _station_xml(self, station: dict[str, object]) -> ET.Element:
+        root = ET.Element(
+            "station",
+            {
+                "name": str(station.get("name", "")),
+                "ord": str(station.get("ord", "")),
+                "version": str(station.get("version", "")),
+                "vendor": str(station.get("vendor", "")),
+            },
+        )
+        for key in ("id", "slotPath", "description", "timezone", "created", "modified", "application"):
+            self._text_child(root, key, station.get(key))
+        if isinstance(station.get("facets"), dict):
+            self._xml_facets(root, station["facets"])
+        slots_node = ET.SubElement(root, "slots")
+        for slot in station.get("slots", []):
+            slots_node.append(self._xml_slot(slot))
+        return root
+
+    def _navigation_item_xml(self, node: dict[str, object]) -> ET.Element:
+        nav_node = self._xml_slot(node, tag="navNode")
+        if isinstance(node.get("pxPageRef"), dict):
+            px_ref = ET.SubElement(nav_node, "pxPageRef")
+            self._text_child(px_ref, "displayName", node["pxPageRef"].get("displayName"))
+            self._text_child(px_ref, "ord", node["pxPageRef"].get("ord"))
+        if node.get("navOrd"):
+            self._text_child(nav_node, "navOrd", node.get("navOrd"))
+        children_node = ET.SubElement(nav_node, "children")
+        for child in node.get("children", []):
+            children_node.append(self._navigation_item_xml(child))
+        return nav_node
+
+    def _navigation_xml(self, navigation: dict[str, object]) -> ET.Element:
+        root = ET.Element(
+            "navigation",
+            {
+                "name": str(navigation.get("name", "")),
+                "ord": str(navigation.get("ord", "")),
+                "type": str(navigation.get("slotType", "")),
+            },
+        )
+        self._text_child(root, "id", navigation.get("id"))
+        self._text_child(root, "slotPath", navigation.get("slotPath"))
+        children = ET.SubElement(root, "children")
+        for child in navigation.get("children", []):
+            children.append(self._navigation_item_xml(child))
+        return root
+
+    def _proxy_ext_xml(self, proxy_ext: dict[str, object]) -> ET.Element:
+        proxy = ET.Element("proxyExt")
+        self._text_child(proxy, "pointOrd", proxy_ext.get("pointOrd"))
+        self._text_child(proxy, "slotPath", proxy_ext.get("slotPath"))
+        self._text_child(proxy, "driverRef", proxy_ext.get("driverRef"))
+        if isinstance(proxy_ext.get("bacnetProxyExt"), dict):
+            bacnet = ET.SubElement(proxy, "bacnetProxyExt")
+            self._text_child(bacnet, "objectType", proxy_ext["bacnetProxyExt"].get("objectType"))
+            self._text_child(bacnet, "instance", proxy_ext["bacnetProxyExt"].get("instance"))
+            self._text_child(bacnet, "deviceOrd", proxy_ext["bacnetProxyExt"].get("deviceOrd"))
+        if isinstance(proxy_ext.get("modbusProxyExt"), dict):
+            modbus = ET.SubElement(proxy, "modbusProxyExt")
+            self._text_child(modbus, "register", proxy_ext["modbusProxyExt"].get("register"))
+            self._text_child(modbus, "registerType", proxy_ext["modbusProxyExt"].get("registerType"))
+            self._text_child(modbus, "deviceOrd", proxy_ext["modbusProxyExt"].get("deviceOrd"))
+        return proxy
+
+    def _point_binding_xml(self, point_binding: dict[str, object]) -> ET.Element:
+        binding = ET.Element("pointBinding")
+        self._text_child(binding, "ord", point_binding.get("ord"))
+        self._text_child(binding, "slotPath", point_binding.get("slotPath"))
+        self._text_child(binding, "navName", point_binding.get("navName"))
+        return binding
+
+    def _network_ext_xml(self, network_ext: dict[str, object]) -> ET.Element:
+        network = ET.Element("networkExt")
+        addresses = ET.SubElement(network, "addresses")
+        for entry in network_ext.get("addresses", []):
+            address = ET.SubElement(addresses, "address")
+            self._text_child(address, "protocol", entry.get("protocol"))
+            self._text_child(address, "host", entry.get("address"))
+            self._text_child(address, "networkNumber", entry.get("networkNumber"))
+            self._text_child(address, "subnetMask", entry.get("subnetMask"))
+            self._text_child(address, "gateway", entry.get("gateway"))
+        return network
+
+    def _point_ref_xml(self, point_ref_data: dict[str, object]) -> ET.Element:
+        point_ref = ET.Element("pointRef")
+        self._text_child(point_ref, "name", point_ref_data.get("name"))
+        self._text_child(point_ref, "displayName", point_ref_data.get("displayName"))
+        self._text_child(point_ref, "ord", point_ref_data.get("ord"))
+        self._text_child(point_ref, "slotPath", point_ref_data.get("slotPath"))
+        self._text_child(point_ref, "parentOrd", point_ref_data.get("parentOrd"))
+        return point_ref
+
+    def _px_navigation_xml(self, navigation_data: dict[str, object]) -> ET.Element:
+        navigation = ET.Element("navigation")
+        for key, value in navigation_data.items():
+            if isinstance(value, list):
+                container = ET.SubElement(navigation, key)
+                item_tag = "crumb" if key == "breadcrumbs" else "target"
+                for item in value:
+                    self._text_child(container, item_tag, item)
+            else:
+                self._text_child(navigation, key, value)
+        return navigation
+
+    def _range_xml(self, range_data: dict[str, object]) -> ET.Element:
+        range_node = ET.Element("range")
+        self._text_child(range_node, "min", range_data.get("min"))
+        self._text_child(range_node, "max", range_data.get("max"))
+        return range_node
+
+    def _alarm_limits_xml(self, limits_data: dict[str, object]) -> ET.Element:
+        limits = ET.Element("limits")
+        self._text_child(limits, "low", limits_data.get("low"))
+        self._text_child(limits, "high", limits_data.get("high"))
+        self._text_child(limits, "deadband", limits_data.get("deadband"))
+        return limits
+
+    def _schedule_entries_xml(self, entries_data: dict[str, dict[str, object]]) -> ET.Element:
+        entries = ET.Element("entries")
+        for day, config in entries_data.items():
+            day_node = ET.SubElement(entries, "day", name=day)
+            self._text_child(day_node, "occupied", config.get("occupied"))
+            self._text_child(day_node, "unoccupied", config.get("unoccupied"))
+        return entries
+
+    def _history_config_xml(self, history_data: dict[str, object]) -> ET.Element:
+        history = ET.Element("historyConfig")
+        self._text_child(history, "interval", history_data.get("interval"))
+        self._text_child(history, "retention", history_data.get("retention"))
+        self._text_child(history, "enabled", history_data.get("enabled"))
+        return history
+
+    def _points_xml(self, payload: list[dict[str, object]]) -> ET.Element:
+        root = ET.Element("points")
+        for point in payload:
+            point_node = self._xml_slot(point, tag="point")
+            if isinstance(point.get("proxyExt"), dict):
+                point_node.append(self._proxy_ext_xml(point["proxyExt"]))
+            if isinstance(point.get("pointBinding"), dict):
+                point_node.append(self._point_binding_xml(point["pointBinding"]))
+            if isinstance(point.get("range"), dict):
+                point_node.append(self._range_xml(point["range"]))
+            root.append(point_node)
+        return root
+
+    def _devices_xml(self, payload: list[dict[str, object]]) -> ET.Element:
+        root = ET.Element("devices")
+        for device in payload:
+            device_node = self._xml_slot(device, tag="device")
+            protocols = ET.SubElement(device_node, "protocols")
+            for protocol in device.get("protocols", []):
+                self._text_child(protocols, "protocol", protocol)
+            if isinstance(device.get("networkExt"), dict):
+                device_node.append(self._network_ext_xml(device["networkExt"]))
+            points = ET.SubElement(device_node, "points")
+            for child in device.get("children", []):
+                points.append(self._point_ref_xml(child))
+            root.append(device_node)
+        return root
+
+    def _alarms_xml(self, payload: list[dict[str, object]]) -> ET.Element:
+        root = ET.Element("alarms")
+        for alarm in payload:
+            alarm_node = ET.SubElement(
+                root,
+                "alarmExt",
+                {
+                    "name": str(alarm.get("name", "")),
+                    "ord": str(alarm.get("ord", "")),
+                    "sourceOrd": str(alarm.get("sourceOrd", "")),
+                    "type": str(alarm.get("slotType", "")),
+                },
+            )
+            self._text_child(alarm_node, "id", alarm.get("id"))
+            self._text_child(alarm_node, "priority", alarm.get("priority"))
+            self._text_child(alarm_node, "ackRequired", alarm.get("ackRequired"))
+            self._append_slot_metadata(
+                alarm_node,
+                {
+                    "id": alarm.get("id"),
+                    "facets": alarm.get("facets", {}),
+                    "annotations": {},
+                    "actions": [],
+                },
+            )
+            alarm_node.append(self._alarm_limits_xml(alarm.get("limits", {})))
+        return root
+
+    def _schedules_xml(self, payload: list[dict[str, object]]) -> ET.Element:
+        root = ET.Element("schedules")
+        for schedule in payload:
+            schedule_node = ET.SubElement(
+                root,
+                "schedule",
+                {
+                    "name": str(schedule.get("name", "")),
+                    "ord": str(schedule.get("ord", "")),
+                    "type": str(schedule.get("slotType", "")),
+                },
+            )
+            self._append_slot_metadata(
+                schedule_node,
+                {
+                    "id": schedule.get("id"),
+                    "facets": schedule.get("facets", {}),
+                    "annotations": {},
+                    "actions": [],
+                },
+            )
+            schedule_node.append(self._schedule_entries_xml(schedule.get("entries", {})))
+        return root
+
+    def _trends_xml(self, payload: list[dict[str, object]]) -> ET.Element:
+        root = ET.Element("trends")
+        for trend in payload:
+            trend_node = ET.SubElement(
+                root,
+                "historyExt",
+                {
+                    "name": str(trend.get("name", "")),
+                    "ord": str(trend.get("ord", "")),
+                    "sourceOrd": str(trend.get("sourceOrd", "")),
+                    "type": str(trend.get("slotType", "")),
+                },
+            )
+            self._append_slot_metadata(
+                trend_node,
+                {
+                    "id": trend.get("id"),
+                    "facets": trend.get("facets", {}),
+                    "annotations": {},
+                    "actions": [],
+                },
+            )
+            trend_node.append(self._history_config_xml(trend.get("historyConfig", {})))
+        return root
+
+    def _px_component_xml(self, component: dict[str, object]) -> ET.Element:
+        node = ET.Element(
+            "component",
+            {
+                "id": str(component.get("id", "")),
+                "name": str(component.get("name", "")),
+                "type": str(component.get("slotType", "")),
+                "displayName": str(component.get("displayName", "")),
+                "parentId": str(component.get("parentId", "")),
+            },
+        )
+        position = ET.SubElement(node, "position")
+        for key, value in component.get("position", {}).items():
+            self._text_child(position, key, value)
+        if isinstance(component.get("style"), dict):
+            style = ET.SubElement(node, "style")
+            self._xml_append_generic(style, component["style"])
+        if isinstance(component.get("facets"), dict):
+            self._xml_facets(node, component["facets"])
+        if isinstance(component.get("annotations"), dict):
+            self._xml_annotations(node, component["annotations"])
+        if isinstance(component.get("navigation"), dict):
+            node.append(self._px_navigation_xml(component["navigation"]))
+        return node
+
+    def _px_page_xml(self, page: dict[str, object], artifact_name: str) -> ET.Element:
+        root = ET.Element(
+            "pxPage",
+            {
+                "name": str(page.get("name", artifact_name)),
+                "ord": str(page.get("ord", "")),
+                "type": str(page.get("slotType", "")),
+            },
+        )
+        for key in ("id", "displayName", "slotPath", "equipmentOrd", "navigationOrd"):
+            if key in page:
+                self._text_child(root, key, page.get(key))
+        if isinstance(page.get("facets"), dict):
+            self._xml_facets(root, page["facets"])
+        if isinstance(page.get("navigation"), dict):
+            root.append(self._px_navigation_xml(page["navigation"]))
+
+        components_node = ET.SubElement(root, "components")
+        root_component = page.get("components", {}).get("root", {})
+        canvas = ET.SubElement(
+            components_node,
+            "canvas",
+            {
+                "id": str(root_component.get("id", "root")),
+                "type": str(root_component.get("slotType", "px:CanvasPane")),
+            },
+        )
+        children = ET.SubElement(canvas, "children")
+        for component in root_component.get("children", []):
+            children.append(self._px_component_xml(component))
+
+        bindings_node = ET.SubElement(root, "bindings")
+        for binding in page.get("bindings", []):
+            binding_node = ET.SubElement(
+                bindings_node,
+                "binding",
+                {
+                    "id": str(binding.get("id", "")),
+                    "widgetId": str(binding.get("widgetId", "")),
+                    "type": str(binding.get("bindingType", "")),
+                },
+            )
+            for key in ("label", "sourceOrd", "slotPath", "format", "targetOrd"):
+                if key in binding:
+                    self._text_child(binding_node, key, binding.get(key))
+            if isinstance(binding.get("actions"), list):
+                self._xml_actions(binding_node, binding["actions"])
+        return root
 
 
 def export_niagara(project: Project, output_dir: Path) -> ExportResult:

@@ -7,6 +7,8 @@ from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
 from bas_assistant.models import Project, ProjectMetadata, UnitSystem
+from bas_assistant.models.types import ValidationCategory, ValidationSeverity
+from bas_assistant.validation import ValidationReport, ValidationResult
 from ui.api import main
 
 
@@ -164,15 +166,36 @@ def test_generation_post_handlers_render() -> None:
         assert response_text(response), handler.__name__
 
 
-def test_validate_page_includes_filters_and_export_link() -> None:
+def test_validate_page_includes_filters_and_export_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     project_id = create_project()
+    report = ValidationReport(project_id=project_id, total_rules_run=3, total_objects_checked=1)
+    report.add_result(
+        ValidationResult(
+            object_type="equipment",
+            object_id="AHU-1",
+            rule_id="COMP-001",
+            severity=ValidationSeverity.ERROR,
+            category=ValidationCategory.COMPLETENESS,
+            message="Equipment is missing controller assignment",
+            field="controller_id",
+            passed=False,
+        )
+    )
+    monkeypatch.setattr(main.ValidationEngine, "validate", lambda self, project: report)
 
     response = run_async(main.validate_page(request(f"/project/{project_id}/validate"), project_id))
 
     assert response.status_code == 200
     text = response_text(response)
-    assert "No validation findings" in text or "Findings Explorer" in text
+    assert "Findings Explorer" in text
+    assert 'id="validation-group-by"' in text
+    assert 'id="validation-object-filter"' in text
+    assert "Selected Finding" in text
+    assert "Inspect" in text
     assert f'/project/{project_id}/validate/report.json' in text
+    assert f'/project/{project_id}/validate/report.csv' in text
     assert "Re-run Validation" in text
 
 
@@ -186,6 +209,20 @@ def test_validation_report_export_returns_json() -> None:
     assert response.headers["content-disposition"] == (
         f'attachment; filename="{project_id}-validation-report.json"'
     )
+
+
+def test_validation_report_export_returns_csv() -> None:
+    project_id = create_project()
+
+    response = run_async(main.validation_report_csv_export(project_id))
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert response.headers["content-disposition"] == (
+        f'attachment; filename="{project_id}-validation-report.csv"'
+    )
+    body = response.body.decode()
+    assert "severity,object_type,object_id,rule_id,category,field,message" in body
 
 
 def test_import_data_without_uploaded_files_redirects() -> None:

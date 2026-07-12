@@ -66,6 +66,15 @@ Engineering projects accumulate context that is often lost. This log preserves w
 - Consequences: Workflows must include review states and approval tracking.
 - Future review status: Permanent principle.
 
+## 2026-07-11 - Niagara Export Uses JSON Canonical Model with Parallel XML
+
+- Date: 2026-07-11
+- Decision: Keep the Niagara JSON station model as the canonical export graph and generate Niagara-shaped XML/WXF/PX artifacts from that model in parallel.
+- Reason: The station semantics, ORD generation, hierarchy, and PX bindings are the hard part; keeping one canonical model reduces drift while allowing iterative XML compatibility work.
+- Alternatives considered: Write XML directly with no intermediate model; stop at JSON-only review artifacts.
+- Consequences: JSON and XML outputs must stay aligned through regression tests, and compatibility work should focus on serializer changes instead of duplicating business logic.
+- Future review status: Revisit when a real Niagara reference export is available and import compatibility becomes the primary target.
+
 ## Future Improvements
 - Add decision identifiers.
 - Add links from decisions to implementation files.
@@ -74,4 +83,3 @@ Engineering projects accumulate context that is often lost. This log preserves w
 ## Examples
 - Record a new BACnet object naming convention here before applying it across generators.
 - Record a vendor-specific Niagara export strategy here before implementing it.
-
