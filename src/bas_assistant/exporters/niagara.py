@@ -6,10 +6,10 @@ import json
 import re
 import uuid
 import zipfile
-from datetime import datetime
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from ..generators.graphics import GraphicDefinition, GraphicElement, GraphicsGenerator
 from ..models import Controller, Equipment, EquipmentType, Point, PointKind, Project
 from .base import BaseExporter, ExportResult
 
@@ -72,6 +72,8 @@ class NiagaraExporter(BaseExporter):
     def __init__(self, project: Project):
         super().__init__(project)
         self._uids: dict[str, str] = {}
+        self._graphics_generator: GraphicsGenerator | None = None
+        self._graphic_cache: dict[str, GraphicDefinition] | None = None
 
     def _uid(self, prefix: str, key: str) -> str:
         if key not in self._uids:
@@ -207,6 +209,16 @@ class NiagaraExporter(BaseExporter):
             errors=errors,
             warnings=warnings,
         )
+
+    def preview_pages(self) -> list[dict[str, object]]:
+        """Return PX page payloads for browser preview."""
+        pages = [self._dashboard_page()["pxPage"]]
+        for equip in self.project.equipment:
+            points = self.project.get_points_for_equipment(equip.id)
+            if not points:
+                continue
+            pages.append(self._equipment_page(equip, points)["pxPage"])
+        return pages
 
     def _export_station(self, output_dir: Path) -> Path:
         root_components = [
@@ -568,7 +580,7 @@ class NiagaraExporter(BaseExporter):
         children = []
         bindings = []
         x = 40
-        y = 40
+        y = 110
         for index, equip in enumerate(self.project.equipment):
             if index and index % 3 == 0:
                 x = 40
@@ -599,6 +611,7 @@ class NiagaraExporter(BaseExporter):
             "pxPage": {
                 "id": self._uid("px", "dashboard_main"),
                 "name": "dashboard_main",
+                "displayName": "Dashboard",
                 "slotType": "px:PxPage",
                 "slotPath": self._slot_path("Px", "Dashboard", "dashboard_main"),
                 "ord": self._ord("Px", "Dashboard", "dashboard_main"),
@@ -620,10 +633,14 @@ class NiagaraExporter(BaseExporter):
         page_id = self._uid("px", equip.id)
         components: list[dict[str, object]] = []
         bindings: list[dict[str, object]] = []
-
-        symbol_key = self._symbol_key(equip)
-        for element in self.SYMBOLS.get(symbol_key, self.SYMBOLS["ahu"]):
-            components.append(self._px_component_from_symbol(element, equip, page_id))
+        graphic = self._graphic_definition_for_equipment(equip)
+        if graphic:
+            for index, element in enumerate(graphic.elements):
+                components.append(self._px_component_from_graphic_element(element, equip, page_id, index, graphic))
+        else:
+            symbol_key = self._symbol_key(equip)
+            for element in self.SYMBOLS.get(symbol_key, self.SYMBOLS["ahu"]):
+                components.append(self._px_component_from_symbol(element, equip, page_id))
 
         components.append(
             {
@@ -637,6 +654,7 @@ class NiagaraExporter(BaseExporter):
             }
         )
 
+        generated_bindings = {binding.point_name: binding for binding in graphic.bindings} if graphic else {}
         grouped = {
             "sensor": (40, 390),
             "actuator": (600, 390),
@@ -648,9 +666,19 @@ class NiagaraExporter(BaseExporter):
 
         for point in points:
             family = self._binding_family(point)
-            base_x, base_y = grouped.get(family, (40, 390))
-            offset = counts.get(family, 0)
-            counts[family] = offset + 1
+            generated_binding = generated_bindings.get(point.name)
+            if generated_binding:
+                position = {
+                    "x": int(generated_binding.x * graphic.width),
+                    "y": int(generated_binding.y * graphic.height),
+                    "width": 240,
+                    "height": 28,
+                }
+            else:
+                base_x, base_y = grouped.get(family, (40, 390))
+                offset = counts.get(family, 0)
+                counts[family] = offset + 1
+                position = {"x": base_x, "y": base_y + offset * 34, "width": 260, "height": 28}
             widget_id = self._uid("px:widget", f"{equip.id}:{point.name}:widget")
             components.append(
                 {
@@ -659,7 +687,7 @@ class NiagaraExporter(BaseExporter):
                     "parentId": "root",
                     "slotType": "px:BoundLabel",
                     "displayName": point.name,
-                    "position": {"x": base_x, "y": base_y + offset * 34, "width": 260, "height": 28},
+                    "position": position,
                     "facets": self._facet_block(
                         units=point.units,
                         precision=self._display_precision(point),
@@ -713,6 +741,59 @@ class NiagaraExporter(BaseExporter):
             }
         }
 
+    def _graphic_definition_for_equipment(self, equip: Equipment) -> GraphicDefinition | None:
+        if self._graphic_cache is None:
+            self._graphics_generator = GraphicsGenerator(self.project)
+            self._graphic_cache = self._graphics_generator.generate_all()
+        return self._graphic_cache.get(f"graphic_{equip.id.lower()}")
+
+    def _px_component_from_graphic_element(
+        self,
+        element: GraphicElement,
+        equip: Equipment,
+        page_id: str,
+        index: int,
+        graphic: GraphicDefinition,
+    ) -> dict[str, object]:
+        widget_id = self._uid("px:widget", f"{page_id}:{equip.id}:{element.element_type}:{index}")
+        position = self._graphic_element_position(element, graphic)
+        return {
+            "id": widget_id,
+            "name": self._sanitize_name(f"{equip.id}_{element.element_type}_{index}"),
+            "parentId": "root",
+            "slotType": f"px:{element.element_type.title()}",
+            "displayName": element.text or equip.id,
+            "position": position,
+            "style": {
+                "fill": element.fill,
+                "stroke": element.stroke,
+                "strokeWidth": element.stroke_width,
+                "fontSize": element.font_size,
+                "fontFamily": element.font_family,
+            },
+            "facets": self._facet_block(summary=f"{element.element_type} widget for {equip.id}"),
+        }
+
+    def _graphic_element_position(self, element: GraphicElement, graphic: GraphicDefinition) -> dict[str, int]:
+        x = int(element.x * graphic.width)
+        y = int(element.y * graphic.height)
+        width = int(element.width * graphic.width)
+        height = int(element.height * graphic.height)
+        if element.element_type == "circle":
+            return {"x": x - (width // 2), "y": y - (height // 2), "width": width, "height": height}
+        if element.element_type == "ellipse":
+            return {"x": x - (width // 2), "y": y - (height // 2), "width": width, "height": height}
+        if element.element_type == "text":
+            return {"x": x - 60, "y": y - 12, "width": max(width, 120), "height": max(height, 24)}
+        if element.element_type == "line":
+            return {
+                "x": min(x, x + width),
+                "y": min(y, y + height),
+                "width": max(abs(width), 4),
+                "height": max(abs(height), 4),
+            }
+        return {"x": x, "y": y, "width": max(width, 4), "height": max(height, 4)}
+
     def _px_component_from_symbol(self, element: dict[str, object], equip: Equipment, page_id: str) -> dict[str, object]:
         element_type = str(element["type"])
         widget_id = self._uid("px:widget", f"{page_id}:{equip.id}:{element_type}:{element.get('x')}:{element.get('y')}")
@@ -740,7 +821,9 @@ class NiagaraExporter(BaseExporter):
             "style": {
                 "fill": element.get("fill"),
                 "stroke": element.get("stroke"),
+                "strokeWidth": element.get("stroke_width"),
                 "fontSize": element.get("fontSize"),
+                "fontFamily": element.get("fontFamily"),
             },
             "facets": self._facet_block(summary=f"{element_type} widget for {equip.id}"),
         }

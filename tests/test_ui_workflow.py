@@ -6,7 +6,8 @@ import pytest
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
-from bas_assistant.models import Project, ProjectMetadata, UnitSystem
+from bas_assistant.importers import CSVImporter
+from bas_assistant.models import Equipment, EquipmentType, Project, ProjectMetadata, UnitSystem
 from bas_assistant.models.types import ValidationCategory, ValidationSeverity
 from bas_assistant.validation import ValidationReport, ValidationResult
 from ui.api import main
@@ -16,13 +17,13 @@ def run_async(awaitable: Any) -> Any:
     return asyncio.run(awaitable)
 
 
-def request(path: str = "/") -> Request:
+def request(path: str = "/", method: str = "GET", headers: list[tuple[bytes, bytes]] | None = None) -> Request:
     return Request(
         {
             "type": "http",
-            "method": "GET",
+            "method": method,
             "path": path,
-            "headers": [],
+            "headers": headers or [],
             "query_string": b"",
             "server": ("testserver", 80),
             "client": ("testclient", 50000),
@@ -166,6 +167,53 @@ def test_generation_post_handlers_render() -> None:
         assert response_text(response), handler.__name__
 
 
+def test_graphics_preview_pages_prefers_equipment_pages() -> None:
+    project = Project(
+        metadata=ProjectMetadata(project_id="preview-test", name="Preview Test"),
+        equipment=[
+            Equipment(id="AHU-1", type=EquipmentType.AHU),
+        ],
+        points=[
+            main.Point(
+                name="AHU-1_SAT",
+                equipment_id="AHU-1",
+                kind=main.PointKind.SENSOR,
+                direction=main.PointDirection.INPUT,
+                units="degF",
+            )
+        ],
+        controllers=[],
+    )
+
+    pages = main.graphics_preview_pages(project)
+
+    assert pages
+    assert all(str(page.get("slotPath", "")).startswith("/Px/Equipment/") for page in pages)
+
+
+def test_graphics_page_includes_symbol_library() -> None:
+    project_id = create_project()
+    project = main.projects[project_id]
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.points.append(
+        main.Point(
+            name="AHU-1_SAT",
+            equipment_id="AHU-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+
+    response = run_async(main.graphics_page(request(f"/project/{project_id}/graphics"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Graphics Library" in text
+    assert "Library Symbol" in text
+    assert "ahu" in text
+
+
 def test_validate_page_includes_filters_and_export_link(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -232,6 +280,22 @@ def test_import_data_without_uploaded_files_redirects() -> None:
 
     assert response.status_code == 303
     assert response.headers["location"] == f"/project/{project_id}?imported=1"
+
+
+def test_load_demo_returns_htmx_redirect_header() -> None:
+    response = run_async(
+        main.api_load_demo(
+            request(
+                "/api/load-demo",
+                method="POST",
+                headers=[(b"hx-request", b"true")],
+            )
+        )
+    )
+
+    assert response.status_code == 200
+    assert response.headers["HX-Redirect"] == "/project/demo-hvac-project"
+    assert "demo-hvac-project" in main.projects
 
 
 def test_export_project_renders_partial_and_writes_vendor_output() -> None:
@@ -316,6 +380,82 @@ def test_read_only_project_api_endpoints() -> None:
     assert equipment == []
     assert points == []
     assert controllers == []
+
+
+def test_equipment_graphic_sections_update_route_persists_to_equipment() -> None:
+    project_id = create_project()
+    project = main.projects[project_id]
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+
+    response = run_async(
+        main.update_equipment_graphics_config(
+            project_id=project_id,
+            equipment_id="AHU-1",
+            graphic_sections="outside_air, filter, cooling_coil, supply_fan, discharge",
+        )
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/project/{project_id}"
+    assert main.equipment_graphic_sections(project.get_equipment("AHU-1")) == (
+        "outside_air,filter,cooling_coil,supply_fan,discharge"
+    )
+
+
+def test_csv_importer_reads_equipment_graphic_sections(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="CSV-1", name="CSV Project"))
+    importer = CSVImporter(project)
+    csv_path = tmp_path / "equipment_schedule.csv"
+    csv_path.write_text(
+        "Equipment ID,Equipment Type,Graphic Sections\n"
+        "AHU-1,AHU,\"outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge\"\n"
+    )
+
+    result = importer.import_equipment_schedule(csv_path, "equip_csv")
+
+    assert result.success
+    equipment = project.get_equipment("AHU-1")
+    assert equipment is not None
+    assert main.equipment_graphic_sections(equipment) == (
+        "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge"
+    )
+
+
+def test_csv_importer_warns_on_invalid_graphic_sections(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="CSV-2", name="CSV Project"))
+    importer = CSVImporter(project)
+    csv_path = tmp_path / "equipment_schedule.csv"
+    csv_path.write_text(
+        "Equipment ID,Equipment Type,Graphic Sections\n"
+        "AHU-1,AHU,\"outside_air,mystery_box,filter\"\n"
+    )
+
+    result = importer.import_equipment_schedule(csv_path, "equip_csv")
+
+    assert result.success
+    assert result.warnings
+    equipment = project.get_equipment("AHU-1")
+    assert equipment is not None
+    assert main.equipment_graphic_sections(equipment) == "outside_air,filter"
+
+
+def test_equipment_graphic_preset_route_applies_sections() -> None:
+    project_id = create_project()
+    project = main.projects[project_id]
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+
+    response = run_async(
+        main.apply_equipment_graphics_preset(
+            project_id=project_id,
+            equipment_id="AHU-1",
+            preset_value="outside_air,energy_recovery,filter,cooling_coil,heating_coil,supply_fan,discharge",
+        )
+    )
+
+    assert response.status_code == 303
+    assert main.equipment_graphic_sections(project.get_equipment("AHU-1")) == (
+        "outside_air,energy_recovery,filter,cooling_coil,heating_coil,supply_fan,discharge"
+    )
 
 
 def test_report_generation_handles_empty_point_list(tmp_path: Path) -> None:

@@ -16,6 +16,7 @@ from bas_assistant.models import (
     ProjectMetadata,
     Protocol,
 )
+from bas_assistant.models.equipment import EquipmentTemplateRef
 
 
 def build_project() -> Project:
@@ -228,3 +229,72 @@ def test_niagara_json_and_xml_outputs_stay_structurally_aligned(tmp_path: Path) 
         if binding.find("sourceOrd") is not None
     )
     assert binding_ords_json == binding_ords_xml
+
+
+def test_niagara_export_uses_section_based_ahu_layout(tmp_path: Path) -> None:
+    project = build_project()
+    ahu = project.get_equipment("AHU-1")
+    assert ahu is not None
+    ahu.template = EquipmentTemplateRef(
+        template_name="ahu_custom",
+        parameters={
+            "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge",
+        },
+    )
+    project.add_point(
+        Point(
+            name="AHU-1_CCV_CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=PointKind.ACTUATOR,
+            direction=PointDirection.OUTPUT,
+            units="%",
+            bacnet_object_type="AO",
+            bacnet_instance=103,
+            description="Cooling coil valve command",
+        )
+    )
+
+    exporter = NiagaraExporter(project)
+    result = exporter.export(tmp_path)
+
+    assert result.success
+    ahu_page = load_json(tmp_path / "niagara-test_wxf" / "graphics" / "AHU-1.json")["pxPage"]
+    children = ahu_page["components"]["root"]["children"]
+    bindings = {binding["label"]: binding for binding in ahu_page["bindings"]}
+    cooling_valve_widget = next(
+        component for component in children
+        if component["slotType"] == "px:BoundLabel" and component["displayName"] == "AHU-1_CCV_CMD"
+    )
+
+    assert bindings["AHU-1_CCV_CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
+    assert 460 <= cooling_valve_widget["position"]["x"] <= 560
+    assert cooling_valve_widget["position"]["y"] < 180
+    rect_count = sum(1 for component in children if component["slotType"] == "px:Rect")
+    assert rect_count >= 6
+
+
+def test_niagara_preview_components_include_rendering_style_metadata() -> None:
+    exporter = NiagaraExporter(build_project())
+
+    pages = exporter.preview_pages()
+
+    ahu_page = next(page for page in pages if page.get("slotPath") == "/Px/Equipment/AHU-1")
+    children = ahu_page["components"]["root"]["children"]
+    line_component = next(component for component in children if component["slotType"] == "px:Line")
+    text_component = next(component for component in children if component["slotType"] == "px:Text")
+
+    assert line_component["style"]["strokeWidth"] >= 1
+    assert text_component["style"]["fontSize"] >= 8
+    assert text_component["style"]["fontFamily"] == "Arial"
+
+
+def test_dashboard_preview_cards_clear_header_band() -> None:
+    exporter = NiagaraExporter(build_project())
+
+    dashboard_page = exporter.preview_pages()[0]
+    children = dashboard_page["components"]["root"]["children"]
+    first_card = next(component for component in children if component["slotType"] == "px:LinkButton")
+
+    assert dashboard_page["displayName"] == "Dashboard"
+    assert first_card["position"]["y"] >= 100

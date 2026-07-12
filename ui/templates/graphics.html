@@ -3,109 +3,421 @@
 {% block page_title %}Graphics - {{ project.metadata.name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Graphics Definitions</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
-    </div>
+<div class="mx-auto max-w-7xl space-y-8">
+    <section class="rounded-[28px] border border-orange-200 bg-[linear-gradient(135deg,#fff4e8_0%,#fffdf8_52%,#eef7ff_100%)] p-8 shadow-sm dark:border-orange-900 dark:bg-[linear-gradient(135deg,#2d1d12_0%,#1c1a18_55%,#16212b_100%)]">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-orange-700 dark:text-orange-300">Graphics Workbench</p>
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Program-Facing Graphic Preview</h1>
+                    <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+                        Review generated graphics in two ways: the raw BAS graphic artifacts and a Niagara-style PX page preview rendered from the exporter component tree.
+                    </p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-2xl border border-orange-200 bg-white/80 p-4 backdrop-blur dark:border-orange-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Graphics</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphics_result.json|length }}</p>
+                </div>
+                <div class="rounded-2xl border border-blue-200 bg-white/80 p-4 backdrop-blur dark:border-blue-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">SVG</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphics_result.svg|length }}</p>
+                </div>
+                <div class="rounded-2xl border border-emerald-200 bg-white/80 p-4 backdrop-blur dark:border-emerald-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">PX Pages</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ niagara_preview_pages|length }}</p>
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur dark:border-gray-700 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Export</p>
+                    <p class="mt-2 truncate text-xs font-mono text-gray-700 dark:text-gray-300">graphics_niagara.json</p>
+                </div>
+            </div>
+        </div>
+    </section>
 
     {% if graphics_result %}
-    <!-- Summary -->
-    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="card bg-purple-50 dark:bg-purple-900/30 p-4 border border-purple-200 dark:border-purple-800">
-                <p class="text-sm text-purple-700 dark:text-purple-300">Equipment Graphics</p>
-                <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ graphics_result.json|length }}</p>
+    <section class="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Niagara PX Preview</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Switch between generated PX pages and inspect the layout the exporter is producing.</p>
             </div>
-            <div class="card bg-blue-50 dark:bg-blue-900/30 p-4 border border-blue-200 dark:border-blue-800">
-                <p class="text-sm text-blue-700 dark:text-blue-300">SVG Previews</p>
-                <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ graphics_result.svg|length }}</p>
-            </div>
-            <div class="card bg-orange-50 dark:bg-orange-900/30 p-4 border border-orange-200 dark:border-orange-800">
-                <p class="text-sm text-orange-700 dark:text-orange-300">Niagara PX</p>
-                <p class="text-2xl font-bold text-orange-700 dark:text-orange-300">1</p>
-            </div>
-            <div class="card bg-gray-50 dark:bg-gray-700 p-4 border border-gray-200 dark:border-gray-700">
-                <p class="text-sm text-gray-700 dark:text-gray-300">Output Directory</p>
-                <p class="text-sm font-mono text-gray-500 dark:text-gray-400 truncate">{{ graphics_result.niagara }}</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Equipment Graphics -->
-    <div class="space-y-6">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Equipment Graphics</h2>
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {% for json_file in graphics_result.json %}
-            {% set equip_name = json_file.stem.replace('graphic_', '').replace('graphic_system_', '') %}
-            <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
-                    <div class="flex gap-2">
-                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
-                            <i class="fas fa-code mr-1"></i>
-                            JSON
-                        </a>
-                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.stem }}.svg" target="_blank" class="btn-secondary text-sm">
-                            <i class="fas fa-image mr-1"></i>
-                            SVG
-                        </a>
+            <div class="space-y-3" id="preview-page-list">
+                {% for page in niagara_preview_pages %}
+                <button
+                    type="button"
+                    class="preview-page-btn w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-left transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-900/40 dark:hover:border-orange-700 dark:hover:bg-orange-900/20"
+                    data-page-index="{{ loop.index0 }}"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ page.displayName or page.name }}</p>
+                            <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ page.slotPath }}</p>
+                        </div>
+                        <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                            {{ page.slotType.replace('px:', '') }}
+                        </span>
                     </div>
-                </div>
-                <div class="p-6">
-                    <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-auto text-sm font-mono text-gray-700 dark:text-gray-300">
-                        {% set json_content = json_file.read_text() %}
-                        {{ json_content[:1500] }}{% if json_content|length > 1500 %}...{% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- SVG Previews -->
-        {% if graphics_result.svg %}
-        <div class="mt-8">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">SVG Previews</h2>
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {% for svg_file in graphics_result.svg %}
-                <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ svg_file.stem }}</h3>
-                    </div>
-                    <div class="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                        <img src="/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" alt="{{ svg_file.stem }}" class="w-full h-auto max-h-64">
-                    </div>
-                    <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 flex justify-end">
-                        <a href="/output/{{ project.metadata.project_id }}/graphics/{{ svg_file.name }}" target="_blank" class="btn-secondary text-sm">
-                            <i class="fas fa-external-link-alt mr-1"></i>
-                            Open SVG
-                        </a>
-                    </div>
-                </div>
+                </button>
                 {% endfor %}
             </div>
-        </div>
-        {% endif %}
+            <div class="mt-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Preview Notes</p>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    This renders the Niagara exporter’s PX components and bindings in-browser. It is a close preview of exporter output, not a Workbench screenshot.
+                </p>
+            </div>
+        </aside>
 
-        <!-- Niagara PX Export -->
-        <div class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Niagara PX Export</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-4">Import this JSON into Niagara Workbench to create PX graphics pages with point bindings.</            <a href="/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" class="btn-primary" download>
-                <i class="fas fa-download mr-2"></i>
-                Download Niagara PX Export
-            </a>
-        </div>
+        <div class="space-y-6">
+            <section class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-orange-600 dark:text-orange-300">Program Preview</p>
+                            <h2 id="preview-title" class="mt-1 text-xl font-semibold text-gray-900 dark:text-white"></h2>
+                            <p id="preview-path" class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400"></p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <span id="preview-slot-type" class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 font-semibold text-orange-700 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300"></span>
+                            <span id="preview-bind-count" class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"></span>
+                            <span id="preview-comp-count" class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid gap-0 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px]">
+                    <div class="min-w-0 border-b border-gray-200 bg-[#f6f7f9] p-4 dark:border-gray-700 dark:bg-[#111827] xl:border-b-0 xl:border-r">
+                        <div class="overflow-auto rounded-[20px] border border-gray-300 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_55%,#ececec_100%)] p-4 shadow-inner dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_58%,#0b1220_100%)]">
+                            <div id="px-preview-canvas" class="relative mx-auto w-full max-w-[980px] overflow-hidden rounded-[18px] border border-gray-400 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.15)] dark:border-gray-600 dark:bg-[#f8fafc]"></div>
+                        </div>
+                    </div>
+                    <div class="relative z-10 min-w-0 space-y-5 bg-white p-5 dark:bg-gray-800">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Bindings</p>
+                            <div id="binding-list" class="mt-3 max-h-[280px] space-y-2 overflow-auto pr-1"></div>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Component Tree</p>
+                            <div id="component-list" class="mt-3 max-h-[320px] space-y-2 overflow-auto pr-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
+            <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Generated Artifacts</h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Raw graphic JSON, SVG previews, and Niagara export files.</p>
+                    </div>
+                    <a href="/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" target="_blank" class="btn-primary">
+                        <i class="fas fa-download mr-2"></i>
+                        Niagara Export
+                    </a>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-2">
+                    {% for json_file in graphics_result.json %}
+                    {% set graphic_name = json_file.stem %}
+                    <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/50">
+                            <div>
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ graphic_name }}</h3>
+                                <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ json_file.name }}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">JSON</a>
+                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}.svg" target="_blank" class="btn-secondary text-sm">SVG</a>
+                            </div>
+                        </div>
+                        <div class="bg-gray-950 p-4 text-[12px] leading-5 text-gray-200">
+                            <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ json_file.read_text()[:1600] }}{% if json_file.read_text()|length > 1600 %}...{% endif %}</pre>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="mb-4">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphics Library</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Reusable symbol structures from the generator library. This is the pre-export shape library we can evolve toward PX-style graphics.</p>
+                </div>
+                <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                    {% for symbol in graphics_symbol_library %}
+                    <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+                        <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
+                                <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
+                            </div>
+                            <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                                {{ symbol.element_count }} elems
+                            </span>
+                        </div>
+                        <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
+                            {{ symbol.svg|safe }}
+                        </div>
+                        <div class="flex items-center justify-between px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
+                            <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
+                            <span>Library Symbol</span>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </section>
     {% else %}
-    <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
-        <i class="fas fa-chart-area text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
-        <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Graphics Generated</h2>
-        <p class="text-gray-500 dark:text-gray-400 mb-6">Generate PX page definitions with equipment symbols, point bindings, and navigation for Niagara Workbench.
-        <button hx-post="/project/{{ project.metadata.project_id }}/graphics/generate" hx-target="body" class="btn-primary">
+    <section class="rounded-[24px] border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <i class="fas fa-chart-area mb-4 text-4xl text-gray-300 dark:text-gray-600"></i>
+        <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">No Graphics Generated</h2>
+        <p class="mx-auto mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
+            Generate graphics to inspect JSON, SVG, and a Niagara-style PX preview for the current project.
+        </p>
+        <button hx-post="/project/{{ project.metadata.project_id }}/graphics/generate" hx-target="body" class="btn-primary mt-6">
             <i class="fas fa-magic mr-2"></i>
             Generate Graphics
         </button>
-    </div>
+    </section>
     {% endif %}
 </div>
+
+{% if graphics_result %}
+<script>
+    const previewPages = {{ niagara_preview_pages|tojson }};
+    const pageButtons = [...document.querySelectorAll(".preview-page-btn")];
+    const previewCanvas = document.getElementById("px-preview-canvas");
+    const previewTitle = document.getElementById("preview-title");
+    const previewPath = document.getElementById("preview-path");
+    const previewSlotType = document.getElementById("preview-slot-type");
+    const previewBindCount = document.getElementById("preview-bind-count");
+    const previewCompCount = document.getElementById("preview-comp-count");
+    const bindingList = document.getElementById("binding-list");
+    const componentList = document.getElementById("component-list");
+
+    function componentColor(component) {
+        const slotType = component.slotType || "";
+        if (slotType.includes("BoundLabel")) return "#e0f2fe";
+        if (slotType.includes("LinkButton")) return "#ffedd5";
+        if (slotType.includes("Label") || slotType.includes("Text")) return "transparent";
+        if (slotType.includes("Line")) return "transparent";
+        return component.style?.fill || "#f3f4f6";
+    }
+
+    function componentBorder(component) {
+        return component.style?.stroke || "#475569";
+    }
+
+    function componentStrokeWidth(component) {
+        return Number(component.style?.strokeWidth || 2);
+    }
+
+    function escapeHtml(value) {
+        return String(value || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function isTextComponent(slotType) {
+        return slotType.includes("Label") || slotType.includes("Text");
+    }
+
+    function computeBounds(children) {
+        if (!children.length) {
+            return { minX: 0, minY: 0, maxX: 760, maxY: 520 };
+        }
+
+        let minX = 0;
+        let minY = 0;
+        let maxX = 760;
+        let maxY = 520;
+
+        children.forEach((component) => {
+            const position = component.position || {};
+            const x = Number(position.x || 0);
+            const y = Number(position.y || 0);
+            const width = Math.max(Number(position.width || 0), 0);
+            const height = Math.max(Number(position.height || 0), 0);
+            minX = Math.min(minX, x - 40);
+            minY = Math.min(minY, y - 40);
+            maxX = Math.max(maxX, x + width + 40);
+            maxY = Math.max(maxY, y + height + 40);
+        });
+
+        return { minX, minY, maxX, maxY };
+    }
+
+    function renderShape(component) {
+        const slotType = component.slotType || "";
+        const position = component.position || {};
+        const x = Number(position.x || 0);
+        const y = Number(position.y || 0);
+        const width = Math.max(Number(position.width || 0), 0);
+        const height = Math.max(Number(position.height || 0), 0);
+        const fill = componentColor(component);
+        const stroke = componentBorder(component);
+        const strokeWidth = componentStrokeWidth(component);
+        const label = escapeHtml(component.displayName || component.name || slotType.replace("px:", ""));
+        const fontSize = Number(component.style?.fontSize || (slotType.includes("Label") ? 14 : 12));
+        const fontFamily = escapeHtml(component.style?.fontFamily || "Arial");
+
+        if (slotType.includes("Line")) {
+            return `<line x1="${x}" y1="${y}" x2="${x + width}" y2="${y + height}" stroke="${stroke}" stroke-width="${Math.max(strokeWidth, 1)}" stroke-linecap="round" />`;
+        }
+
+        if (slotType.includes("Ellipse") || slotType.includes("Circle")) {
+            return `
+                <g>
+                    <ellipse cx="${x + (width / 2)}" cy="${y + (height / 2)}" rx="${Math.max(width / 2, 2)}" ry="${Math.max(height / 2, 2)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+                    <text x="${x + (width / 2)}" y="${y + (height / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>
+                </g>
+            `;
+        }
+
+        if (slotType.includes("BoundLabel")) {
+            const badgeX = x + width - 18;
+            const badgeY = y - 10;
+            return `
+                <g>
+                    <rect x="${x}" y="${y}" width="${Math.max(width, 96)}" height="${Math.max(height, 26)}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+                    <text x="${x + 12}" y="${y + (Math.max(height, 26) / 2)}" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>
+                    <circle cx="${badgeX}" cy="${badgeY + 8}" r="9" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.5" />
+                    <text x="${badgeX}" y="${badgeY + 8}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="Arial" fill="#1d4ed8" font-weight="700">B</text>
+                </g>
+            `;
+        }
+
+        if (slotType.includes("LinkButton")) {
+            return `
+                <g>
+                    <rect x="${x}" y="${y}" width="${Math.max(width, 96)}" height="${Math.max(height, 34)}" rx="18" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+                    <text x="${x + (Math.max(width, 96) / 2)}" y="${y + (Math.max(height, 34) / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#7c2d12" font-weight="700">${label}</text>
+                </g>
+            `;
+        }
+
+        if (isTextComponent(slotType)) {
+            return `<text x="${x + (width / 2)}" y="${y + (height / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="${slotType.includes("Label") ? "700" : "600"}">${label}</text>`;
+        }
+
+        return `
+            <g>
+                <rect x="${x}" y="${y}" width="${Math.max(width, 8)}" height="${Math.max(height, 8)}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+                ${label ? `<text x="${x + (Math.max(width, 8) / 2)}" y="${y + (Math.max(height, 8) / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>` : ""}
+            </g>
+        `;
+    }
+
+    function renderPage(index) {
+        const page = previewPages[index];
+        if (!page) return;
+
+        pageButtons.forEach((button, buttonIndex) => {
+            const active = buttonIndex === index;
+            button.classList.toggle("border-orange-400", active);
+            button.classList.toggle("bg-orange-50", active);
+            button.classList.toggle("dark:border-orange-700", active);
+            button.classList.toggle("dark:bg-orange-900/20", active);
+        });
+
+        const root = page.components?.root || {};
+        const children = root.children || [];
+        const bindings = page.bindings || [];
+        const bounds = computeBounds(children);
+        const width = Math.max(bounds.maxX - bounds.minX, 760);
+        const height = Math.max(bounds.maxY - bounds.minY, 520);
+
+        previewTitle.textContent = page.displayName || page.name || "PX Preview";
+        previewPath.textContent = page.slotPath || "";
+        previewSlotType.textContent = page.slotType || "";
+        previewBindCount.textContent = `${bindings.length} bindings`;
+        previewCompCount.textContent = `${children.length} components`;
+
+        previewCanvas.innerHTML = "";
+        previewCanvas.style.aspectRatio = `${width} / ${height}`;
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${width} ${height}`);
+        svg.setAttribute("class", "block h-auto w-full");
+        svg.innerHTML = `
+            <defs>
+                <linearGradient id="px-preview-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#f8fafc" />
+                    <stop offset="100%" stop-color="#e2e8f0" />
+                </linearGradient>
+            </defs>
+            <rect x="${bounds.minX}" y="${bounds.minY}" width="${width}" height="${height}" fill="url(#px-preview-bg)" />
+            <g>
+                <rect x="${bounds.minX + 16}" y="${bounds.minY + 16}" width="${Math.max(width - 32, 180)}" height="56" rx="18" fill="rgba(255,255,255,0.96)" stroke="#cbd5e1" stroke-width="1.5" />
+                <text x="${bounds.minX + 34}" y="${bounds.minY + 37}" font-size="11" font-family="Arial" fill="#64748b" font-weight="700">NIAGARA PX</text>
+                <text x="${bounds.minX + 34}" y="${bounds.minY + 58}" font-size="20" font-family="Arial" fill="#0f172a" font-weight="700">${escapeHtml(page.displayName || page.name || "PX Preview")}</text>
+            </g>
+            <g>
+                ${children.map((component) => renderShape(component)).join("")}
+            </g>
+        `;
+        previewCanvas.appendChild(svg);
+
+        bindingList.innerHTML = "";
+        bindings.forEach((binding) => {
+            const item = document.createElement("div");
+            item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+            item.innerHTML = `
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${binding.label || binding.widgetId}</div>
+                        <div class="mt-1 break-all text-xs font-mono text-gray-500 dark:text-gray-400">${binding.sourceOrd || binding.targetOrd || ""}</div>
+                    </div>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                        ${binding.bindingType || "binding"}
+                    </span>
+                </div>
+            `;
+            bindingList.appendChild(item);
+        });
+
+        if (!bindings.length) {
+            bindingList.innerHTML = '<div class="rounded-2xl border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No bindings on this page.</div>';
+        }
+
+        componentList.innerHTML = "";
+        children.forEach((component) => {
+            const item = document.createElement("div");
+            item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+            const position = component.position || {};
+            const slotType = component.slotType || "";
+            item.innerHTML = `
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${component.displayName || component.name}</div>
+                        <div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">${slotType}</div>
+                    </div>
+                    <div class="shrink-0 text-right text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                        <div>x ${position.x || 0}</div>
+                        <div>y ${position.y || 0}</div>
+                    </div>
+                </div>
+            `;
+            componentList.appendChild(item);
+        });
+    }
+
+    pageButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            renderPage(Number(button.dataset.pageIndex || 0));
+        });
+    });
+
+    const defaultPageIndex = Math.max(
+        previewPages.findIndex((page) => (page.slotPath || "").startsWith("/Px/Equipment/")),
+        0
+    );
+    renderPage(defaultPageIndex);
+</script>
+{% endif %}
 {% endblock %}

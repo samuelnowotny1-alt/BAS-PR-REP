@@ -6,6 +6,7 @@ import shutil
 from io import StringIO
 from pathlib import Path
 from typing import Optional, List
+from xml.sax.saxutils import escape
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse, Response
@@ -18,7 +19,9 @@ from bas_assistant.models import (
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
     ControllerNetworkAddress, ControllerIOCapacity
 )
+from bas_assistant.models.equipment import EquipmentTemplateRef
 from bas_assistant.importers import CSVImporter, create_sample_csvs
+from bas_assistant.generators.graphics import GraphicsGenerator
 from bas_assistant.validation import ValidationEngine
 from bas_assistant.generators import (
     generate_checkout_sheets, generate_reports, generate_graphics, generate_logic
@@ -78,6 +81,131 @@ def save_project(project: Project) -> None:
     project_dir.mkdir(parents=True, exist_ok=True)
     with open(project_dir / "project.json", "w") as f:
         f.write(project.model_dump_json(indent=2))
+
+
+def equipment_graphic_sections(equipment: Equipment) -> str:
+    if equipment.template and equipment.template.parameters:
+        return (equipment.template.parameters.get("graphic_sections") or "").strip()
+    return ""
+
+
+def equipment_graphic_section_errors(equipment: Equipment) -> list[str]:
+    sections = equipment_graphic_sections(equipment)
+    if not sections or equipment.type != EquipmentType.AHU:
+        return []
+    _, invalid = GraphicsGenerator.parse_ahu_graphic_sections(sections)
+    return invalid
+
+
+def equipment_graphic_presets(equipment: Equipment) -> dict[str, str]:
+    if equipment.type == EquipmentType.AHU:
+        return GraphicsGenerator.ahu_section_presets()
+    return {}
+
+
+def normalize_graphic_sections(raw_value: str) -> str:
+    valid, _invalid = GraphicsGenerator.parse_ahu_graphic_sections(raw_value)
+    return ",".join(valid)
+
+
+def graphics_preview_pages(project: Project) -> list[dict[str, object]]:
+    pages = NiagaraExporter(project).preview_pages()
+    equipment_pages = [
+        page for page in pages
+        if str(page.get("slotPath", "")).startswith("/Px/Equipment/")
+    ]
+    return equipment_pages or pages
+
+
+def _symbol_element_to_svg(element: dict[str, object], width: float, height: float) -> str:
+    element_type = str(element.get("type", "rect"))
+    stroke = str(element.get("stroke") or "none")
+    stroke_width = float(element.get("stroke_width") or 1)
+    fill = str(element.get("fill") or "none")
+
+    if element_type == "rect":
+        return (
+            f'<rect x="{float(element["x"]) * width:.2f}" y="{float(element["y"]) * height:.2f}" '
+            f'width="{float(element["width"]) * width:.2f}" height="{float(element["height"]) * height:.2f}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}" rx="4" />'
+        )
+    if element_type == "circle":
+        return (
+            f'<circle cx="{float(element["x"]) * width:.2f}" cy="{float(element["y"]) * height:.2f}" '
+            f'r="{float(element["radius"]) * width:.2f}" fill="{fill}" stroke="{stroke}" '
+            f'stroke-width="{stroke_width}" />'
+        )
+    if element_type == "ellipse":
+        return (
+            f'<ellipse cx="{float(element["x"]) * width:.2f}" cy="{float(element["y"]) * height:.2f}" '
+            f'rx="{(float(element["width"]) * width) / 2:.2f}" ry="{(float(element["height"]) * height) / 2:.2f}" '
+            f'fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}" />'
+        )
+    if element_type == "line":
+        return (
+            f'<line x1="{float(element["x1"]) * width:.2f}" y1="{float(element["y1"]) * height:.2f}" '
+            f'x2="{float(element["x2"]) * width:.2f}" y2="{float(element["y2"]) * height:.2f}" '
+            f'stroke="{stroke}" stroke-width="{stroke_width}" stroke-linecap="round" />'
+        )
+    if element_type == "text":
+        label = escape(str(element.get("text", "")).replace("{name}", "NAME"))
+        font_size = float(element.get("font_size") or element.get("fontSize") or 12)
+        return (
+            f'<text x="{float(element["x"]) * width:.2f}" y="{float(element["y"]) * height:.2f}" '
+            f'font-size="{font_size}" font-family="{escape(str(element.get("font_family") or element.get("fontFamily") or "Arial"))}" '
+            'text-anchor="middle" dominant-baseline="middle" fill="#0f172a" font-weight="600">'
+            f"{label}</text>"
+        )
+    return ""
+
+
+def graphics_symbol_library() -> list[dict[str, object]]:
+    library: list[dict[str, object]] = []
+    for symbol_key, template in GraphicsGenerator.SYMBOLS.items():
+        width = 240.0
+        height = 160.0
+        svg_elements = "\n".join(
+            part for part in (_symbol_element_to_svg(element, width, height) for element in template["elements"]) if part
+        )
+        library.append(
+            {
+                "key": symbol_key,
+                "label": symbol_key.replace("_", " ").upper(),
+                "element_count": len(template["elements"]),
+                "width": template.get("width"),
+                "height": template.get("height"),
+                "svg": (
+                    f'<svg viewBox="0 0 {width:.0f} {height:.0f}" class="h-40 w-full" '
+                    'xmlns="http://www.w3.org/2000/svg">'
+                    '<rect width="100%" height="100%" rx="18" fill="#f8fafc" />'
+                    f"{svg_elements}</svg>"
+                ),
+            }
+        )
+    return library
+
+
+def update_equipment_graphic_sections_value(equipment: Equipment, raw_value: str) -> None:
+    normalized = normalize_graphic_sections(raw_value)
+    if not normalized:
+        if equipment.template and equipment.template.parameters:
+            equipment.template.parameters.pop("graphic_sections", None)
+            if not equipment.template.parameters:
+                equipment.template = None
+        return
+
+    if equipment.template is None:
+        equipment.template = EquipmentTemplateRef(template_name="graphic_layout", parameters={})
+    elif not equipment.template.template_name:
+        equipment.template.template_name = "graphic_layout"
+    equipment.template.parameters["graphic_sections"] = normalized
+
+
+def validate_equipment_graphic_sections(equipment: Equipment, raw_value: str) -> tuple[str, list[str]]:
+    if equipment.type != EquipmentType.AHU:
+        return normalize_graphic_sections(raw_value), []
+    valid, invalid = GraphicsGenerator.parse_ahu_graphic_sections(raw_value)
+    return ",".join(valid), invalid
 
 
 def load_projects_from_disk() -> None:
@@ -222,7 +350,49 @@ async def project_detail(request: Request, project_id: str):
     project = get_project(project_id)
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
         "project": project,
+        "graphic_sections_for": equipment_graphic_sections,
+        "graphic_section_errors_for": equipment_graphic_section_errors,
+        "graphic_presets_for": equipment_graphic_presets,
     })
+
+
+@app.post("/project/{project_id}/equipment/{equipment_id}/graphics-config")
+async def update_equipment_graphics_config(
+    project_id: str,
+    equipment_id: str,
+    graphic_sections: str = Form(""),
+):
+    project = get_project(project_id)
+    equipment = project.get_equipment(equipment_id)
+    if equipment is None:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    normalized, invalid = validate_equipment_graphic_sections(equipment, graphic_sections)
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid graphic sections: {', '.join(invalid)}",
+        )
+    update_equipment_graphic_sections_value(equipment, normalized)
+    save_project(project)
+    return RedirectResponse(url=f"/project/{project_id}", status_code=303)
+
+
+@app.post("/project/{project_id}/equipment/{equipment_id}/graphics-preset")
+async def apply_equipment_graphics_preset(
+    project_id: str,
+    equipment_id: str,
+    preset_value: str = Form(...),
+):
+    project = get_project(project_id)
+    equipment = project.get_equipment(equipment_id)
+    if equipment is None:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    normalized, invalid = validate_equipment_graphic_sections(equipment, preset_value)
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Invalid preset sections: {', '.join(invalid)}")
+    update_equipment_graphic_sections_value(equipment, normalized)
+    save_project(project)
+    return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
 
 @app.get("/project/{project_id}/import", response_class=HTMLResponse)
@@ -373,9 +543,12 @@ async def graphics_page(request: Request, project_id: str):
     output_dir = OUTPUT_DIR / project_id / "graphics"
     output_dir.mkdir(parents=True, exist_ok=True)
     result = generate_graphics(project, output_dir)
+    niagara_preview = graphics_preview_pages(project)
     return templates.TemplateResponse(request=request, name="graphics.html", context={
         "project": project,
         "graphics_result": result,
+        "niagara_preview_pages": niagara_preview,
+        "graphics_symbol_library": graphics_symbol_library(),
     })
 
 
@@ -521,7 +694,7 @@ async def api_create_sample_data():
 
 
 @app.post("/api/load-demo")
-async def api_load_demo():
+async def api_load_demo(request: Request):
     """Load the demo HVAC project with all pre-generated outputs."""
     from pathlib import Path
     from bas_assistant.models import Project, ProjectMetadata, UnitSystem
@@ -537,10 +710,16 @@ async def api_load_demo():
     from bas_assistant.reasoning import analyze_gaps
 
     project_id = "demo-hvac-project"
+
+    def redirect_response():
+        target = f"/project/{project_id}"
+        if request.headers.get("HX-Request") == "true":
+            return Response(status_code=200, headers={"HX-Redirect": target})
+        return RedirectResponse(url=target, status_code=303)
     
     # Check if already loaded
     if project_id in projects:
-        return RedirectResponse(url=f"/project/{project_id}", status_code=303)
+        return redirect_response()
     
     # Create project
     metadata = ProjectMetadata(
@@ -626,7 +805,7 @@ async def api_load_demo():
         exporter = exporter_class(project)
         exporter.export(vendor_dir)
     
-    return RedirectResponse(url=f"/project/{project_id}", status_code=303)
+    return redirect_response()
 
 
 @app.get("/api/project/{project_id}/summary")

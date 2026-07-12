@@ -1,28 +1,29 @@
 """Core models package for BAS Assistant."""
 
-# Types & Enums (from types module)
 from .types import (
-    PointKind,
-    PointDirection,
-    PointSource,
     EquipmentType,
-    Protocol,
-    ValidationSeverity,
-    ValidationCategory,
-    UnitSystem,
     NonEmptyStr,
-    PositiveFloat,
     NonNegInt,
+    PointDirection,
+    PointKind,
+    PointSource,
+    PositiveFloat,
+    Protocol,
+    UnitSystem,
+    ValidationCategory,
+    ValidationSeverity,
 )
+
+# Types & Enums (from types module)
+from .checkout import CheckoutItem, CheckoutReport, CheckoutSheet
+from .controller import Controller, ControllerIOCapacity, ControllerNetworkAddress
+from .equipment import Equipment, EquipmentRelationship, EquipmentTemplateRef
+from .graphics import GraphicBinding, GraphicDefinition, GraphicElement, GraphicNavigation
+from .logic import LogicBlock, LogicConnection, LogicDiagram, LogicParameter, LogicSignal
+from .points import Point, PointValidationIssue
 
 # Model classes
 from .project import Project, ProjectMetadata, SourceDocument
-from .equipment import Equipment, EquipmentRelationship, EquipmentTemplateRef
-from .points import Point, PointValidationIssue
-from .controller import Controller, ControllerNetworkAddress, ControllerIOCapacity
-from .checkout import CheckoutItem, CheckoutSheet, CheckoutReport
-from .logic import LogicSignal, LogicParameter, LogicConnection, LogicBlock, LogicDiagram
-from .graphics import GraphicElement, GraphicBinding, GraphicNavigation, GraphicDefinition
 
 __all__ = [
     # Types & Enums
