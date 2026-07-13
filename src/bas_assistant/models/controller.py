@@ -1,6 +1,6 @@
 """Controller model - BAS controller definitions."""
 
-from typing import Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 from . import NonEmptyStr, Protocol
@@ -11,9 +11,9 @@ class ControllerNetworkAddress(BaseModel):
 
     protocol: Protocol
     address: NonEmptyStr = Field(description="IP address, MAC, or device ID")
-    network_number: Optional[int] = None
-    subnet_mask: Optional[str] = None
-    gateway: Optional[str] = None
+    network_number: int | None = None
+    subnet_mask: str | None = None
+    gateway: str | None = None
 
 
 class ControllerIOCapacity(BaseModel):
@@ -40,16 +40,16 @@ class Controller(BaseModel):
 
     # Identity
     id: NonEmptyStr = Field(description="Controller ID (e.g., MPC-1, VAV-203)")
-    name: Optional[str] = None
-    vendor: Optional[str] = None
-    model: Optional[str] = None
-    firmware_version: Optional[str] = None
+    name: str | None = None
+    vendor: str | None = None
+    model: str | None = None
+    firmware_version: str | None = None
 
     # Type & Capabilities
     type: str = Field(default="generic", description="Controller type (MPC, VAV, FCU, etc.)")
     protocols: list[Protocol] = Field(default_factory=list)
     network_addresses: list[ControllerNetworkAddress] = Field(default_factory=list)
-    io_capacity: Optional[ControllerIOCapacity] = None
+    io_capacity: ControllerIOCapacity | None = None
 
     # Equipment served
     serves_equipment_ids: list[NonEmptyStr] = Field(default_factory=list)
@@ -58,16 +58,16 @@ class Controller(BaseModel):
     owned_point_names: list[NonEmptyStr] = Field(default_factory=list)
 
     # Location
-    panel_location: Optional[str] = None
-    electrical_panel: Optional[str] = None
-    circuit: Optional[str] = None
+    panel_location: str | None = None
+    electrical_panel: str | None = None
+    circuit: str | None = None
 
     # Status
     status: str = Field(default="design", description="design, installed, commissioned, operational")
 
     # Metadata
     tags: list[str] = Field(default_factory=list)
-    notes: Optional[str] = None
+    notes: str | None = None
 
     @field_validator("id")
     @classmethod
@@ -87,7 +87,7 @@ class Controller(BaseModel):
         if point_name not in self.owned_point_names:
             self.owned_point_names.append(point_name)
 
-    def utilization_pct(self) -> Optional[float]:
+    def utilization_pct(self) -> float | None:
         """Get I/O utilization percentage."""
         if self.io_capacity:
             total_points = self.io_capacity.total_points
@@ -98,4 +98,4 @@ class Controller(BaseModel):
         return None
 
 
-__all__ = ["Controller", "ControllerNetworkAddress", "ControllerIOCapacity"]
+__all__ = ["Controller", "ControllerIOCapacity", "ControllerNetworkAddress"]

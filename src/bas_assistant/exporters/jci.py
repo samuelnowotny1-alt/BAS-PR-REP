@@ -1,13 +1,10 @@
 """JCI (Johnson Controls) Metasys exporter."""
 
-import csv
 import json
 from pathlib import Path
-from typing import Optional
-from datetime import datetime
 
-from ..models import Project, Equipment, Point, Controller, PointKind, EquipmentType
-from .base import BaseExporter, ExportResult, ExportContext
+from ..models import Controller, PointKind, Project
+from .base import BaseExporter, ExportResult
 
 
 class JCIExporter(BaseExporter):
@@ -244,8 +241,8 @@ class JCIExporter(BaseExporter):
             if point.kind == PointKind.ALARM or point.range_min is not None or point.range_max is not None:
                 xml.append(f'  <Alarm point="{point.name}" name="{point.name}_Alarm">')
                 xml.append(f'    <Description>{point.description or ""}</Description>')
-                xml.append(f'    <Priority>3</Priority>')
-                xml.append(f'    <AckRequired>true</AckRequired>')
+                xml.append('    <Priority>3</Priority>')
+                xml.append('    <AckRequired>true</AckRequired>')
 
                 if point.range_min is not None:
                     xml.append(f'    <LowLimit value="{point.range_min}"/>')

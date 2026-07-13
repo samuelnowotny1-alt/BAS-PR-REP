@@ -1,17 +1,11 @@
 """Gap Analysis - Analyzes project data for completeness and consistency."""
 
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import json
 
-from ..models import (
-    Project, Equipment, Point, Controller, PointKind, EquipmentType, PointSource,
-    ValidationSeverity, ValidationCategory
-)
-from ..validation import ValidationEngine, ValidationReport
+from ..models import EquipmentType, PointKind, PointSource, Project, ValidationSeverity
+from ..validation import ValidationEngine
 
 
 class GapSeverity(str, Enum):
@@ -45,7 +39,7 @@ class Gap:
     affected_object_id: str
     recommendation: str
     auto_fixable: bool = False
-    fix_suggestion: Optional[str] = None
+    fix_suggestion: str | None = None
     related_gaps: list[str] = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
 
@@ -102,7 +96,7 @@ class GapAnalysisReport:
         return [g for g in self.gaps if g.severity == severity]
 
     def get_gaps_for_object(self, object_type: str, object_id: str) -> list[Gap]:
-        return [g for g in self.gaps 
+        return [g for g in self.gaps
                 if g.affected_object_type == object_type and g.affected_object_id == object_id]
 
     def to_dict(self) -> dict:
@@ -246,7 +240,7 @@ class GapAnalyzer:
                     affected_object_type="equipment",
                     affected_object_id=equip.id,
                     recommendation="Assign equipment to a controller",
-                    fix_suggestion=f"equip.controller_id = 'MPC-1'",
+                    fix_suggestion="equip.controller_id = 'MPC-1'",
                     auto_fixable=True,
                     metadata={"equipment_type": equip.type.value},
                 ))
@@ -262,7 +256,7 @@ class GapAnalyzer:
                     affected_object_type="equipment",
                     affected_object_id=equip.id,
                     recommendation="Add served area for documentation and graphics",
-                    fix_suggestion=f"equip.served_area = 'Floor 1 West'",
+                    fix_suggestion="equip.served_area = 'Floor 1 West'",
                     auto_fixable=True,
                 ))
 
@@ -287,7 +281,7 @@ class GapAnalyzer:
                     affected_object_type="equipment",
                     affected_object_id=equip.id,
                     recommendation="Add design data for proper sizing validation",
-                    fix_suggestion=f"equip.design_cfm = 10000",
+                    fix_suggestion="equip.design_cfm = 10000",
                     auto_fixable=True,
                     metadata={"missing": missing_design},
                 ))
@@ -335,7 +329,7 @@ class GapAnalyzer:
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Assign point to a controller",
-                    fix_suggestion=f"point.controller_id = 'MPC-1'",
+                    fix_suggestion="point.controller_id = 'MPC-1'",
                     auto_fixable=True,
                 ))
 
@@ -350,7 +344,7 @@ class GapAnalyzer:
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Add engineering units for proper display and validation",
-                    fix_suggestion=f"point.units = 'degF'",
+                    fix_suggestion="point.units = 'degF'",
                     auto_fixable=True,
                 ))
 
@@ -365,7 +359,7 @@ class GapAnalyzer:
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Add expected operating range",
-                    fix_suggestion=f"point.range_min = 40; point.range_max = 120",
+                    fix_suggestion="point.range_min = 40; point.range_max = 120",
                     auto_fixable=True,
                 ))
 
@@ -378,11 +372,11 @@ class GapAnalyzer:
                     category=GapCategory.INCONSISTENT_CONFIG,
                     severity=GapSeverity.HIGH,
                     title=f"Point {point.name} missing BACnet object type",
-                    description=f"Point on BACnet controller missing BACnet object type",
+                    description="Point on BACnet controller missing BACnet object type",
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Set BACnet object type (AI, AO, AV, BI, BO, BV, etc.)",
-                    fix_suggestion=f"point.bacnet_object_type = 'AI'",
+                    fix_suggestion="point.bacnet_object_type = 'AI'",
                     auto_fixable=True,
                 ))
 
@@ -392,11 +386,11 @@ class GapAnalyzer:
                     category=GapCategory.INCONSISTENT_CONFIG,
                     severity=GapSeverity.HIGH,
                     title=f"Point {point.name} missing BACnet instance",
-                    description=f"Point on BACnet controller missing instance number",
+                    description="Point on BACnet controller missing instance number",
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Assign unique BACnet instance number per controller",
-                    fix_suggestion=f"point.bacnet_instance = 1",
+                    fix_suggestion="point.bacnet_instance = 1",
                     auto_fixable=True,
                 ))
 
@@ -421,11 +415,11 @@ class GapAnalyzer:
                     category=GapCategory.INCONSISTENT_CONFIG,
                     severity=GapSeverity.HIGH,
                     title=f"Point {point.name} missing Modbus register",
-                    description=f"Point on Modbus controller missing register address",
+                    description="Point on Modbus controller missing register address",
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Assign Modbus register address and type",
-                    fix_suggestion=f"point.modbus_register = 100; point.modbus_type = 'holding_register'",
+                    fix_suggestion="point.modbus_register = 100; point.modbus_type = 'holding_register'",
                     auto_fixable=True,
                 ))
 
@@ -440,7 +434,7 @@ class GapAnalyzer:
                     affected_object_type="point",
                     affected_object_id=point.name,
                     recommendation="Add description for documentation",
-                    fix_suggestion=f"point.description = 'Supply Air Temperature'",
+                    fix_suggestion="point.description = 'Supply Air Temperature'",
                     auto_fixable=True,
                 ))
 
@@ -472,7 +466,7 @@ class GapAnalyzer:
                     affected_object_type="controller",
                     affected_object_id=ctrl.id,
                     recommendation="Add protocol (BACnet/IP, Modbus/TCP, etc.)",
-                    fix_suggestion=f"ctrl.protocols = [Protocol.BACNET_IP]",
+                    fix_suggestion="ctrl.protocols = [Protocol.BACNET_IP]",
                     auto_fixable=True,
                 ))
 
@@ -487,7 +481,7 @@ class GapAnalyzer:
                     affected_object_type="controller",
                     affected_object_id=ctrl.id,
                     recommendation="Add network address for communication",
-                    fix_suggestion=f"ctrl.network_addresses.append(NetworkAddress(protocol=Protocol.BACNET_IP, address='192.168.1.10'))",
+                    fix_suggestion="ctrl.network_addresses.append(NetworkAddress(protocol=Protocol.BACNET_IP, address='192.168.1.10'))",
                     auto_fixable=True,
                 ))
 
@@ -502,7 +496,7 @@ class GapAnalyzer:
                     affected_object_type="controller",
                     affected_object_id=ctrl.id,
                     recommendation="Assign equipment to controller",
-                    fix_suggestion=f"ctrl.serves_equipment_ids = ['AHU-1', 'VAV-101']",
+                    fix_suggestion="ctrl.serves_equipment_ids = ['AHU-1', 'VAV-101']",
                     auto_fixable=True,
                 ))
 
@@ -560,7 +554,7 @@ class GapAnalyzer:
                     affected_object_type="controller",
                     affected_object_id=ctrl.id,
                     recommendation="Add vendor and model for documentation",
-                    fix_suggestion=f"ctrl.vendor = 'JCI'; ctrl.model = 'NAE55'",
+                    fix_suggestion="ctrl.vendor = 'JCI'; ctrl.model = 'NAE55'",
                     auto_fixable=True,
                 ))
 
@@ -580,7 +574,7 @@ class GapAnalyzer:
                         affected_object_type="equipment",
                         affected_object_id=equip.id,
                         recommendation="Fix controller ID or add missing controller",
-                        fix_suggestion=f"equip.controller_id = 'MPC-1' (existing)",
+                        fix_suggestion="equip.controller_id = 'MPC-1' (existing)",
                         metadata={"referenced_controller": equip.controller_id},
                     ))
                 elif equip.id not in ctrl.serves_equipment_ids:
@@ -589,7 +583,7 @@ class GapAnalyzer:
                         category=GapCategory.INCONSISTENT_CONFIG,
                         severity=GapSeverity.MEDIUM,
                         title=f"Equipment {equip.id} not in controller's served list",
-                        description=f"Equipment assigned to controller but controller doesn't list it",
+                        description="Equipment assigned to controller but controller doesn't list it",
                         affected_object_type="equipment",
                         affected_object_id=equip.id,
                         recommendation="Add equipment to controller's serves_equipment_ids",
@@ -648,7 +642,7 @@ class GapAnalyzer:
                         category=GapCategory.INCONSISTENT_CONFIG,
                         severity=GapSeverity.MEDIUM,
                         title=f"Point {point.name} not in controller's owned points",
-                        description=f"Point assigned to controller but controller doesn't list it as owned",
+                        description="Point assigned to controller but controller doesn't list it as owned",
                         affected_object_type="point",
                         affected_object_id=point.name,
                         recommendation="Add point to controller's owned_point_names",
@@ -847,7 +841,7 @@ class GapAnalyzer:
                     category=GapCategory.GENERATION_BLOCKER,
                     severity=GapSeverity.HIGH,
                     title=f"Controller {ctrl.id} has no protocols for export",
-                    description=f"Vendor exports require communication protocol definitions",
+                    description="Vendor exports require communication protocol definitions",
                     affected_object_type="controller",
                     affected_object_id=ctrl.id,
                     recommendation="Add protocols to controller",
@@ -861,10 +855,10 @@ def analyze_gaps(project: Project) -> GapAnalysisReport:
 
 
 __all__ = [
-    "GapAnalyzer",
-    "GapAnalysisReport",
     "Gap",
-    "GapSeverity",
+    "GapAnalysisReport",
+    "GapAnalyzer",
     "GapCategory",
+    "GapSeverity",
     "analyze_gaps",
 ]

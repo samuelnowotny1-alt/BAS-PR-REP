@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block page_title %}Station Sync - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl space-y-8">
+    <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Station Sync</h1>
+            <p class="mt-1 text-gray-500 dark:text-gray-400">
+                Configure a Niagara station target, test connectivity, and preview the sync plan before live writeback exists.
+            </p>
+        </div>
+        <a href="/project/{{ project.metadata.project_id }}/export" class="btn-secondary">
+            <i class="fas fa-download mr-2"></i>
+            Vendor Export
+        </a>
+    </div>
+
+    {% if flash_message %}
+    <div class="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200">
+        {{ flash_message }}
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 md:grid-cols-4">
+        <div class="card rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Protocol</p>
+            <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ station_connection.protocol.value }}</p>
+        </div>
+        <div class="card rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Host</p>
+            <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ station_connection.host or "Not configured" }}</p>
+        </div>
+        <div class="card rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Planned Items</p>
+            <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ station_plan.items|length }}</p>
+        </div>
+        <div class="card rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Last Probe</p>
+            <p class="mt-2 text-lg font-semibold {% if station_connection.last_test_status == 'success' %}text-green-600 dark:text-green-400{% elif station_connection.last_test_status == 'failed' %}text-red-600 dark:text-red-400{% else %}text-gray-900 dark:text-white{% endif %}">
+                {{ station_connection.last_test_status|capitalize if station_connection.last_test_status else "Not tested" }}
+            </p>
+        </div>
+    </div>
+
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Connection Settings</h2>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                This is the first real Station Sync target. Save settings first, then probe the station and review the generated sync plan.
+            </p>
+
+            <form method="post" action="/project/{{ project.metadata.project_id }}/station-sync/save" class="mt-6 space-y-5">
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Protocol</span>
+                        <select name="protocol" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="oBIX/HTTP" {% if station_connection.protocol.value == "oBIX/HTTP" %}selected{% endif %}>oBIX/HTTP</option>
+                            <option value="File Export" {% if station_connection.protocol.value == "File Export" %}selected{% endif %}>File Export</option>
+                        </select>
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Station Name</span>
+                        <input type="text" name="station_name" value="{{ station_connection.station_name or '' }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="jace-1" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Host</span>
+                        <input type="text" name="host" value="{{ station_connection.host or '' }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="192.168.1.25" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Port</span>
+                        <input type="number" name="port" value="{{ station_connection.port }}" min="1" max="65535" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Username</span>
+                        <input type="text" name="username" value="{{ station_connection.username or '' }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="niagara-user" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Password</span>
+                        <input type="password" name="password" value="" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="Stored in memory for this session" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">oBIX Path</span>
+                        <input type="text" name="obix_path" value="{{ station_connection.obix_path }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" placeholder="/obix" />
+                    </label>
+                    <label class="space-y-2">
+                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Timeout (s)</span>
+                        <input type="number" name="timeout_seconds" value="{{ station_connection.timeout_seconds }}" min="1" max="60" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white" />
+                    </label>
+                </div>
+
+                <div class="flex flex-wrap gap-6 text-sm text-gray-700 dark:text-gray-300">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="enabled" class="rounded border-gray-300 text-orange-500 focus:ring-orange-500" {% if station_connection.enabled %}checked{% endif %} />
+                        Enable station sync target
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="use_tls" class="rounded border-gray-300 text-orange-500 focus:ring-orange-500" {% if station_connection.use_tls %}checked{% endif %} />
+                        Use TLS
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" name="verify_tls" class="rounded border-gray-300 text-orange-500 focus:ring-orange-500" {% if station_connection.verify_tls %}checked{% endif %} />
+                        Verify TLS certificate
+                    </label>
+                </div>
+
+                <div class="flex flex-wrap gap-3 pt-2">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-save mr-2"></i>
+                        Save Configuration
+                    </button>
+                    <button type="submit" formaction="/project/{{ project.metadata.project_id }}/station-sync/probe" class="btn-secondary">
+                        <i class="fas fa-plug mr-2"></i>
+                        Save And Probe
+                    </button>
+                </div>
+            </form>
+
+            {% if probe_result %}
+            <div class="mt-6 rounded-xl border px-4 py-3 text-sm {% if probe_result.success %}border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200{% else %}border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200{% endif %}">
+                <div class="font-semibold">{{ probe_result.message }}</div>
+                <div class="mt-1 font-mono text-xs">{{ probe_result.endpoint }}</div>
+            </div>
+            {% elif station_connection.last_test_message %}
+            <div class="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
+                {{ station_connection.last_test_message }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="space-y-6">
+            <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Sync Plan</h2>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ station_plan.summary }}</p>
+
+                {% if station_plan.warnings %}
+                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                    {% for warning in station_plan.warnings %}
+                    <div>{{ warning }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="mt-5 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-50 dark:bg-gray-700/50">
+                            <tr>
+                                <th class="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Category</th>
+                                <th class="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Name</th>
+                                <th class="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            {% for item in station_plan.items[:18] %}
+                            <tr class="bg-white dark:bg-gray-800">
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ item.category }}</td>
+                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ item.name }}</td>
+                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ item.action }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if station_plan.items|length > 18 %}
+                <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    Showing the first 18 planned operations. The sync service is generating {{ station_plan.items|length }} total items.
+                </p>
+                {% endif %}
+            </div>
+
+            <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Current Target</h2>
+                <div class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-800 dark:text-white">Base URL:</span> {{ station_connection.base_url() if station_connection.host else "Not configured" }}</div>
+                    <div><span class="font-semibold text-gray-800 dark:text-white">oBIX URL:</span> {{ station_connection.obix_url() if station_connection.host else "Not configured" }}</div>
+                    <div><span class="font-semibold text-gray-800 dark:text-white">Target:</span> {{ station_connection.target.value }}</div>
+                    <div><span class="font-semibold text-gray-800 dark:text-white">Mode:</span> {{ "Enabled" if station_connection.enabled else "Disabled" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

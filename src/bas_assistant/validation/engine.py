@@ -1,26 +1,18 @@
 """Validation engine - checks completeness, consistency, naming, engineering constraints."""
 
-from typing import Optional
-from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 
 from pydantic import BaseModel, Field
 
 from ..models import (
-    Project,
+    Controller,
     Equipment,
     Point,
-    Controller,
     PointKind,
-    PointDirection,
-    PointSource,
-    ValidationSeverity,
+    Project,
     ValidationCategory,
-    EquipmentType,
+    ValidationSeverity,
 )
-from ..models.points import PointValidationIssue
-from ..models.equipment import EquipmentRelationship
 
 
 class ValidationRule(BaseModel):
@@ -44,7 +36,7 @@ class ValidationResult(BaseModel):
     severity: ValidationSeverity
     category: ValidationCategory
     message: str
-    field: Optional[str] = None
+    field: str | None = None
     passed: bool
 
 
@@ -275,7 +267,7 @@ BUILTIN_RULES: list[ValidationRule] = [
 class ValidationEngine:
     """Validates BAS project models against rules."""
 
-    def __init__(self, rules: Optional[list[ValidationRule]] = None):
+    def __init__(self, rules: list[ValidationRule] | None = None):
         self.rules = rules or BUILTIN_RULES
         self.enabled_rules = [r for r in self.rules if r.enabled]
 
@@ -686,9 +678,9 @@ class ValidationEngine:
 
 
 __all__ = [
-    "ValidationEngine",
-    "ValidationRule",
-    "ValidationResult",
-    "ValidationReport",
     "BUILTIN_RULES",
+    "ValidationEngine",
+    "ValidationReport",
+    "ValidationResult",
+    "ValidationRule",
 ]

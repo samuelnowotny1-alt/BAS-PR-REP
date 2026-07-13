@@ -9,7 +9,7 @@
         <p class="text-gray-500 dark:text-gray-400 mt-1">Upload CSV files to populate project data</p>
     </div>
 
-    <form hx-post="/project/{{ project.metadata.project_id }}/import" hx-target="#import-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
+    <form action="/project/{{ project.metadata.project_id }}/import" hx-post="/project/{{ project.metadata.project_id }}/import" hx-target="#import-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
         <div class="grid gap-6">
             <!-- Equipment Schedule -->
             <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -17,7 +17,7 @@
                     <i class="fas fa-building text-orange-500 mr-2"></i>
                     Equipment Schedule
                 </h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Equipment ID, Equipment Type. Optional: Subtype, Building, Floor, Room, Served Area, Controller ID, Parent/Child Equipment, Points, Design CFM/Tonnage/GPM/kW, Voltage, Phase, Status, Notes</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Equipment ID, Equipment Type. Optional: Subtype, Building, Floor, Room, Served Area, Controller ID, Parent/Child Equipment, Points, Design CFM/Tonnage/GPM/kW, Voltage, Phase, Status, Graphic Sections, Tags, Notes</p>
                 <input type="file" name="equipment_file" accept=".csv" class="input-field w-full">
             </div>
 

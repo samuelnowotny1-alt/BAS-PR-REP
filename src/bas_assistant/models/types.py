@@ -1,9 +1,9 @@
 """Core type definitions for BAS Assistant."""
 
 from enum import Enum
-from typing import Annotated, Literal
-from pydantic import BaseModel, Field, field_validator
-from pydantic.types import NonNegativeFloat, NonNegativeInt
+from typing import Annotated
+
+from pydantic import Field
 
 
 class PointKind(str, Enum):
@@ -115,15 +115,15 @@ NonNegInt = Annotated[int, Field(ge=0)]
 
 # Re-export
 __all__ = [
-    "PointKind",
-    "PointDirection",
-    "PointSource",
     "EquipmentType",
-    "Protocol",
-    "ValidationSeverity",
-    "ValidationCategory",
-    "UnitSystem",
     "NonEmptyStr",
-    "PositiveFloat",
     "NonNegInt",
+    "PointDirection",
+    "PointKind",
+    "PointSource",
+    "PositiveFloat",
+    "Protocol",
+    "UnitSystem",
+    "ValidationCategory",
+    "ValidationSeverity",
 ]

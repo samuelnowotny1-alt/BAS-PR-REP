@@ -1,8 +1,8 @@
 """Logic model - structured control logic representation."""
 
-from typing import Optional
-from pydantic import BaseModel, Field
 from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 from . import NonEmptyStr
 
@@ -13,11 +13,11 @@ class LogicSignal(BaseModel):
     name: NonEmptyStr
     data_type: str = Field(description="boolean, analog, integer, enum, string")
     description: str = ""
-    units: Optional[str] = None
-    default_value: Optional[str] = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    point_ref: Optional[str] = None
+    units: str | None = None
+    default_value: str | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    point_ref: str | None = None
     is_input: bool = True
     is_output: bool = False
     is_parameter: bool = False
@@ -30,9 +30,9 @@ class LogicParameter(BaseModel):
     value: str
     data_type: str = Field(description="boolean, analog, integer, enum, string")
     description: str = ""
-    units: Optional[str] = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
+    units: str | None = None
+    min_value: float | None = None
+    max_value: float | None = None
     tunable: bool = True
 
 
@@ -64,7 +64,7 @@ class LogicDiagram(BaseModel):
 
     diagram_id: NonEmptyStr
     name: str
-    equipment_id: Optional[NonEmptyStr] = None
+    equipment_id: NonEmptyStr | None = None
     description: str = ""
     blocks: list[LogicBlock] = Field(default_factory=list)
     connections: list[LogicConnection] = Field(default_factory=list)
@@ -83,4 +83,4 @@ class LogicDiagram(BaseModel):
         return next((b for b in self.blocks if b.block_id == block_id), None)
 
 
-__all__ = ["LogicSignal", "LogicParameter", "LogicConnection", "LogicBlock", "LogicDiagram"]
+__all__ = ["LogicBlock", "LogicConnection", "LogicDiagram", "LogicParameter", "LogicSignal"]

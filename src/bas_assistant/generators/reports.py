@@ -1,13 +1,12 @@
 """Report generator - submittal reports, equipment schedules, point summaries."""
 
-from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
-from ..models import Project, Equipment, Point, Controller, PointKind, EquipmentType
+from ..models import Project
 
 
 @dataclass

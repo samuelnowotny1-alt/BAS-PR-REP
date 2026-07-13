@@ -1,29 +1,27 @@
 """Importers - normalize source files into structured models."""
 
-import csv
 import json
-from pathlib import Path
-from typing import Optional
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel, Field
 
+from ..generators.graphics import GraphicsGenerator
 from ..models import (
-    Project,
-    ProjectMetadata,
-    SourceDocument,
+    Controller,
     Equipment,
     EquipmentType,
     Point,
-    PointKind,
     PointDirection,
+    PointKind,
     PointSource,
-    Controller,
+    Project,
+    ProjectMetadata,
     Protocol,
-    UnitSystem,
+    SourceDocument,
 )
-from ..models.equipment import EquipmentRelationship
+from ..models.equipment import EquipmentTemplateRef
 
 
 class ImportResult(BaseModel):
@@ -109,6 +107,7 @@ class CSVImporter:
                     phase=self._parse_int(row.get("Phase")),
                     status=str(row.get("Status", "design")).strip(),
                     notes=str(row.get("Notes", "")).strip() or None,
+                    tags=[t.strip() for t in (self._parse_str(row.get("Tags")) or "").split(",") if t.strip()],
                 )
 
                 parent_id = str(row.get("Parent Equipment", "")).strip()
@@ -122,6 +121,20 @@ class CSVImporter:
                 points_str = str(row.get("Points", "")).strip()
                 if points_str:
                     equipment.point_names = [p.strip() for p in points_str.split(",")]
+
+                graphic_sections = self._parse_str(row.get("Graphic Sections"))
+                if graphic_sections:
+                    valid_sections, invalid_sections = GraphicsGenerator.parse_ahu_graphic_sections(graphic_sections)
+                    if invalid_sections:
+                        warnings.append(
+                            f"Equipment '{equip_id}': ignored invalid graphic sections {', '.join(invalid_sections)}"
+                        )
+                    graphic_sections = ",".join(valid_sections)
+                if graphic_sections:
+                    equipment.template = EquipmentTemplateRef(
+                        template_name="graphic_layout",
+                        parameters={"graphic_sections": graphic_sections},
+                    )
 
                 self.project.add_equipment(equipment)
                 count += 1
@@ -366,7 +379,7 @@ class CSVImporter:
             warnings=warnings,
         )
 
-    def _parse_float(self, value) -> Optional[float]:
+    def _parse_float(self, value) -> float | None:
         if value is None or (isinstance(value, float) and pd.isna(value)):
             return None
         try:
@@ -374,7 +387,7 @@ class CSVImporter:
         except (ValueError, TypeError):
             return None
 
-    def _parse_int(self, value) -> Optional[int]:
+    def _parse_int(self, value) -> int | None:
         if value is None or (isinstance(value, float) and pd.isna(value)):
             return None
         try:
@@ -382,7 +395,7 @@ class CSVImporter:
         except (ValueError, TypeError):
             return None
 
-    def _parse_str(self, value) -> Optional[str]:
+    def _parse_str(self, value) -> str | None:
         if value is None or (isinstance(value, float) and pd.isna(value)):
             return None
         s = str(value).strip()
@@ -435,7 +448,7 @@ class JSONImporter:
 
         return ImportResult(
             success=True,
-            message=f"Imported project from JSON",
+            message="Imported project from JSON",
             equipment_count=equip_count,
             points_count=point_count,
             controllers_count=ctrl_count,
@@ -465,7 +478,9 @@ def create_sample_csvs(output_dir: Path) -> None:
         "Voltage": "460",
         "Phase": 3,
         "Status": "design",
+        "Graphic Sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge",
         "Notes": "Main AHU for floor 1",
+        "Tags": "ahu,main",
     }])
     equip_template.to_csv(output_dir / "equipment_schedule.csv", index=False)
 
@@ -515,4 +530,4 @@ def create_sample_csvs(output_dir: Path) -> None:
     ctrl_template.to_csv(output_dir / "controller_schedule.csv", index=False)
 
 
-__all__ = ["CSVImporter", "JSONImporter", "ImportResult", "create_sample_csvs"]
+__all__ = ["CSVImporter", "ImportResult", "JSONImporter", "create_sample_csvs"]

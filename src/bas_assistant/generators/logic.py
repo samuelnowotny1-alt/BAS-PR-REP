@@ -1,12 +1,19 @@
 """Logic generator - generates logic diagrams from equipment and sequences."""
 
-from pathlib import Path
-from typing import Optional
 import json
+from pathlib import Path
 
 from ..models import (
-    Project, Equipment, Point, PointKind, EquipmentType,
-    LogicDiagram, LogicBlock, LogicSignal, LogicParameter, LogicConnection,
+    Equipment,
+    EquipmentType,
+    LogicBlock,
+    LogicConnection,
+    LogicDiagram,
+    LogicParameter,
+    LogicSignal,
+    Point,
+    PointKind,
+    Project,
 )
 
 
@@ -61,7 +68,7 @@ class LogicGenerator:
         self.diagrams[diagram.diagram_id] = diagram
         return diagram
 
-    def _find_point(self, points: list[Point], name_fragment: str) -> Optional[str]:
+    def _find_point(self, points: list[Point], name_fragment: str) -> str | None:
         """Find a point by name fragment."""
         for p in points:
             if name_fragment.lower() in p.name.lower():

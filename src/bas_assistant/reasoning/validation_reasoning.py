@@ -1,14 +1,16 @@
 """Validation Reasoning - Engineering rule validation and compliance checking."""
 
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime
 
 from ..models import (
-    Project, Equipment, Point, Controller, PointKind, EquipmentType,
-    ValidationSeverity, ValidationCategory
+    Controller,
+    Equipment,
+    EquipmentType,
+    Point,
+    PointKind,
+    ValidationCategory,
+    ValidationSeverity,
 )
 
 
@@ -780,8 +782,8 @@ def validate_engineering_rules(project) -> list[ValidationFinding]:
 
 
 __all__ = [
-    "EngineeringRulesEngine",
     "EngineeringRule",
+    "EngineeringRulesEngine",
     "ValidationFinding",
     "ValidationRuleType",
     "validate_engineering_rules",

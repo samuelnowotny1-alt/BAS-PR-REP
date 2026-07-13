@@ -7,8 +7,8 @@
     "location": "Test Lab",
     "timezone": null,
     "unit_system": "IP",
-    "created_at": "2026-07-12T03:22:33.796288",
-    "updated_at": "2026-07-12T03:22:33.796291",
+    "created_at": "2026-07-12T17:57:48.795408",
+    "updated_at": "2026-07-12T17:57:48.796211",
     "design_phase": "CD",
     "naming_standard": "ASHRAE-135",
     "bacnet_network_number": null,
@@ -16,10 +16,42 @@
     "programmer": "Test Programmer",
     "commissioning_agent": "Test Cx"
   },
-  "equipment": [],
+  "equipment": [
+    {
+      "id": "AHU-1",
+      "type": "AHU",
+      "subtype": null,
+      "building": null,
+      "floor": null,
+      "room": null,
+      "served_area": null,
+      "parent_equipment_id": null,
+      "child_equipment_ids": [],
+      "relationships": [],
+      "controller_id": null,
+      "point_names": [],
+      "template": {
+        "template_name": "graphic_layout",
+        "parameters": {
+          "graphic_sections": "outside_air,energy_recovery,filter,cooling_coil,heating_coil,supply_fan,discharge"
+        }
+      },
+      "sequence_ref": null,
+      "design_cfm": null,
+      "design_tonnage": null,
+      "design_gpm": null,
+      "design_kw": null,
+      "voltage": null,
+      "phase": null,
+      "status": "design",
+      "tags": [],
+      "notes": null
+    }
+  ],
   "points": [],
   "controllers": [],
   "source_documents": [],
+  "station_connection": null,
   "validation_status": "pending",
   "last_validated": null
 }

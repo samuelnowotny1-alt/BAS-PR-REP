@@ -1,11 +1,10 @@
 """Assumptions Tracking - Documents and traces assumptions made during design."""
 
-from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime
 import json
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
 
 
 class AssumptionStatus(str, Enum):
@@ -41,8 +40,8 @@ class Assumption:
     status: AssumptionStatus = AssumptionStatus.PENDING
     source: str = ""  # Who made the assumption
     created_at: datetime = field(default_factory=datetime.now)
-    verified_at: Optional[datetime] = None
-    verified_by: Optional[str] = None
+    verified_at: datetime | None = None
+    verified_by: str | None = None
     related_objects: list[str] = field(default_factory=list)  # equipment IDs, point names, etc.
     dependencies: list[str] = field(default_factory=list)  # Other assumption IDs this depends on
     impacts: list[str] = field(default_factory=list)  # What breaks if this is wrong
@@ -86,7 +85,7 @@ class AssumptionSet:
         self.assumptions.append(assumption)
         self.updated_at = datetime.now()
 
-    def get_by_id(self, assumption_id: str) -> Optional[Assumption]:
+    def get_by_id(self, assumption_id: str) -> Assumption | None:
         return next((a for a in self.assumptions if a.assumption_id == assumption_id), None)
 
     def get_by_category(self, category: AssumptionCategory) -> list[Assumption]:
@@ -189,7 +188,7 @@ class AssumptionTracker:
                 return True
         return False
 
-    def get_assumption(self, assumption_id: str) -> Optional[Assumption]:
+    def get_assumption(self, assumption_id: str) -> Assumption | None:
         for asm_set in self.assumption_sets.values():
             asm = asm_set.get_by_id(assumption_id)
             if asm:
@@ -412,11 +411,11 @@ def create_bas_assumptions(project_id: str) -> AssumptionTracker:
 
 
 __all__ = [
-    "AssumptionTracker",
-    "AssumptionSet",
-    "Assumption",
-    "AssumptionStatus",
-    "AssumptionCategory",
     "BAS_ASSUMPTION_TEMPLATES",
+    "Assumption",
+    "AssumptionCategory",
+    "AssumptionSet",
+    "AssumptionStatus",
+    "AssumptionTracker",
     "create_bas_assumptions",
 ]

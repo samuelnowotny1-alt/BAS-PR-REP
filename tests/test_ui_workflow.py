@@ -8,6 +8,7 @@ from starlette.requests import Request
 from bas_assistant.generators import generate_reports
 from bas_assistant.importers import CSVImporter
 from bas_assistant.models import Equipment, EquipmentType, Project, ProjectMetadata, UnitSystem
+from bas_assistant.models.station_sync import StationProbeResult
 from bas_assistant.models.types import ValidationCategory, ValidationSeverity
 from bas_assistant.validation import ValidationReport, ValidationResult
 from ui.api import main
@@ -44,7 +45,10 @@ def response_text(response: Any) -> str:
 def isolated_ui_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     output_dir = tmp_path / "output"
     output_dir.mkdir()
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
     monkeypatch.setattr(main, "OUTPUT_DIR", output_dir)
+    monkeypatch.setattr(main, "DATA_DIR", data_dir)
     main.projects.clear()
 
 
@@ -96,7 +100,7 @@ def test_create_project_persists_form_fields_and_detail_loads() -> None:
     assert project.metadata.commissioning_agent == "Test Cx"
     assert project.metadata.naming_standard == "ASHRAE-135"
 
-    saved_project = main.OUTPUT_DIR / "projects" / project_id / "project.json"
+    saved_project = main.DATA_DIR / "projects" / project_id / "project.json"
     assert saved_project.exists()
 
     detail = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
@@ -138,6 +142,7 @@ def test_main_project_pages_render_for_empty_project() -> None:
         (main.graphics_page, f"/project/{project_id}/graphics"),
         (main.logic_page, f"/project/{project_id}/logic"),
         (main.export_page, f"/project/{project_id}/export"),
+        (main.station_sync_page, f"/project/{project_id}/station-sync"),
         (main.sequence_page, f"/project/{project_id}/sequence"),
         (main.troubleshoot_page, f"/project/{project_id}/troubleshoot"),
         (main.assumptions_page, f"/project/{project_id}/assumptions"),
@@ -212,6 +217,81 @@ def test_graphics_page_includes_symbol_library() -> None:
     assert "Graphics Library" in text
     assert "Library Symbol" in text
     assert "ahu" in text
+
+
+def test_station_sync_save_persists_configuration() -> None:
+    project_id = create_project()
+
+    response = run_async(
+        main.save_station_sync_config(
+            request(f"/project/{project_id}/station-sync/save", method="POST"),
+            project_id,
+            enabled="on",
+            protocol="oBIX/HTTP",
+            host="10.1.2.3",
+            port=8443,
+            use_tls="on",
+            verify_tls=None,
+            station_name="JACE-1",
+            username="station-user",
+            password="secret",
+            obix_path="/obix",
+            timeout_seconds=12,
+        )
+    )
+
+    project = main.projects[project_id]
+    assert response.status_code == 200
+    assert project.station_connection is not None
+    assert project.station_connection.enabled is True
+    assert project.station_connection.host == "10.1.2.3"
+    assert project.station_connection.port == 8443
+    assert project.station_connection.use_tls is True
+    assert project.station_connection.verify_tls is False
+    assert project.station_connection.station_name == "JACE-1"
+    assert main.station_sync_passwords[project_id] == "secret"
+    assert "Station sync configuration saved." in response_text(response)
+
+
+def test_station_sync_probe_updates_last_probe_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    project_id = create_project()
+
+    def fake_probe(self, config, password=None):
+        assert config.host == "jace.local"
+        assert password == "topsecret"
+        return StationProbeResult(
+            success=True,
+            endpoint=config.obix_url(),
+            status_code=200,
+            message="Station endpoint responded.",
+        )
+
+    monkeypatch.setattr(main.StationSyncService, "probe", fake_probe)
+
+    response = run_async(
+        main.probe_station_sync(
+            request(f"/project/{project_id}/station-sync/probe", method="POST"),
+            project_id,
+            enabled="on",
+            protocol="oBIX/HTTP",
+            host="jace.local",
+            port=443,
+            use_tls="on",
+            verify_tls="on",
+            station_name="JACE-TEST",
+            username="niagara",
+            password="topsecret",
+            obix_path="/obix",
+            timeout_seconds=10,
+        )
+    )
+
+    project = main.projects[project_id]
+    assert response.status_code == 200
+    assert project.station_connection is not None
+    assert project.station_connection.last_test_status == "success"
+    assert project.station_connection.last_test_message == "Station endpoint responded."
+    assert "Station endpoint responded." in response_text(response)
 
 
 def test_validate_page_includes_filters_and_export_link(
@@ -354,6 +434,7 @@ def test_add_assumption_redirects_with_valid_category() -> None:
 
     response = run_async(
         main.add_assumption(
+            request=request(f"/project/{project_id}/assumptions", method="POST"),
             project_id=project_id,
             category="design",
             title="Design Weather",

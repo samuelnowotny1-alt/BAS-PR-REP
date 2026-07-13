@@ -1,6 +1,6 @@
 """Graphics model - structured graphics definitions."""
 
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from . import NonEmptyStr
@@ -15,13 +15,13 @@ class GraphicElement(BaseModel):
     width: float = Field(default=0, description="Normalized width 0-1")
     height: float = Field(default=0, description="Normalized height 0-1")
     rotation: float = Field(default=0, description="Rotation in degrees")
-    fill: Optional[str] = None
-    stroke: Optional[str] = None
+    fill: str | None = None
+    stroke: str | None = None
     stroke_width: float = 1
-    text: Optional[str] = None
+    text: str | None = None
     font_size: float = 12
     font_family: str = "Arial"
-    symbol_name: Optional[str] = None
+    symbol_name: str | None = None
     layer: str = "default"
 
 
@@ -32,10 +32,10 @@ class GraphicBinding(BaseModel):
     binding_type: str = Field(description="value, setpoint, status, alarm, trend, override, command")
     x: float = Field(description="Normalized X position 0-1")
     y: float = Field(description="Normalized Y position 0-1")
-    label: Optional[str] = None
-    format: Optional[str] = None
-    color_map: Optional[dict] = None
-    min_max: Optional[tuple[float, float]] = None
+    label: str | None = None
+    format: str | None = None
+    color_map: dict | None = None
+    min_max: tuple[float, float] | None = None
 
 
 class GraphicNavigation(BaseModel):
@@ -55,7 +55,7 @@ class GraphicDefinition(BaseModel):
     graphic_id: NonEmptyStr
     name: str
     graphic_type: str = Field(description="equipment, system, floor_plan, riser, schematic, dashboard, alarm, trend")
-    equipment_id: Optional[NonEmptyStr] = None
+    equipment_id: NonEmptyStr | None = None
     width: int = 1200
     height: int = 800
     background: str = "white"
@@ -65,4 +65,4 @@ class GraphicDefinition(BaseModel):
     metadata: dict = Field(default_factory=dict)
 
 
-__all__ = ["GraphicElement", "GraphicBinding", "GraphicNavigation", "GraphicDefinition"]
+__all__ = ["GraphicBinding", "GraphicDefinition", "GraphicElement", "GraphicNavigation"]

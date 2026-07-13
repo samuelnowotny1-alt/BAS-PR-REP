@@ -1,13 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BAS Assistant{% endblock %}</title>
+    <title>{% block page_title %}BAS Assistant{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -15,215 +13,356 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#fef7ee',
-                            100: '#fdedd6',
-                            200: '#fad6ac',
-                            300: '#f6b97a',
-                            400: '#f19346',
-                            500: '#ed741d',
-                            600: '#e05910',
-                            700: '#bc4110',
-                            800: '#963614',
-                            900: '#782f13',
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
                         }
                     }
                 }
             }
         }
-        mermaid.initialize({ startOnLoad: true, theme: 'default' });
     </script>
     <style>
-        .htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
-        .htmx-request .htmx-indicator { opacity: 1; }
-        .htmx-request.htmx-indicator { opacity: 1; }
-        .sidebar-link { transition: all 0.2s ease; }
-        .sidebar-link:hover { background-color: #fed7aa; padding-left: 1.5rem; }
-        .dark .sidebar-link:hover { background-color: #9a3412; }
-        .card { transition: box-shadow 0.2s ease; }
-        .card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-        .table-row:hover { background-color: #fef7ee; }
-        .dark .table-row:hover { background-color: #7c2d12; }
+        .input-field {
+            @apply w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all;
+        }
+        .btn-primary {
+            @apply px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all font-medium;
+        }
+        .btn-secondary {
+            @apply px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-all font-medium;
+        }
+        .card {
+            @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
+        }
+        .app-shell {
+            @apply min-h-screen lg:flex;
+        }
+        .sidebar-overlay {
+            @apply fixed inset-0 z-30 hidden bg-slate-950/45 lg:hidden;
+        }
+        .sidebar-shell {
+            @apply fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 -translate-x-full flex-col border-r border-gray-200 bg-white transition-all duration-300 dark:border-gray-700 dark:bg-gray-900 lg:static lg:translate-x-0;
+        }
+        .sidebar-shell.is-open {
+            @apply translate-x-0;
+        }
+        .sidebar-shell.is-collapsed {
+            @apply lg:w-24;
+        }
+        .sidebar-brand {
+            @apply flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800;
+        }
+        .sidebar-meta {
+            @apply rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800;
+        }
+        .sidebar-meta-kicker {
+            @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500;
+        }
+        .sidebar-meta-name {
+            @apply mt-2 truncate text-sm font-semibold text-gray-900 dark:text-white;
+        }
+        .sidebar-meta-id {
+            @apply mt-1 truncate text-xs text-gray-500 dark:text-gray-400;
+        }
+        .sidebar-nav {
+            @apply flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-4;
+        }
+        .sidebar-link {
+            @apply flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-sm font-medium leading-5 text-gray-600 transition-all hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white;
+        }
+        .sidebar-link.active {
+            @apply border-primary-200 bg-primary-50 text-primary-700 shadow-sm dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-300;
+        }
+        .sidebar-link-icon {
+            @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-300;
+        }
+        .sidebar-link.active .sidebar-link-icon {
+            @apply bg-primary-100 text-primary-700 dark:bg-primary-800/60 dark:text-primary-200;
+        }
+        .sidebar-link-label {
+            @apply truncate text-sm;
+        }
+        .sidebar-shell.is-collapsed .sidebar-brand,
+        .sidebar-shell.is-collapsed .sidebar-meta {
+            @apply px-3;
+        }
+        .sidebar-shell.is-collapsed .sidebar-meta {
+            @apply py-3;
+        }
+        .sidebar-shell.is-collapsed .sidebar-meta-copy,
+        .sidebar-shell.is-collapsed .sidebar-brand-copy,
+        .sidebar-shell.is-collapsed .sidebar-link-label {
+            @apply hidden;
+        }
+        .sidebar-shell.is-collapsed .sidebar-link {
+            @apply justify-center px-2;
+        }
+        .sidebar-shell.is-collapsed .sidebar-link-icon {
+            @apply h-11 w-11;
+        }
+        .content-shell {
+            @apply flex min-w-0 flex-1 flex-col;
+        }
+        .topbar-button {
+            @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white;
+        }
+        .new-project-link {
+            @apply inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-200 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 min-h-screen flex">
-    <!-- Sidebar -->
-    <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0" id="sidebar">
-        <div class="flex flex-col h-full">
-            <!-- Logo -->
-            <div class="flex items-center justify-center h-16 border-b border-gray-200 dark:border-gray-700">
-                <a href="/" class="flex items-center space-x-2">
-                    <i class="fas fa-fan text-2xl text-orange-500"></i>
-                    <span class="text-xl font-bold text-gray-800 dark:text-white">BAS Assistant</span>
-                </a>
+<body class="min-h-full bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+    <div class="app-shell">
+        {% if project %}
+        <aside id="sidebar" class="sidebar-shell">
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700">
+                <div class="flex items-center justify-between gap-3">
+                    <a href="/" class="sidebar-brand min-w-0 flex-1">
+                        <i class="fas fa-building shrink-0 text-2xl text-primary-600"></i>
+                        <div class="sidebar-brand-copy min-w-0">
+                            <div class="truncate text-lg font-bold text-gray-800 dark:text-white">BAS Assistant</div>
+                            <div class="truncate text-xs text-gray-500 dark:text-gray-400">Project Workspace</div>
+                        </div>
+                    </a>
+                    <button type="button" class="topbar-button hidden lg:inline-flex" onclick="toggleDesktopSidebar()" title="Collapse sidebar">
+                        <i class="fas fa-panel-left"></i>
+                    </button>
+                    <button type="button" class="topbar-button lg:hidden" onclick="closeSidebar()" title="Close sidebar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
             </div>
-
-            <!-- Navigation -->
-            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-                {% if project %}
-                <a href="/project/{{ project.metadata.project_id }}" 
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-home"></i>
-                    <span>Overview</span>
+            <div class="p-4">
+                <div class="sidebar-meta">
+                    <div class="sidebar-meta-copy">
+                        <div class="sidebar-meta-kicker">Active Project</div>
+                        <div class="sidebar-meta-name">{{ project.metadata.name }}</div>
+                        <div class="sidebar-meta-id">{{ project.metadata.project_id }}</div>
+                    </div>
+                    <div class="hidden items-center justify-center text-primary-600 lg:flex">
+                        <i class="fas fa-diagram-project text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/project/{{ project.metadata.project_id }}" class="sidebar-link {% if request.url.path == '/project/' ~ project.metadata.project_id %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
+                    <span class="sidebar-link-label">Dashboard</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/import"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-upload"></i>
-                    <span>Import Data</span>
+                <a href="/project/{{ project.metadata.project_id }}/import" class="sidebar-link {% if '/import' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-file-import"></i></span>
+                    <span class="sidebar-link-label">Import Data</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/validate"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-check-circle"></i>
-                    <span>Validate</span>
+                <a href="/project/{{ project.metadata.project_id }}/validate" class="sidebar-link {% if '/validate' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-check-circle"></i></span>
+                    <span class="sidebar-link-label">Validate</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/gaps"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-search"></i>
-                    <span>Gap Analysis</span>
+                <a href="/project/{{ project.metadata.project_id }}/gaps" class="sidebar-link {% if '/gaps' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-search"></i></span>
+                    <span class="sidebar-link-label">Gap Analysis</span>
                 </a>
-
-                <hr class="border-gray-200 dark:border-gray-700 my-2">
-
-                <a href="/project/{{ project.metadata.project_id }}/checkout"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>Checkout Sheets</span>
+                <a href="/project/{{ project.metadata.project_id }}/checkout" class="sidebar-link {% if '/checkout' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-clipboard-check"></i></span>
+                    <span class="sidebar-link-label">Checkout Sheets</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/reports"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Reports</span>
+                <a href="/project/{{ project.metadata.project_id }}/reports" class="sidebar-link {% if '/reports' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-file-alt"></i></span>
+                    <span class="sidebar-link-label">Reports</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/graphics"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-chart-area"></i>
-                    <span>Graphics</span>
+                <a href="/project/{{ project.metadata.project_id }}/graphics" class="sidebar-link {% if '/graphics' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-image"></i></span>
+                    <span class="sidebar-link-label">Graphics</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/logic"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-sitemap"></i>
-                    <span>Logic Diagrams</span>
+                <a href="/project/{{ project.metadata.project_id }}/logic" class="sidebar-link {% if '/logic' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-sitemap"></i></span>
+                    <span class="sidebar-link-label">Logic Diagrams</span>
                 </a>
-
-                <hr class="border-gray-200 dark:border-gray-700 my-2">
-
-                <a href="/project/{{ project.metadata.project_id }}/export"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-download"></i>
-                    <span>Export</span>
+                <a href="/project/{{ project.metadata.project_id }}/export" class="sidebar-link {% if '/export' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-download"></i></span>
+                    <span class="sidebar-link-label">Export</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/sequence"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-file-alt"></i>
-                    <span>Sequence Parser</span>
+                <a href="/project/{{ project.metadata.project_id }}/station-sync" class="sidebar-link {% if '/station-sync' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-plug"></i></span>
+                    <span class="sidebar-link-label">Station Sync</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/troubleshoot"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-tools"></i>
-                    <span>Troubleshooting</span>
+                <a href="/project/{{ project.metadata.project_id }}/sequence" class="sidebar-link {% if '/sequence' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-code"></i></span>
+                    <span class="sidebar-link-label">Sequence Parser</span>
                 </a>
-
-                <a href="/project/{{ project.metadata.project_id }}/assumptions"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-lightbulb"></i>
-                    <span>Assumptions</span>
+                <a href="/project/{{ project.metadata.project_id }}/troubleshoot" class="sidebar-link {% if '/troubleshoot' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-tools"></i></span>
+                    <span class="sidebar-link-label">Troubleshooting</span>
                 </a>
-                {% else %}
-                <a href="/project/new"
-                   class="sidebar-link flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 font-medium">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>New Project</span>
+                <a href="/project/{{ project.metadata.project_id }}/assumptions" class="sidebar-link {% if '/assumptions' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-list-alt"></i></span>
+                    <span class="sidebar-link-label">Assumptions</span>
                 </a>
-                {% endif %}
             </nav>
-
-            <!-- Footer -->
-            <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                    <i class="fas fa-info-circle"></i>
-                    <span>BAS Assistant v0.1.0</span>
+            <div class="border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+                <div class="text-center text-xs text-gray-400 dark:text-gray-500">
+                    <p>BAS Assistant v0.1.0</p>
+                    <p class="mt-1">Building Automation System Design Tool</p>
                 </div>
             </div>
-        </div>
-    </aside>
-
-    <!-- Mobile sidebar overlay -->
-    <div class="fixed inset-0 z-40 bg-black bg-opacity-50 hidden lg:hidden" id="sidebar-overlay"></div>
-
-    <!-- Main Content -->
-    <main class="flex-1 lg:ml-64 min-h-screen">
-        <!-- Top Bar -->
-        <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
-            <div class="flex items-center justify-between px-4 py-3">
-                <div class="flex items-center space-x-4">
-                    <button type="button" class="lg:hidden text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" id="sidebar-toggle">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                    <h1 class="text-xl font-bold text-gray-800 dark:text-white">
-                        {% block page_title %}BAS Assistant{% endblock %}
-                    </h1>
+        </aside>
+        {% endif %}
+        <div class="content-shell">
+            <!-- Top Bar -->
+            <header class="sticky top-0 z-20 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-6">
+                    <div class="flex min-w-0 items-center gap-3">
+                        {% if project %}
+                        <button type="button" class="topbar-button lg:hidden" onclick="openSidebar()" title="Open sidebar">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        {% else %}
+                        <a href="/" class="flex min-w-0 items-center gap-3">
+                            <i class="fas fa-building text-2xl text-primary-600"></i>
+                            <div class="min-w-0">
+                                <div class="truncate text-lg font-bold text-gray-800 dark:text-white">BAS Assistant</div>
+                            </div>
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-center gap-3">
+                        {% if not project %}
+                        <a href="/project/new" class="new-project-link">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>New Project</span>
+                        </a>
+                        {% endif %}
+                        <button onclick="toggleDarkMode()" class="topbar-button" title="Toggle dark mode">
+                            <i class="fas fa-sun dark:hidden"></i>
+                            <i class="fas fa-moon hidden dark:block"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    {% if project %}
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
-                        {{ project.metadata.project_id }}
-                    </span>
-                    {% endif %}
-                    <button type="button" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700" id="theme-toggle">
-                        <i class="fas fa-sun text-xl dark:hidden"></i>
-                        <i class="fas fa-moon text-xl hidden dark:block"></i>
+            </header>
+            
+            <!-- Page Content -->
+            <main class="flex-1 overflow-auto p-4 lg:p-6">
+            {% if messages %}
+            <div class="mb-6" id="messages">
+                {% for message in messages %}
+                <div class="mb-3 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800{% elif message.tags == 'error' %}bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800{% else %}bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800{% endif %} flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        {% if message.tags == 'success' %}
+                        <i class="fas fa-check-circle text-green-500"></i>
+                        {% elif message.tags == 'error' %}
+                        <i class="fas fa-exclamation-circle text-red-500"></i>
+                        {% else %}
+                        <i class="fas fa-info-circle text-blue-500"></i>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                    </div>
+                    <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
+                {% endfor %}
             </div>
-        </header>
-
-        <!-- Page Content -->
-        <div class="p-4 lg:p-6">
+            {% endif %}
+            
             {% block content %}{% endblock %}
+            </main>
+            {% if not project %}
+            <footer class="border-t border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-800 lg:px-6">
+                <div class="text-center text-xs text-gray-400 dark:text-gray-500">
+                    <p>BAS Assistant v0.1.0</p>
+                    <p class="mt-1">Building Automation System Design Tool</p>
+                </div>
+            </footer>
+            {% endif %}
         </div>
-    </main>
-
+    </div>
+    
     <script>
-        // Theme toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const html = document.documentElement;
-        
-        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
+        // Dark mode handling
+        function initDarkMode() {
+            if (localStorage.getItem('darkMode') === 'true' || 
+                (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
         }
         
-        themeToggle.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-        });
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+        }
+        
+        function openSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (!sidebar || !overlay) return;
+            sidebar.classList.add('is-open');
+            overlay.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
 
-        // Sidebar toggle for mobile
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebar-overlay');
-        
-        sidebarToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
-        });
-        
-        overlay.addEventListener('click', () => {
-            sidebar.classList.add('-translate-x-full');
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (!sidebar || !overlay) return;
+            sidebar.classList.remove('is-open');
             overlay.classList.add('hidden');
-        });
+            document.body.classList.remove('overflow-hidden');
+        }
 
-        // Re-initialize mermaid on HTMX content swap
-        document.body.addEventListener('htmx:afterSwap', (e) => {
-            if (window.mermaid) {
-                mermaid.init(undefined, e.target.querySelectorAll('.mermaid'));
+        function applyDesktopSidebarState(collapsed) {
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            sidebar.classList.toggle('is-collapsed', collapsed);
+            localStorage.setItem('sidebarCollapsed', collapsed ? 'true' : 'false');
+        }
+
+        function toggleDesktopSidebar() {
+            if (window.innerWidth < 1024) {
+                openSidebar();
+                return;
+            }
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar) return;
+            applyDesktopSidebarState(!sidebar.classList.contains('is-collapsed'));
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initDarkMode();
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                applyDesktopSidebarState(localStorage.getItem('sidebarCollapsed') === 'true');
+                document.querySelectorAll('#sidebar a').forEach((link) => {
+                    link.addEventListener('click', () => {
+                        if (window.innerWidth < 1024) {
+                            closeSidebar();
+                        }
+                    });
+                });
+            }
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) {
+                    closeSidebar();
+                }
+            });
+        });
+        
+        // HTMX event listeners
+        document.body.addEventListener('htmx:afterSwap', (evt) => {
+            // Re-initialize any components after HTMX swap
+            if (evt.detail.target.id === 'messages') {
+                // Messages were updated
             }
         });
     </script>

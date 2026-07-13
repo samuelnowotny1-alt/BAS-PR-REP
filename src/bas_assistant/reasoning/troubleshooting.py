@@ -1,14 +1,12 @@
 """Troubleshooting Assistant - Analyzes trends, alarms, and system behavior for diagnostics."""
 
-from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
-from collections import defaultdict
 import statistics
+from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
 
-from ..models import Project, Point, PointKind, Equipment, EquipmentType
+from ..models import Equipment, EquipmentType, Point, PointKind, Project
 
 
 class IssueSeverity(str, Enum):
@@ -48,8 +46,8 @@ class TrendData:
     point_name: str
     points: list[TrendPoint] = field(default_factory=list)
     interval_seconds: int = 900  # 15 min default
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    start_time: datetime | None = None
+    end_time: datetime | None = None
 
     @property
     def values(self) -> list[float]:
@@ -60,25 +58,25 @@ class TrendData:
         return len(self.values)
 
     @property
-    def mean(self) -> Optional[float]:
+    def mean(self) -> float | None:
         if not self.values:
             return None
         return statistics.mean(self.values)
 
     @property
-    def stdev(self) -> Optional[float]:
+    def stdev(self) -> float | None:
         if len(self.values) < 2:
             return None
         return statistics.stdev(self.values)
 
     @property
-    def min_val(self) -> Optional[float]:
+    def min_val(self) -> float | None:
         if not self.values:
             return None
         return min(self.values)
 
     @property
-    def max_val(self) -> Optional[float]:
+    def max_val(self) -> float | None:
         if not self.values:
             return None
         return max(self.values)
@@ -92,8 +90,8 @@ class AlarmEvent:
     timestamp: datetime
     severity: str  # critical, high, medium, low
     state: str  # active, acknowledged, cleared
-    value: Optional[float] = None
-    limit: Optional[float] = None
+    value: float | None = None
+    limit: float | None = None
     message: str = ""
 
 
@@ -120,7 +118,7 @@ class TroubleshootingReport:
     """Complete troubleshooting report for equipment or project."""
     report_id: str
     project_id: str
-    equipment_id: Optional[str] = None
+    equipment_id: str | None = None
     generated_at: datetime = field(default_factory=datetime.now)
     issues: list[TroubleshootingIssue] = field(default_factory=list)
     trend_summary: dict = field(default_factory=dict)
@@ -225,7 +223,7 @@ class TrendAnalyzer:
                     category=IssueCategory.SENSOR_DRIFT,
                     severity=IssueSeverity.MEDIUM,
                     title=f"Sensor {trend.point_name} showing excessive noise (CV={cv:.1%})",
-                    description=f"High variability detected - possible electrical noise or failing sensor",
+                    description="High variability detected - possible electrical noise or failing sensor",
                     equipment_id=self._get_equipment_for_point(trend.point_name),
                     point_names=[trend.point_name],
                     evidence=[f"CV: {cv:.1%}", f"StdDev: {stdev:.2f}", f"Mean: {mean:.2f}"],
@@ -778,17 +776,17 @@ def analyze_alarms(project: Project, alarms: list[AlarmEvent]) -> list[Troublesh
 
 
 __all__ = [
-    "TroubleshootingAssistant",
-    "TrendAnalyzer",
     "AlarmAnalyzer",
+    "AlarmEvent",
     "ControlLoopAnalyzer",
-    "TroubleshootingReport",
-    "TroubleshootingIssue",
+    "IssueCategory",
+    "IssueSeverity",
+    "TrendAnalyzer",
     "TrendData",
     "TrendPoint",
-    "AlarmEvent",
-    "IssueSeverity",
-    "IssueCategory",
-    "analyze_trends",
+    "TroubleshootingAssistant",
+    "TroubleshootingIssue",
+    "TroubleshootingReport",
     "analyze_alarms",
+    "analyze_trends",
 ]

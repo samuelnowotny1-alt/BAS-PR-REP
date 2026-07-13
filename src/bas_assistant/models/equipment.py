@@ -1,9 +1,9 @@
 """Equipment model - structured equipment definitions."""
 
-from typing import Optional
+
 from pydantic import BaseModel, Field, field_validator
 
-from . import NonEmptyStr, EquipmentType
+from . import EquipmentType, NonEmptyStr
 
 
 class EquipmentRelationship(BaseModel):
@@ -11,7 +11,7 @@ class EquipmentRelationship(BaseModel):
 
     type: str = Field(description="feeds, serves, controls, monitors, contains")
     target_equipment_id: NonEmptyStr
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class EquipmentTemplateRef(BaseModel):
@@ -27,41 +27,41 @@ class Equipment(BaseModel):
     # Identity
     id: NonEmptyStr = Field(description="Unique equipment ID (e.g., AHU-1, VAV-203)")
     type: EquipmentType = Field(description="Equipment type")
-    subtype: Optional[str] = Field(default=None, description="Subtype (e.g., VAV-Reheat)")
+    subtype: str | None = Field(default=None, description="Subtype (e.g., VAV-Reheat)")
 
     # Location & Context
-    building: Optional[str] = None
-    floor: Optional[str] = None
-    room: Optional[str] = None
-    served_area: Optional[str] = Field(default=None, description="Area served by this equipment")
+    building: str | None = None
+    floor: str | None = None
+    room: str | None = None
+    served_area: str | None = Field(default=None, description="Area served by this equipment")
 
     # Relationships
-    parent_equipment_id: Optional[NonEmptyStr] = None
+    parent_equipment_id: NonEmptyStr | None = None
     child_equipment_ids: list[NonEmptyStr] = Field(default_factory=list)
     relationships: list[EquipmentRelationship] = Field(default_factory=list)
 
     # Controller & Points
-    controller_id: Optional[NonEmptyStr] = None
+    controller_id: NonEmptyStr | None = None
     point_names: list[NonEmptyStr] = Field(default_factory=list, description="Point names belonging to this equipment")
 
     # Template & Sequence
-    template: Optional[EquipmentTemplateRef] = None
-    sequence_ref: Optional[str] = Field(default=None, description="Reference to sequence of operation")
+    template: EquipmentTemplateRef | None = None
+    sequence_ref: str | None = Field(default=None, description="Reference to sequence of operation")
 
     # Design Data
-    design_cfm: Optional[float] = None
-    design_tonnage: Optional[float] = None
-    design_gpm: Optional[float] = None
-    design_kw: Optional[float] = None
-    voltage: Optional[str] = None
-    phase: Optional[int] = None
+    design_cfm: float | None = None
+    design_tonnage: float | None = None
+    design_gpm: float | None = None
+    design_kw: float | None = None
+    voltage: str | None = None
+    phase: int | None = None
 
     # Status
     status: str = Field(default="design", description="design, installed, commissioned, operational")
 
     # Metadata
     tags: list[str] = Field(default_factory=list)
-    notes: Optional[str] = None
+    notes: str | None = None
 
     @field_validator("id")
     @classmethod

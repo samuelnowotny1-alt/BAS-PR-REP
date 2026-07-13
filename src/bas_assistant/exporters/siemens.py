@@ -3,11 +3,9 @@
 import csv
 import json
 from pathlib import Path
-from typing import Optional
-from datetime import datetime
 
-from ..models import Project, Equipment, Point, Controller, PointKind, EquipmentType
-from .base import BaseExporter, ExportResult, ExportContext
+from ..models import PointKind, Project
+from .base import BaseExporter, ExportResult
 
 
 class SiemensExporter(BaseExporter):

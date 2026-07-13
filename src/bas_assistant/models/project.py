@@ -1,13 +1,14 @@
 """Project model - top-level BAS project structure."""
 
-from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+
+from pydantic import BaseModel, Field
 
 from . import NonEmptyStr, UnitSystem
+from .controller import Controller
 from .equipment import Equipment
 from .points import Point
-from .controller import Controller
+from .station_sync import StationConnectionConfig
 
 
 class ProjectMetadata(BaseModel):
@@ -15,25 +16,25 @@ class ProjectMetadata(BaseModel):
 
     project_id: NonEmptyStr
     name: NonEmptyStr
-    number: Optional[str] = None
-    client: Optional[str] = None
-    location: Optional[str] = None
-    timezone: Optional[str] = None
+    number: str | None = None
+    client: str | None = None
+    location: str | None = None
+    timezone: str | None = None
     unit_system: UnitSystem = UnitSystem.IP
 
     # Dates
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-    design_phase: Optional[str] = None  # SD, DD, CD, CA
+    design_phase: str | None = None  # SD, DD, CD, CA
 
     # Standards
-    naming_standard: Optional[str] = None
-    bacnet_network_number: Optional[int] = None
+    naming_standard: str | None = None
+    bacnet_network_number: int | None = None
 
     # Team
-    engineer_of_record: Optional[str] = None
-    programmer: Optional[str] = None
-    commissioning_agent: Optional[str] = None
+    engineer_of_record: str | None = None
+    programmer: str | None = None
+    commissioning_agent: str | None = None
 
 
 class SourceDocument(BaseModel):
@@ -42,10 +43,10 @@ class SourceDocument(BaseModel):
     id: NonEmptyStr
     name: str
     type: str = Field(description="point_list, equipment_schedule, sequence, drawing, submittal")
-    path: Optional[str] = None
-    version: Optional[str] = None
+    path: str | None = None
+    version: str | None = None
     imported_at: datetime = Field(default_factory=datetime.now)
-    hash: Optional[str] = None  # For change detection
+    hash: str | None = None  # For change detection
 
 
 class Project(BaseModel):
@@ -62,9 +63,12 @@ class Project(BaseModel):
     # Source documents
     source_documents: list[SourceDocument] = Field(default_factory=list)
 
+    # Station sync
+    station_connection: StationConnectionConfig | None = None
+
     # Validation state
     validation_status: str = Field(default="pending", description="pending, valid, invalid")
-    last_validated: Optional[datetime] = None
+    last_validated: datetime | None = None
 
     def add_equipment(self, equipment: Equipment) -> None:
         """Add equipment to project."""
@@ -88,13 +92,13 @@ class Project(BaseModel):
             raise ValueError(f"Controller with ID '{controller.id}' already exists")
         self.controllers.append(controller)
 
-    def get_equipment(self, equipment_id: str) -> Optional[Equipment]:
+    def get_equipment(self, equipment_id: str) -> Equipment | None:
         return next((e for e in self.equipment if e.id == equipment_id), None)
 
-    def get_point(self, point_name: str) -> Optional[Point]:
+    def get_point(self, point_name: str) -> Point | None:
         return next((p for p in self.points if p.name == point_name), None)
 
-    def get_controller(self, controller_id: str) -> Optional[Controller]:
+    def get_controller(self, controller_id: str) -> Controller | None:
         return next((c for c in self.controllers if c.id == controller_id), None)
 
     def get_points_for_equipment(self, equipment_id: str) -> list[Point]:

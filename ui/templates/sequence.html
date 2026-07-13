@@ -13,7 +13,7 @@
     <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-6">Parse Sequence</h2>
 
-        <form hx-post="/project/{{ project.metadata.project_id }}/sequence/parse" hx-target="#parse-result" hx-swap="innerHTML" class="space-y-6">
+        <form action="/project/{{ project.metadata.project_id }}/sequence/parse" hx-post="/project/{{ project.metadata.project_id }}/sequence/parse" hx-target="#parse-result" hx-swap="innerHTML" class="space-y-6">
             <div>
                 <label for="equipment_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Equipment</label>
                 <select id="equipment_id" name="equipment_id" required class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">

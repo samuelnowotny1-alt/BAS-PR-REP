@@ -1,0 +1,166 @@
+{
+  "metadata": {
+    "project_id": "demo-hvac-project",
+    "name": "Demo HVAC Project",
+    "number": null,
+    "client": "Demo Client",
+    "location": "Demo Building",
+    "timezone": null,
+    "unit_system": "IP",
+    "created_at": "2026-07-12T17:57:48.622243",
+    "updated_at": "2026-07-12T17:57:48.640038",
+    "design_phase": "Design Development",
+    "naming_standard": "ASHRAE 135",
+    "bacnet_network_number": null,
+    "engineer_of_record": "Demo Engineer",
+    "programmer": "Demo Programmer",
+    "commissioning_agent": "Demo CxA"
+  },
+  "equipment": [
+    {
+      "id": "AHU-1",
+      "type": "AHU",
+      "subtype": "VAV",
+      "building": "Main",
+      "floor": "1",
+      "room": "Mechanical",
+      "served_area": "Floor 1",
+      "parent_equipment_id": "nan",
+      "child_equipment_ids": [
+        "VAV-101",
+        "VAV-102"
+      ],
+      "relationships": [],
+      "controller_id": "MPC-1",
+      "point_names": [
+        "AHU-1 SAT",
+        "AHU-1 MAT",
+        "AHU-1 RAT",
+        "AHU-1 SF CMD"
+      ],
+      "template": {
+        "template_name": "graphic_layout",
+        "parameters": {
+          "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge"
+        }
+      },
+      "sequence_ref": null,
+      "design_cfm": 10000.0,
+      "design_tonnage": 25.0,
+      "design_gpm": 50.0,
+      "design_kw": 15.0,
+      "voltage": "460",
+      "phase": 3,
+      "status": "design",
+      "tags": [
+        "ahu",
+        "main"
+      ],
+      "notes": "Main AHU for floor 1"
+    }
+  ],
+  "points": [
+    {
+      "name": "AHU-1 SAT",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 40.0,
+      "range_max": 120.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 1,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "Row 1",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply Air Temperature",
+      "tags": [
+        "temperature",
+        "supply",
+        "ahu"
+      ]
+    }
+  ],
+  "controllers": [
+    {
+      "id": "MPC-1",
+      "name": "Main Plant Controller 1",
+      "vendor": "Johnson Controls",
+      "model": "MPC-8000",
+      "firmware_version": "12.3",
+      "type": "MPC",
+      "protocols": [
+        "BACnet/IP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "192.168.1.10",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 16,
+        "digital_inputs": 8,
+        "analog_outputs": 4,
+        "digital_outputs": 8,
+        "total_points": 36
+      },
+      "serves_equipment_ids": [
+        "AHU-1",
+        "CHWP-1"
+      ],
+      "owned_point_names": [
+        "AHU-1 SAT",
+        "AHU-1 MAT",
+        "AHU-1 RAT",
+        "AHU-1 SF CMD"
+      ],
+      "panel_location": "Mechanical Room",
+      "electrical_panel": "MP-1",
+      "circuit": "12",
+      "status": "design",
+      "tags": [],
+      "notes": "Main plant controller"
+    }
+  ],
+  "source_documents": [
+    {
+      "id": "equip_schedule_demo",
+      "name": "equipment_schedule.csv",
+      "type": "equipment_schedule",
+      "path": "/home/oem/.openclaw/workspace/bas-assistant/ui/examples/equipment_schedule.csv",
+      "version": null,
+      "imported_at": "2026-07-12T17:57:48.634795",
+      "hash": null
+    },
+    {
+      "id": "point_list_demo",
+      "name": "point_list.csv",
+      "type": "point_list",
+      "path": "/home/oem/.openclaw/workspace/bas-assistant/ui/examples/point_list.csv",
+      "version": null,
+      "imported_at": "2026-07-12T17:57:48.636915",
+      "hash": null
+    },
+    {
+      "id": "ctrl_schedule_demo",
+      "name": "controller_schedule.csv",
+      "type": "controller_schedule",
+      "path": "/home/oem/.openclaw/workspace/bas-assistant/ui/examples/controller_schedule.csv",
+      "version": null,
+      "imported_at": "2026-07-12T17:57:48.639305",
+      "hash": null
+    }
+  ],
+  "station_connection": null,
+  "validation_status": "pending",
+  "last_validated": null
+}

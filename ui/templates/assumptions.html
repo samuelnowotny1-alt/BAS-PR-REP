@@ -20,7 +20,7 @@
         </div>
 
         <!-- Quick Add Form -->
-        <form hx-post="/project/{{ project.metadata.project_id }}/assumptions/add" hx-target="#assumptions-list" hx-swap="afterbegin" class="space-y-4">
+        <form action="/project/{{ project.metadata.project_id }}/assumptions/add" hx-post="/project/{{ project.metadata.project_id }}/assumptions/add" hx-target="#assumptions-list" hx-swap="afterbegin" class="space-y-4">
             <div class="grid md:grid-cols-3 gap-4">
                 <div>
                     <label for="category" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
@@ -84,107 +84,8 @@
 
     <!-- Assumptions List -->
     <div id="assumptions-list">
-        {% if assumption_set %}
-        <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
-                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Assumptions ({{ assumption_set.assumptions|length }})</h2>
-                <div class="flex gap-2">
-                    <select class="input-field text-sm" onchange="filterAssumptions(this.value)">
-                        <option value="all">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="verified">Verified</option>
-                        <option value="accepted">Accepted</option>
-                        <option value="deferred">Deferred</option>
-                        <option value="invalidated">Invalidated</option>
-                    </select>
-                    <select class="input-field text-sm" onchange="filterByCategory(this.value)">
-                        <option value="all">All Categories</option>
-                        <option value="design">Design</option>
-                        <option value="equipment">Equipment</option>
-                        <option value="sequence">Sequence</option>
-                        <option value="code">Code</option>
-                        <option value="site">Site</option>
-                        <option value="client">Client</option>
-                        <option value="coordination">Coordination</option>
-                        <option value="budget">Budget</option>
-                        <option value="schedule">Schedule</option>
-                    </select>
-                </div>
-            </div>
+        {% include "partials/assumptions_list.html" %}
 
-            <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                {% for asm in assumption_set.assumptions %}
-                <div class="assumption-row p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50" data-category="{{ asm.category }}" data-status="{{ asm.status }}">
-                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if asm.category == 'design' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                                    {% elif asm.category == 'equipment' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                                    {% elif asm.category == 'sequence' %}bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200
-                                    {% elif asm.category == 'code' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                                    {% elif asm.category == 'site' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                                    {% elif asm.category == 'client' %}bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200
-                                    {% elif asm.category == 'coordination' %}bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200
-                                    {% elif asm.category == 'budget' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
-                                    {{ asm.category|capitalize }}
-                                </span>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                    {% if asm.status == 'pending' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                                    {% elif asm.status == 'verified' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                                    {% elif asm.status == 'accepted' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
-                                    {% elif asm.status == 'deferred' %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200
-                                    {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
-                                    {{ asm.status|capitalize }}
-                                </span>
-                                <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ asm.assumption_id }}</span>
-                            </div>
-                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ asm.title }}</h3>
-                            <p class="text-gray-600 dark:text-gray-400 mt-1">{{ asm.description }}</p>
-                            {% if asm.rationale %}
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2"><strong>Rationale:</strong> {{ asm.rationale }}</p>
-                            {% endif %}
-                            {% if asm.verification_method %}
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2"><strong>Verification:</strong> {{ asm.verification_method }}</p>
-                            {% endif %}
-                            {% if asm.impacts %}
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2"><strong>Impacts:</strong> {{ asm.impacts }}</p>
-                            {% endif %}
-                            {% if asm.verification_evidence %}
-                            <p class="text-sm text-green-600 dark:text-green-400 mt-2"><strong>Evidence:</strong> {{ asm.verification_evidence }}</p>
-                            {% endif %}
-                            {% if asm.notes %}
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2"><strong>Notes:</strong> {{ asm.notes }}</p>
-                            {% endif %}
-                        </div>
-                        <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:ml-8">
-                            <span class="text-xs text-gray-500 dark:text-gray-400">Created: {{ asm.created_at[:10] if asm.created_at else 'Unknown' }}</span>
-                            {% if asm.verified_at %}
-                            <span class="text-xs text-green-600 dark:text-green-400">Verified: {{ asm.verified_at[:10] }} by {{ asm.verified_by }}</span>
-                            {% endif %}
-                            <div class="flex gap-2">
-                                {% if asm.status == 'pending' %}
-                                <button onclick="verifyAssumption('{{ asm.assumption_id }}')" class="btn-secondary text-sm">
-                                    <i class="fas fa-check mr-1"></i>
-                                    Verify
-                                </button>
-                                {% endif %}
-                                {% if asm.status != 'invalidated' %}
-                                <button onclick="invalidateAssumption('{{ asm.assumption_id }}')" class="btn-secondary text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30">
-                                    <i class="fas fa-times mr-1"></i>
-                                    Invalidate
-                                </button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <!-- Summary -->
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mt-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Summary</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -224,17 +125,6 @@
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
-            <i class="fas fa-lightbulb text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
-            <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Assumptions Tracked</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-6">Add your first design assumption above or load the BAS standard templates.
-            <button onclick="loadTemplates()" class="btn-secondary mt-4">
-                <i class="fas fa-download mr-2"></i>
-                Load BAS Standard Templates
-            </button>
-        </div>
-        {% endif %}
     </div>
 </div>
 
@@ -247,7 +137,7 @@
                 <i class="fas fa-times text-xl"></i>
             </button>
         </div>
-        <form hx-post="/project/{{ project.metadata.project_id }}/assumptions/add" hx-target="#assumptions-list" hx-swap="afterbegin" hx-on::after-request="document.getElementById('assumption-modal').classList.add('hidden')" class="space-y-4">
+        <form action="/project/{{ project.metadata.project_id }}/assumptions/add" hx-post="/project/{{ project.metadata.project_id }}/assumptions/add" hx-target="#assumptions-list" hx-swap="afterbegin" hx-on::after-request="document.getElementById('assumption-modal').classList.add('hidden')" class="space-y-4">
             <div class="grid md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>

@@ -13,8 +13,8 @@ from .validation_reasoning import (
 )
 
 __all__ = [
-    "EngineeringRulesEngine",
     "EngineeringRule",
+    "EngineeringRulesEngine",
     "ValidationFinding",
     "ValidationRuleType",
     "validate_engineering_rules",

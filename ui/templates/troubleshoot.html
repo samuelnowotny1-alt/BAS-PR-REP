@@ -3,208 +3,66 @@
 {% block page_title %}Troubleshooting - {{ project.metadata.name }}{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto">
+<div class="max-w-4xl mx-auto">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Troubleshooting Assistant</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Analyze trends, alarms, and control loop performance</p>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Analyze trends, alarms, and control loops to identify issues</p>
     </div>
 
-    <!-- Input Section -->
-    <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
-        <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-6">Analyze Equipment</h2>
-
-        <form hx-post="/project/{{ project.metadata.project_id }}/troubleshoot/analyze" hx-target="#troubleshoot-result" hx-swap="innerHTML" class="space-y-6">
-            <div class="grid md:grid-cols-2 gap-6">
-                <div>
-                    <label for="equipment_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Equipment *</label>
-                    <select id="equipment_id" name="equipment_id" required class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="">Select equipment...</option>
-                        {% for equip in project.equipment %}
-                        <option value="{{ equip.id }}">{{ equip.id }} ({{ equip.type.value }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div>
-                    <label for="analysis_type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Analysis Type</label>
-                    <select id="analysis_type" name="analysis_type" class="input-field w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                        <option value="full">Full Analysis (Trends + Alarms + Loops)</option>
-                        <option value="trends">Trend Analysis Only</option>
-                        <option value="alarms">Alarm Analysis Only</option>
-                        <option value="loops">Control Loop Analysis Only</option>
-                    </select>
-                </div>
-            </div>
-
+    <form action="/project/{{ project.metadata.project_id }}/troubleshoot/analyze" hx-post="/project/{{ project.metadata.project_id }}/troubleshoot/analyze" hx-target="#troubleshoot-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
+        <div class="grid gap-6">
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Trend Data (CSV)</label>
-                <input type="file" name="trends_file" accept=".csv" class="input-field w-full">
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">CSV with columns: timestamp, point_name, value, quality</p>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Upload Alarm Log (CSV)</label>
-                <input type="file" name="alarms_file" accept=".csv" class="input-field w-full">
-                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">CSV with columns: timestamp, alarm_name, point_name, severity, state, value, limit, message</p>
-            </div>
-
-            <div class="flex justify-end gap-4">
-                <button type="submit" class="btn-primary">
-                    <i class="fas fa-search mr-2"></i>
-                    Analyze
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Result -->
-    <div id="troubleshoot-result">
-        {% if troubleshoot_report %}
-        <div class="space-y-8">
-            <!-- Summary -->
-            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Troubleshooting Report</h2>
-                    <span class="px-3 py-1 rounded-full text-sm font-medium
-                        {% if troubleshoot_report.critical_count > 0 %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                        {% elif troubleshoot_report.high_count > 0 %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                        {% elif troubleshoot_report.by_category %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                        {% else %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200{% endif %}">
-                        {{ troubleshoot_report.issues|length }} Issues Found
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div class="card bg-red-50 dark:bg-red-900/30 p-4 border border-red-200 dark:border-red-800">
-                        <p class="text-sm text-red-700 dark:text-red-300">Critical</p>
-                        <p class="text-2xl font-bold text-red-700 dark:text-red-300">{{ troubleshoot_report.critical_count }}</p>
-                    </div>
-                    <div class="card bg-orange-50 dark:bg-orange-900/30 p-4 border border-orange-200 dark:border-orange-800">
-                        <p class="text-sm text-orange-700 dark:text-orange-300">High</p>
-                        <p class="text-2xl font-bold text-orange-700 dark:text-orange-300">{{ troubleshoot_report.high_count }}</p>
-                    </div>
-                    <div class="card bg-yellow-50 dark:bg-yellow-900/30 p-4 border border-yellow-200 dark:border-yellow-800">
-                        <p class="text-sm text-yellow-700 dark:text-yellow-300">Medium</p>
-                        <p class="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{{ troubleshoot_report.by_category.get('sensor_drift', 0) + troubleshoot_report.by_category.get('actuator_issue', 0) + troubleshoot_report.by_category.get('control_loop', 0) + troubleshoot_report.by_category.get('energy_waste', 0) + troubleshoot_report.by_category.get('comfort', 0) }}</p>
-                    </div>
-                    <div class="card bg-green-50 dark:bg-green-900/30 p-4 border border-green-200 dark:border-green-800">
-                        <p class="text-sm text-green-700 dark:text-green-300">Low / Info</p>
-                        <p class="text-2xl font-bold text-green-700 dark:text-green-300">{{ troubleshoot_report.by_category.get('maintenance', 0) + troubleshoot_report.by_category.get('communication', 0) + troubleshoot_report.by_category.get('sequence', 0) }}</p>
-                    </div>
-                </div>
-
-                <!-- Issues by Category -->
-                <div class="space-y-4">
-                    {% for category, count in troubleshoot_report.by_category.items() %}
-                    {% if count > 0 %}
-                    <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                        <h3 class="font-semibold text-gray-800 dark:text-white capitalize mb-3">{{ category.replace('_', ' ') }} ({{ count }})</h3>
-                        <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            {% for issue in troubleshoot_report.issues %}
-                            {% if issue.category.value == category %}
-                            <li class="flex items-start gap-2">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                    {% if issue.severity.value == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                                    {% elif issue.severity.value == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                                    {% elif issue.severity.value == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                                    {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
-                                    {{ issue.severity.value }}
-                                </span>
-                                <span>{{ issue.title }}</span>
-                            </li>
-                            {% endif %}
-                            {% endfor %}
-                        </ul>
-                    </div>
-                    {% endif %}
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Equipment</label>
+                <select name="equipment_id" class="input-field w-full md:w-1/2" required>
+                    <option value="">Select equipment...</option>
+                    {% for equip in project.equipment %}
+                    <option value="{{ equip.id }}">{{ equip.id }} ({{ equip.type.value }})</option>
                     {% endfor %}
-                </div>
+                </select>
             </div>
 
-            {% if troubleshoot_report.issues %}
-            <!-- Issues Detail -->
-            <div class="space-y-6 mt-8">
-                {% for issue in troubleshoot_report.issues %}
-                <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                {% if issue.severity.value == 'critical' %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                                {% elif issue.severity.value == 'high' %}bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200
-                                {% elif issue.severity.value == 'medium' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
-                                {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
-                                {{ issue.severity.value|upper }}
-                            </span>
-                            <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ issue.category.value }}</span>
-                            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ issue.title }}</h3>
-                        </div>
-                        <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ issue.issue_id }}</span>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Analysis Type</label>
+                <select name="analysis_type" class="input-field w-full md:w-1/2">
+                    <option value="full">Full Analysis (Trends + Alarms + Loops)</option>
+                    <option value="trends">Trend Analysis Only</option>
+                    <option value="alarms">Alarm Analysis Only</option>
+                    <option value="loops">Control Loop Analysis Only</option>
+                </select>
+            </div>
+
+            <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-file-upload text-orange-500 mr-2"></i>
+                    Optional Data Files
+                </h3>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trends CSV</label>
+                        <input type="file" name="trends_file" accept=".csv" class="input-field w-full">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, value</p>
                     </div>
-                    <div class="p-6">
-                        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ issue.description }}</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                            <div>
-                                <h4 class="font-medium text-gray-800 dark:text-white mb-2">Affected Points</h4>
-                                <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                    {% for point in issue.point_names %}
-                                    <li>{{ point }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            <div>
-                                <h4 class="font-medium text-gray-800 dark:text-white mb-2">Equipment</h4>
-                                <p class="text-sm text-gray-600 dark:text-gray-400">{{ issue.equipment_id }}</p>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <h4 class="font-medium text-gray-800 dark:text-white mb-2">Root Cause Hypotheses</h4>
-                            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                {% for hypothesis in issue.root_cause_hypothesis %}
-                                <li>{{ hypothesis }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="mb-4">
-                            <h4 class="font-medium text-gray-800 dark:text-white mb-2">Recommended Actions</h4>
-                            <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                                {% for action in issue.recommended_actions %}
-                                <li>{{ action }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">Confidence: {{ "%.0f"|format(issue.confidence * 100) }}%</span>
-                            <div class="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div class="bg-orange-500 h-2 rounded-full" style="width: {{ issue.confidence * 100 }}%"></div>
-                            </div>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alarms CSV</label>
+                        <input type="file" name="alarms_file" accept=".csv" class="input-field w-full">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, severity, message, acknowledged</p>
                     </div>
                 </div>
-                {% endfor %}
-            </div>
-
-            {% else %}
-            <p class="text-center text-gray-500 dark:text-gray-400 py-12">No issues detected. System appears healthy!</p>
-            {% endif %}
-        </div>
-
-        {% else %}
-        <div class="card bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
-            <i class="fas fa-tools text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
-            <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Analysis Run Yet</h2>
-            <p class="text-gray-500 dark:text-gray-400 mb-6">Upload trend data and alarm logs to analyze equipment performance and identify issues.</p>
-            <div class="flex justify-center gap-4">
-                <a href="/project/{{ project.metadata.project_id }}/import" class="btn-secondary">
-                    <i class="fas fa-upload mr-2"></i>
-                    Import Data
-                </a>
             </div>
         </div>
-        {% endif %}
-    </div>
+
+        <div class="mt-8 flex justify-end gap-4">
+            <a href="/project/{{ project.metadata.project_id }}" class="btn-secondary">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Back
+            </a>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-search mr-2"></i>
+                Analyze
+            </button>
+        </div>
+    </form>
+
+    <div id="troubleshoot-result"></div>
 </div>
 {% endblock %}

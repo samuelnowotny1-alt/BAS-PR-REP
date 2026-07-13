@@ -1,15 +1,15 @@
 """Point model - core BAS point definition."""
 
-from typing import Optional
+
 from pydantic import BaseModel, Field, field_validator
 
 from . import (
-    PointKind,
-    PointDirection,
-    PointSource,
     NonEmptyStr,
-    ValidationSeverity,
+    PointDirection,
+    PointKind,
+    PointSource,
     ValidationCategory,
+    ValidationSeverity,
 )
 
 
@@ -20,7 +20,7 @@ class PointValidationIssue(BaseModel):
     severity: ValidationSeverity
     message: str
     rule_id: str
-    field: Optional[str] = None
+    field: str | None = None
 
 
 class Point(BaseModel):
@@ -29,7 +29,7 @@ class Point(BaseModel):
     # Identity
     name: NonEmptyStr = Field(description="Point name per naming convention")
     equipment_id: NonEmptyStr = Field(description="Parent equipment ID")
-    controller_id: Optional[NonEmptyStr] = Field(
+    controller_id: NonEmptyStr | None = Field(
         default=None, description="Owning controller ID"
     )
 
@@ -38,35 +38,35 @@ class Point(BaseModel):
     direction: PointDirection = Field(description="Direction relative to controller")
 
     # Engineering
-    units: Optional[str] = Field(default=None, description="Engineering units")
-    unit_system: Optional[str] = Field(default=None, description="IP or SI")
-    range_min: Optional[float] = Field(default=None, description="Minimum expected value")
-    range_max: Optional[float] = Field(default=None, description="Maximum expected value")
+    units: str | None = Field(default=None, description="Engineering units")
+    unit_system: str | None = Field(default=None, description="IP or SI")
+    range_min: float | None = Field(default=None, description="Minimum expected value")
+    range_max: float | None = Field(default=None, description="Maximum expected value")
 
     # Protocol mapping
-    bacnet_object_type: Optional[str] = Field(
+    bacnet_object_type: str | None = Field(
         default=None, description="BACnet object type (AI, AO, BI, BO, AV, BV, etc.)"
     )
-    bacnet_instance: Optional[int] = Field(
+    bacnet_instance: int | None = Field(
         default=None, description="BACnet instance number"
     )
-    modbus_register: Optional[int] = Field(
+    modbus_register: int | None = Field(
         default=None, description="Modbus register address"
     )
-    modbus_type: Optional[str] = Field(
+    modbus_type: str | None = Field(
         default=None, description="coil, discrete_input, holding_register, input_register"
     )
 
     # Source & Validation
     source: PointSource = Field(default=PointSource.POINT_LIST)
-    source_reference: Optional[str] = Field(
+    source_reference: str | None = Field(
         default=None, description="Row ID, register, or reference in source"
     )
     validation_status: str = Field(default="pending", description="pending, valid, invalid")
     validation_issues: list[PointValidationIssue] = Field(default_factory=list)
 
     # Metadata
-    description: Optional[str] = Field(default=None)
+    description: str | None = Field(default=None)
     tags: list[str] = Field(default_factory=list)
 
     @field_validator("name")
@@ -78,7 +78,7 @@ class Point(BaseModel):
 
     @field_validator("bacnet_object_type")
     @classmethod
-    def validate_bacnet_object_type(cls, v: Optional[str]) -> Optional[str]:
+    def validate_bacnet_object_type(cls, v: str | None) -> str | None:
         if v is None:
             return v
         valid_types = {
@@ -91,7 +91,7 @@ class Point(BaseModel):
 
     @field_validator("modbus_type")
     @classmethod
-    def validate_modbus_type(cls, v: Optional[str]) -> Optional[str]:
+    def validate_modbus_type(cls, v: str | None) -> str | None:
         if v is None or v == "":
             return None
         valid = {"coil", "discrete_input", "holding_register", "input_register"}
@@ -105,7 +105,7 @@ class Point(BaseModel):
         severity: ValidationSeverity,
         message: str,
         rule_id: str,
-        field: Optional[str] = None,
+        field: str | None = None,
     ) -> None:
         """Add a validation issue."""
         self.validation_issues.append(

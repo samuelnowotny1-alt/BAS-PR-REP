@@ -1,14 +1,12 @@
 """Sequence Parsing - Parses natural language sequences into structured logic requirements."""
 
-from pathlib import Path
-from typing import Optional
+import re
 from dataclasses import dataclass, field
 from enum import Enum
-import re
+from pathlib import Path
 
 from ..models import (
-    Project, Equipment, Point, PointKind, EquipmentType,
-    LogicDiagram, LogicBlock, LogicSignal, LogicParameter, LogicConnection
+    EquipmentType,
 )
 
 
@@ -70,8 +68,8 @@ class LogicRequirement:
 class ParsedSequence:
     """A parsed sequence of operation."""
     sequence_id: str
-    equipment_type: Optional[EquipmentType] = None
-    equipment_id: Optional[str] = None
+    equipment_type: EquipmentType | None = None
+    equipment_id: str | None = None
     raw_text: str = ""
     sections: dict[SequenceSection, str] = field(default_factory=dict)
     requirements: list[LogicRequirement] = field(default_factory=list)
@@ -149,7 +147,7 @@ class SequenceParser:
         self._req_counter += 1
         return f"REQ-{self._req_counter:04d}"
 
-    def parse(self, text: str, equipment_id: Optional[str] = None) -> ParsedSequence:
+    def parse(self, text: str, equipment_id: str | None = None) -> ParsedSequence:
         """Parse a sequence of operation text."""
         sequence = ParsedSequence(
             sequence_id=f"seq_{equipment_id or 'unknown'}",
@@ -174,7 +172,7 @@ class SequenceParser:
 
         return sequence
 
-    def _detect_equipment_type(self, text: str) -> Optional[EquipmentType]:
+    def _detect_equipment_type(self, text: str) -> EquipmentType | None:
         """Detect equipment type from sequence text."""
         text_lower = text.lower()
         for equip_type, keywords in self.EQUIP_KEYWORDS.items():
@@ -372,17 +370,17 @@ class SequenceParser:
         return {equip_id: self.parse(text, equip_id) for equip_id, text in texts.items()}
 
 
-def parse_sequence(text: str, equipment_id: Optional[str] = None) -> ParsedSequence:
+def parse_sequence(text: str, equipment_id: str | None = None) -> ParsedSequence:
     """Convenience function to parse a sequence."""
     parser = SequenceParser()
     return parser.parse(text, equipment_id)
 
 
 __all__ = [
-    "SequenceParser",
-    "ParsedSequence",
     "LogicRequirement",
-    "SequenceSection",
     "LogicRequirementType",
+    "ParsedSequence",
+    "SequenceParser",
+    "SequenceSection",
     "parse_sequence",
 ]

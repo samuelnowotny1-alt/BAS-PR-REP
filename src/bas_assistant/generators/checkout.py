@@ -1,14 +1,12 @@
 """Checkout sheet generator - deterministic Markdown & Excel output."""
 
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 
-from ..models import Project, Equipment, Point, Controller, PointKind, PointDirection
-from ..models.equipment import EquipmentRelationship
+from ..models import Equipment, Point, PointKind, Project
 
 
 @dataclass
@@ -23,13 +21,13 @@ class CheckoutItem:
     expected_result: str
     acceptance_criteria: str
     tools_required: list[str] = field(default_factory=list)
-    reference_doc: Optional[str] = None
+    reference_doc: str | None = None
     status: str = "not_started"  # not_started, in_progress, passed, failed, na
-    observed_result: Optional[str] = None
-    technician: Optional[str] = None
-    timestamp: Optional[datetime] = None
+    observed_result: str | None = None
+    technician: str | None = None
+    timestamp: datetime | None = None
     evidence: list[str] = field(default_factory=list)
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 @dataclass
@@ -371,7 +369,7 @@ def generate_checkout_sheets(project: Project, output_dir: Path) -> dict:
 
 __all__ = [
     "CheckoutGenerator",
-    "CheckoutSheet",
     "CheckoutItem",
+    "CheckoutSheet",
     "generate_checkout_sheets",
 ]

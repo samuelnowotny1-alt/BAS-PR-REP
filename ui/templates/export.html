@@ -13,7 +13,7 @@
         <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Select Vendor Formats</h2>
         <p class="text-gray-500 dark:text-gray-400 mb-6">Choose which vendor-specific formats to export. Each vendor format includes all project data in their native format.</p>
 
-        <form hx-post="/project/{{ project.metadata.project_id }}/export" hx-target="#export-result" hx-swap="innerHTML" class="space-y-4">
+        <form action="/project/{{ project.metadata.project_id }}/export" hx-post="/project/{{ project.metadata.project_id }}/export" hx-target="#export-result" hx-swap="innerHTML" class="space-y-4">
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <!-- Niagara -->
                 <label class="vendor-option card bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 p-6 cursor-pointer hover:border-orange-300 dark:hover:border-orange-700 transition-colors">

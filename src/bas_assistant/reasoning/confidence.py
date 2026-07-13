@@ -1,10 +1,8 @@
 """Confidence Scoring - Quantifies reliability of AI-generated outputs."""
 
-from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass, field
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 
 
 class ConfidenceLevel(str, Enum):
@@ -274,32 +272,31 @@ def score_confidence(scorer: ConfidenceScorer, **kwargs) -> ConfidenceScore:
             kwargs.get("logic_diagram"),
             kwargs.get("validation_report"),
         )
-    elif output_type == "graphics":
+    if output_type == "graphics":
         return scorer.score_graphics_generation(
             kwargs["project"],
             kwargs["equipment_id"],
             kwargs.get("graphics_def"),
         )
-    elif output_type == "checkout":
+    if output_type == "checkout":
         return scorer.score_checkout_generation(
             kwargs["project"],
             kwargs["equipment_id"],
             kwargs.get("checkout_sheet"),
         )
-    elif output_type == "report":
+    if output_type == "report":
         return scorer.score_report_generation(
             kwargs["project"],
             kwargs.get("report_type", "submittal"),
         )
-    else:
-        return ConfidenceScore(overall=0.5, level=ConfidenceLevel.MEDIUM)
+    return ConfidenceScore(overall=0.5, level=ConfidenceLevel.MEDIUM)
 
 
 __all__ = [
-    "ConfidenceScorer",
-    "ConfidenceScore",
-    "ScoredOutput",
-    "ConfidenceLevel",
     "ConfidenceFactor",
+    "ConfidenceLevel",
+    "ConfidenceScore",
+    "ConfidenceScorer",
+    "ScoredOutput",
     "score_confidence",
 ]

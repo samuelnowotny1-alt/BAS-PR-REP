@@ -17,7 +17,8 @@ from pydantic import BaseModel
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
-    ControllerNetworkAddress, ControllerIOCapacity
+    ControllerNetworkAddress, ControllerIOCapacity, StationConnectionConfig,
+    StationSyncProtocol
 )
 from bas_assistant.models.equipment import EquipmentTemplateRef
 from bas_assistant.importers import CSVImporter, create_sample_csvs
@@ -36,6 +37,7 @@ from bas_assistant.reasoning import (
     ConfidenceScorer, validate_engineering_rules, create_bas_assumptions,
     AssumptionTracker, AssumptionStatus, AssumptionCategory
 )
+from bas_assistant.station_sync import StationSyncService
 
 # Paths
 import os
@@ -55,6 +57,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # In-memory project store
 projects: dict[str, Project] = {}
+assumption_trackers: dict[str, AssumptionTracker] = {}
+station_sync_passwords: dict[str, str] = {}
 
 # FastAPI app
 app = FastAPI(title="BAS Assistant", version="0.1.0")
@@ -76,11 +80,63 @@ def get_project(project_id: str) -> Project:
 
 def save_project(project: Project) -> None:
     projects[project.metadata.project_id] = project
+    project.update_timestamp()
     # Save to disk
     project_dir = DATA_DIR / "projects" / project.metadata.project_id
     project_dir.mkdir(parents=True, exist_ok=True)
     with open(project_dir / "project.json", "w") as f:
         f.write(project.model_dump_json(indent=2))
+
+
+def get_assumption_tracker(project_id: str) -> AssumptionTracker:
+    tracker = assumption_trackers.get(project_id)
+    if tracker is None:
+        tracker = create_bas_assumptions(project_id)
+        assumption_trackers[project_id] = tracker
+    return tracker
+
+
+def get_station_connection(project: Project) -> StationConnectionConfig:
+    if project.station_connection is None:
+        project.station_connection = StationConnectionConfig()
+    return project.station_connection
+
+
+def station_sync_service() -> StationSyncService:
+    return StationSyncService()
+
+
+def update_station_connection(
+    project: Project,
+    *,
+    enabled: bool,
+    protocol: str,
+    host: str,
+    port: int,
+    use_tls: bool,
+    verify_tls: bool,
+    station_name: str,
+    username: str,
+    obix_path: str,
+    timeout_seconds: int,
+) -> StationConnectionConfig:
+    existing = get_station_connection(project)
+    project.station_connection = StationConnectionConfig(
+        enabled=enabled,
+        protocol=StationSyncProtocol(protocol),
+        host=host.strip() or None,
+        port=port,
+        use_tls=use_tls,
+        verify_tls=verify_tls,
+        station_name=station_name.strip() or None,
+        username=username.strip() or None,
+        obix_path=obix_path.strip() or "/obix",
+        timeout_seconds=timeout_seconds,
+        last_tested_at=existing.last_tested_at,
+        last_test_status=existing.last_test_status,
+        last_test_message=existing.last_test_message,
+    )
+    return project.station_connection
 
 
 def equipment_graphic_sections(equipment: Equipment) -> str:
@@ -183,6 +239,23 @@ def graphics_symbol_library() -> list[dict[str, object]]:
             }
         )
     return library
+
+
+def assumption_set_for_project(project_id: str):
+    tracker = get_assumption_tracker(project_id)
+    assumption_set = tracker.assumption_sets.get("design_basis")
+    if assumption_set is None:
+        assumption_set = tracker.create_set("design_basis", "Design Basis Assumptions")
+    return tracker, assumption_set
+
+
+def render_assumptions_list(request: Request, project: Project):
+    tracker, assumption_set = assumption_set_for_project(project.metadata.project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/assumptions_list.html",
+        context={"project": project, "tracker": tracker, "assumption_set": assumption_set},
+    )
 
 
 def update_equipment_graphic_sections_value(equipment: Equipment, raw_value: str) -> None:
@@ -611,6 +684,109 @@ async def export_project(
     })
 
 
+@app.get("/project/{project_id}/station-sync", response_class=HTMLResponse)
+async def station_sync_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    config = get_station_connection(project)
+    plan = station_sync_service().build_plan(project, config)
+    return templates.TemplateResponse(request=request, name="station_sync.html", context={
+        "project": project,
+        "station_connection": config,
+        "station_plan": plan,
+        "probe_result": None,
+    })
+
+
+@app.post("/project/{project_id}/station-sync/save", response_class=HTMLResponse)
+async def save_station_sync_config(
+    request: Request,
+    project_id: str,
+    enabled: str | None = Form(None),
+    protocol: str = Form(...),
+    host: str = Form(""),
+    port: int = Form(443),
+    use_tls: str | None = Form(None),
+    verify_tls: str | None = Form(None),
+    station_name: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
+    obix_path: str = Form("/obix"),
+    timeout_seconds: int = Form(10),
+):
+    project = get_project(project_id)
+    config = update_station_connection(
+        project,
+        enabled=enabled == "on",
+        protocol=protocol,
+        host=host,
+        port=port,
+        use_tls=use_tls == "on",
+        verify_tls=verify_tls == "on",
+        station_name=station_name,
+        username=username,
+        obix_path=obix_path,
+        timeout_seconds=timeout_seconds,
+    )
+    if password.strip():
+        station_sync_passwords[project_id] = password
+    save_project(project)
+    plan = station_sync_service().build_plan(project, config)
+    return templates.TemplateResponse(request=request, name="station_sync.html", context={
+        "project": project,
+        "station_connection": config,
+        "station_plan": plan,
+        "probe_result": None,
+        "flash_message": "Station sync configuration saved.",
+    })
+
+
+@app.post("/project/{project_id}/station-sync/probe", response_class=HTMLResponse)
+async def probe_station_sync(
+    request: Request,
+    project_id: str,
+    enabled: str | None = Form(None),
+    protocol: str = Form(...),
+    host: str = Form(""),
+    port: int = Form(443),
+    use_tls: str | None = Form(None),
+    verify_tls: str | None = Form(None),
+    station_name: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
+    obix_path: str = Form("/obix"),
+    timeout_seconds: int = Form(10),
+):
+    project = get_project(project_id)
+    config = update_station_connection(
+        project,
+        enabled=enabled == "on",
+        protocol=protocol,
+        host=host,
+        port=port,
+        use_tls=use_tls == "on",
+        verify_tls=verify_tls == "on",
+        station_name=station_name,
+        username=username,
+        obix_path=obix_path,
+        timeout_seconds=timeout_seconds,
+    )
+    if password.strip():
+        station_sync_passwords[project_id] = password
+    password_value = station_sync_passwords.get(project_id)
+    probe_result = station_sync_service().probe(config, password=password_value)
+    config.last_tested_at = probe_result.checked_at
+    config.last_test_status = "success" if probe_result.success else "failed"
+    config.last_test_message = probe_result.message
+    save_project(project)
+    plan = station_sync_service().build_plan(project, config)
+    return templates.TemplateResponse(request=request, name="station_sync.html", context={
+        "project": project,
+        "station_connection": config,
+        "station_plan": plan,
+        "probe_result": probe_result,
+    })
+
+
 @app.get("/project/{project_id}/sequence", response_class=HTMLResponse)
 async def sequence_page(request: Request, project_id: str):
     project = get_project(project_id)
@@ -676,10 +852,11 @@ async def troubleshoot_analyze(
 @app.get("/project/{project_id}/assumptions", response_class=HTMLResponse)
 async def assumptions_page(request: Request, project_id: str):
     project = get_project(project_id)
-    tracker = create_bas_assumptions(project_id)
+    tracker, assumption_set = assumption_set_for_project(project_id)
     return templates.TemplateResponse(request=request, name="assumptions.html", context={
         "project": project,
         "tracker": tracker,
+        "assumption_set": assumption_set,
     })
 
 
@@ -808,6 +985,48 @@ async def api_load_demo(request: Request):
     return redirect_response()
 
 
+@app.post("/api/gap/{gap_id}/fix")
+async def fix_gap(gap_id: str):
+    for project in projects.values():
+        report = analyze_gaps(project)
+        gap = next((item for item in report.gaps if item.gap_id == gap_id), None)
+        if gap is None:
+            continue
+
+        if gap.affected_object_type == "project":
+            field_name = gap.metadata.get("field")
+            if field_name and hasattr(project.metadata, field_name):
+                default_values = {
+                    "client": "TBD Client",
+                    "location": "TBD Location",
+                    "engineer_of_record": "TBD Engineer",
+                    "programmer": "TBD Programmer",
+                    "commissioning_agent": "TBD CxA",
+                    "design_phase": "CD",
+                }
+                setattr(project.metadata, field_name, default_values.get(field_name, "TBD"))
+                save_project(project)
+                return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Auto-fix applied</span>')
+
+        if gap.affected_object_type == "equipment":
+            equipment = project.get_equipment(gap.affected_object_id)
+            if equipment is None:
+                break
+            if gap.title.endswith("has no controller"):
+                controller_id = project.controllers[0].id if project.controllers else "UNASSIGNED"
+                equipment.controller_id = controller_id
+                save_project(project)
+                return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Controller assigned</span>')
+            if "served area" in gap.title.lower():
+                equipment.served_area = "TBD Served Area"
+                save_project(project)
+                return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Served area added</span>')
+
+        return HTMLResponse('<span class="text-sm text-gray-500 dark:text-gray-400">No safe auto-fix available</span>')
+
+    raise HTTPException(status_code=404, detail="Gap not found")
+
+
 @app.get("/api/project/{project_id}/summary")
 async def api_project_summary(project_id: str):
     project = get_project(project_id)
@@ -868,22 +1087,63 @@ async def api_controllers_list(project_id: str):
 
 @app.post("/project/{project_id}/assumptions/add")
 async def add_assumption(
+    request: Request,
     project_id: str,
     category: str = Form(...),
     title: str = Form(...),
     description: str = Form(...),
     status: str = Form("pending"),
+    rationale: str = Form(""),
+    verification_method: str = Form(""),
     impacts: str = Form(""),
 ):
     project = get_project(project_id)
-    tracker = create_bas_assumptions(project_id)
-    tracker.add_assumption(
+    tracker, _assumption_set = assumption_set_for_project(project_id)
+    assumption = tracker.add_assumption(
         category=AssumptionCategory(category),
         title=title,
         description=description,
+        rationale=rationale,
+        verification_method=verification_method,
         impacts=[i.strip() for i in impacts.split(",") if i.strip()],
+        set_name="design_basis",
     )
+    status_enum = AssumptionStatus(status)
+    if status_enum == AssumptionStatus.VERIFIED:
+        assumption.verify("UI", "Marked verified from assumptions page")
+    elif status_enum == AssumptionStatus.INVALIDATED:
+        assumption.invalidate("Marked invalidated from assumptions page")
+    elif status_enum == AssumptionStatus.DEFERRED:
+        assumption.defer("Deferred from assumptions page")
+    elif status_enum == AssumptionStatus.ACCEPTED:
+        assumption.accept()
+
+    if request.headers.get("HX-Request") == "true":
+        return render_assumptions_list(request, project)
     return RedirectResponse(url=f"/project/{project_id}/assumptions", status_code=303)
+
+
+@app.post("/project/{project_id}/assumptions/{assumption_id}/verify")
+async def verify_assumption(request: Request, project_id: str, assumption_id: str):
+    project = get_project(project_id)
+    tracker, _assumption_set = assumption_set_for_project(project_id)
+    tracker.verify_assumption(assumption_id, "UI", "Verified from assumptions page")
+    return render_assumptions_list(request, project)
+
+
+@app.post("/project/{project_id}/assumptions/{assumption_id}/invalidate")
+async def invalidate_assumption(request: Request, project_id: str, assumption_id: str):
+    project = get_project(project_id)
+    tracker, _assumption_set = assumption_set_for_project(project_id)
+    tracker.invalidate_assumption(assumption_id, "Invalidated from assumptions page")
+    return render_assumptions_list(request, project)
+
+
+@app.post("/project/{project_id}/assumptions/load-templates")
+async def load_assumption_templates(request: Request, project_id: str):
+    project = get_project(project_id)
+    assumption_trackers[project_id] = create_bas_assumptions(project_id)
+    return render_assumptions_list(request, project)
 
 
 if __name__ == "__main__":

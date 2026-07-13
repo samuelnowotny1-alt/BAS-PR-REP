@@ -21,6 +21,14 @@ from .equipment import Equipment, EquipmentRelationship, EquipmentTemplateRef
 from .graphics import GraphicBinding, GraphicDefinition, GraphicElement, GraphicNavigation
 from .logic import LogicBlock, LogicConnection, LogicDiagram, LogicParameter, LogicSignal
 from .points import Point, PointValidationIssue
+from .station_sync import (
+    StationConnectionConfig,
+    StationProbeResult,
+    StationSyncPlan,
+    StationSyncPlanItem,
+    StationSyncProtocol,
+    StationSyncTarget,
+)
 
 # Model classes
 from .project import Project, ProjectMetadata, SourceDocument
@@ -47,6 +55,12 @@ __all__ = [
     "EquipmentTemplateRef",
     "Point",
     "PointValidationIssue",
+    "StationConnectionConfig",
+    "StationProbeResult",
+    "StationSyncPlan",
+    "StationSyncPlanItem",
+    "StationSyncProtocol",
+    "StationSyncTarget",
     "Controller",
     "ControllerNetworkAddress",
     "ControllerIOCapacity",

@@ -1,36 +1,18 @@
 """CLI entry point for BAS Assistant."""
 
-import click
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.syntax import Syntax
 from pathlib import Path
 
+import click
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from .importers import CSVImporter, create_sample_csvs
 from .models import (
     Project,
     ProjectMetadata,
-    Equipment,
-    EquipmentType,
-    Point,
-    PointKind,
-    PointDirection,
-    PointSource,
-    Controller,
-    Protocol,
-    UnitSystem,
 )
-from .importers import CSVImporter, create_sample_csvs
-from .validation import ValidationEngine, BUILTIN_RULES
-from .exporters import (
-    NiagaraExporter,
-    BACnetExporter,
-    TridiumExporter,
-    JCIExporter,
-    SiemensExporter,
-    HoneywellExporter,
-)
-
+from .validation import ValidationEngine
 
 console = Console()
 
@@ -39,7 +21,6 @@ console = Console()
 @click.version_option(version="0.1.0")
 def main():
     """BAS Programming Assistant - Deterministic import, validation, and generation for building automation systems."""
-    pass
 
 
 @main.command()
@@ -270,16 +251,16 @@ if __name__ == "__main__":
 def checkout(project: str, output: str):
     """Generate checkout sheets."""
     console.print(f"[blue]Loading project:[/blue] {project}")
-    
+
     import json
     with open(project) as f:
         data = json.load(f)
-    
+
     proj = Project.model_validate(data)
-    
+
     from .generators import generate_checkout_sheets
     result = generate_checkout_sheets(proj, Path(output))
-    
+
     console.print(f"[green]✓[/green] Generated {result['sheet_count']} checkout sheets")
     console.print(f"  Markdown: {len(result['markdown'])} files")
     console.print(f"  Excel: {result['excel']}")
@@ -291,17 +272,17 @@ def checkout(project: str, output: str):
 def reports(project: str, output: str):
     """Generate submittal reports."""
     console.print(f"[blue]Loading project:[/blue] {project}")
-    
+
     import json
     with open(project) as f:
         data = json.load(f)
-    
+
     proj = Project.model_validate(data)
-    
+
     from .generators import generate_reports
     paths = generate_reports(proj, Path(output))
-    
-    console.print(f"[green]✓[/green] Generated report package")
+
+    console.print("[green]✓[/green] Generated report package")
     for name, path in paths.items():
         console.print(f"  {name}: {path}")
 
@@ -312,17 +293,17 @@ def reports(project: str, output: str):
 def graphics(project: str, output: str):
     """Generate graphics definitions."""
     console.print(f"[blue]Loading project:[/blue] {project}")
-    
+
     import json
     with open(project) as f:
         data = json.load(f)
-    
+
     proj = Project.model_validate(data)
-    
+
     from .generators import generate_graphics
     result = generate_graphics(proj, Path(output))
-    
-    console.print(f"[green]✓[/green] Generated graphics")
+
+    console.print("[green]✓[/green] Generated graphics")
     for fmt, paths in result.items():
         console.print(f"  {fmt}: {len(paths)} files")
 
@@ -333,17 +314,17 @@ def graphics(project: str, output: str):
 def logic(project: str, output: str):
     """Generate control logic diagrams."""
     console.print(f"[blue]Loading project:[/blue] {project}")
-    
+
     import json
     with open(project) as f:
         data = json.load(f)
-    
+
     proj = Project.model_validate(data)
-    
+
     from .generators import generate_logic
     result = generate_logic(proj, Path(output))
-    
-    console.print(f"[green]✓[/green] Generated logic diagrams")
+
+    console.print("[green]✓[/green] Generated logic diagrams")
     for fmt, paths in result.items():
         console.print(f"  {fmt}: {len(paths)} files")
 
