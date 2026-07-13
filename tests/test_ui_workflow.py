@@ -173,8 +173,40 @@ def test_object_detail_page_renders_artifact_provenance() -> None:
 
     text = response_text(response)
     assert response.status_code == 200
+    assert "Engineering Review" in text
+    assert "Review Score" in text
     assert "Artifact Provenance" in text
     assert "station.zip" in text
+
+
+def test_controller_detail_page_renders_network_review_context() -> None:
+    project_id = create_project("controller-detail-project")
+    project = main.get_project(project_id)
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP, Protocol.BACNET_MSTP],
+            network_addresses=[
+                ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10"),
+                ControllerNetworkAddress(protocol=Protocol.BACNET_MSTP, address="11", network_number=2001),
+            ],
+            serves_equipment_ids=["AHU-1"],
+            owned_point_names=["AHU-1 SAT"],
+            provenance={"parser": "controller_schedule", "source_name": "controller_schedule.csv"},
+        )
+    )
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    main.save_project(project)
+
+    response = run_async(main.controller_detail_page(request(f"/project/{project_id}/controllers/MPC-1"), project_id, "MPC-1"))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Engineering Review" in text
+    assert "BACnet/IP" in text
+    assert "BACnet/MSTP 11 (net 2001)" in text
+    assert "controller_schedule.csv" in text
 
 
 def test_object_list_pages_render() -> None:

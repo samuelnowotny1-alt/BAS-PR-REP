@@ -255,6 +255,7 @@ class ProjectQueryService:
                 )
             )
         payload = dict(record.payload_json or {})
+        review = self._build_equipment_review(payload, linked_points_count=len(point_records))
         return {
             "entity_type": "equipment",
             "project_id": project_id,
@@ -262,6 +263,7 @@ class ProjectQueryService:
             "subtitle": record.equipment_type,
             "payload": payload,
             "linked_points": [point.point_name for point in point_records],
+            "review": review,
         }
 
     def point_detail(self, project_id: str, point_name: str) -> dict[str, object] | None:
@@ -284,6 +286,7 @@ class ProjectQueryService:
             related.append({"entity_type": "equipment", "entity_key": payload["equipment_id"]})
         if payload.get("controller_id"):
             related.append({"entity_type": "controller", "entity_key": payload["controller_id"]})
+        review = self._build_point_review(payload)
         return {
             "entity_type": "point",
             "project_id": project_id,
@@ -292,6 +295,7 @@ class ProjectQueryService:
             "payload": payload,
             "linked_points": [],
             "related_entities": related,
+            "review": review,
         }
 
     def controller_detail(self, project_id: str, controller_id: str) -> dict[str, object] | None:
@@ -313,6 +317,7 @@ class ProjectQueryService:
             {"entity_type": "equipment", "entity_key": equipment_id}
             for equipment_id in payload.get("serves_equipment_ids", [])
         ]
+        review = self._build_controller_review(payload)
         return {
             "entity_type": "controller",
             "project_id": project_id,
@@ -321,6 +326,7 @@ class ProjectQueryService:
             "payload": payload,
             "linked_points": list(payload.get("owned_point_names", [])),
             "related_entities": related,
+            "review": review,
         }
 
     def activity_view(self, project_id: str) -> dict[str, object] | None:
@@ -763,6 +769,74 @@ class ProjectQueryService:
         if start + width < len(chunk_text):
             excerpt = f"{excerpt}..."
         return excerpt
+
+    def _build_equipment_review(self, payload: dict[str, object], *, linked_points_count: int) -> dict[str, object]:
+        checks = [
+            self._review_check("Assigned controller", bool(payload.get("controller_id")), payload.get("controller_id") or "Missing controller assignment"),
+            self._review_check("Location context", bool(payload.get("building") or payload.get("floor") or payload.get("room")), self._join_review_values(payload.get("building"), payload.get("floor"), payload.get("room")) or "Missing building, floor, and room context"),
+            self._review_check("Served area", bool(payload.get("served_area")), payload.get("served_area") or "Served area not defined"),
+            self._review_check("Linked points", linked_points_count > 0, f"{linked_points_count} linked points" if linked_points_count else "No linked points"),
+            self._review_check("Source provenance", bool((payload.get("provenance") or {}).get("source_name")), self._format_provenance(payload)),
+        ]
+        return self._finalize_review(checks, payload)
+
+    def _build_point_review(self, payload: dict[str, object]) -> dict[str, object]:
+        checks = [
+            self._review_check("Equipment link", bool(payload.get("equipment_id")), payload.get("equipment_id") or "No equipment linked"),
+            self._review_check("Controller link", bool(payload.get("controller_id")), payload.get("controller_id") or "No controller linked"),
+            self._review_check("Units", bool(payload.get("units")), payload.get("units") or "Units not defined"),
+            self._review_check("Protocol mapping", bool(payload.get("bacnet_object_type") or payload.get("modbus_register")), self._join_review_values(payload.get("bacnet_object_type"), payload.get("bacnet_instance"), payload.get("modbus_register")) or "No BACnet or Modbus mapping"),
+            self._review_check("Source provenance", bool((payload.get("provenance") or {}).get("source_name")), self._format_provenance(payload)),
+        ]
+        return self._finalize_review(checks, payload)
+
+    def _build_controller_review(self, payload: dict[str, object]) -> dict[str, object]:
+        protocols = list(payload.get("protocols") or [])
+        network_addresses = list(payload.get("network_addresses") or [])
+        checks = [
+            self._review_check("Protocols", bool(protocols), ", ".join(str(protocol) for protocol in protocols) if protocols else "No controller protocols"),
+            self._review_check("Network addresses", bool(network_addresses), ", ".join(self._format_controller_address(address) for address in network_addresses) if network_addresses else "No network addresses"),
+            self._review_check("Served equipment", bool(payload.get("serves_equipment_ids")), f"{len(payload.get('serves_equipment_ids', []))} linked equipment" if payload.get("serves_equipment_ids") else "No served equipment linked"),
+            self._review_check("Owned points", bool(payload.get("owned_point_names")), f"{len(payload.get('owned_point_names', []))} owned points" if payload.get("owned_point_names") else "No owned points"),
+            self._review_check("Source provenance", bool((payload.get("provenance") or {}).get("source_name")), self._format_provenance(payload)),
+        ]
+        return self._finalize_review(checks, payload)
+
+    def _review_check(self, label: str, passed: bool, detail: object) -> dict[str, object]:
+        return {
+            "label": label,
+            "status": "ready" if passed else "attention",
+            "detail": str(detail),
+        }
+
+    def _finalize_review(self, checks: list[dict[str, object]], payload: dict[str, object]) -> dict[str, object]:
+        ready_count = sum(1 for check in checks if check["status"] == "ready")
+        total = len(checks) or 1
+        score_pct = int(round((ready_count / total) * 100))
+        if score_pct >= 80:
+            status = "ready"
+        elif score_pct >= 50:
+            status = "partial"
+        else:
+            status = "needs_attention"
+        return {
+            "status": status,
+            "score_pct": score_pct,
+            "ready_count": ready_count,
+            "total_checks": total,
+            "provenance": self._format_provenance(payload),
+            "checks": checks,
+        }
+
+    def _format_provenance(self, payload: dict[str, object]) -> str:
+        provenance = dict(payload.get("provenance") or {})
+        parser_name = provenance.get("parser")
+        source_name = provenance.get("source_name")
+        return self._join_review_values(parser_name, source_name) or "No explicit provenance"
+
+    def _join_review_values(self, *values: object) -> str:
+        parts = [str(value) for value in values if value not in (None, "", [], {})]
+        return " · ".join(parts)
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""
