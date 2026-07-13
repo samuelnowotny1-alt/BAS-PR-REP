@@ -112,6 +112,13 @@ class ProjectQueryService:
                     .order_by(EquipmentRecord.equipment_key)
                 )
             )
+            controller_records = list(
+                session.scalars(
+                    select(ControllerRecord)
+                    .where(ControllerRecord.project_id == project.id)
+                    .order_by(ControllerRecord.controller_key)
+                )
+            )
             point_count = session.scalar(
                 select(func.count()).select_from(PointRecord).where(PointRecord.project_id == project.id)
             ) or 0
@@ -150,6 +157,9 @@ class ProjectQueryService:
                     .limit(8)
                 )
             )
+            artifact_link_count = session.scalar(
+                select(func.count()).select_from(ArtifactObjectLinkRecord).where(ArtifactObjectLinkRecord.project_id == project.id)
+            ) or 0
             memberships = list(
                 session.execute(
                     select(UserAccount.username, ProjectMembershipRecord.access_level)
@@ -224,6 +234,15 @@ class ProjectQueryService:
                 }
                 for record in tasks
             ],
+            "engineering_status": self._build_project_engineering_status(
+                equipment_records=equipment_records,
+                controller_records=controller_records,
+                point_count=int(point_count),
+                documents=documents,
+                knowledge=knowledge,
+                tasks=tasks,
+                artifact_link_count=int(artifact_link_count),
+            ),
             "memberships": [
                 {
                     "username": username,
@@ -837,6 +856,95 @@ class ProjectQueryService:
     def _join_review_values(self, *values: object) -> str:
         parts = [str(value) for value in values if value not in (None, "", [], {})]
         return " · ".join(parts)
+
+    def _build_project_engineering_status(
+        self,
+        *,
+        equipment_records: list[EquipmentRecord],
+        controller_records: list[ControllerRecord],
+        point_count: int,
+        documents: list[DocumentRecord],
+        knowledge: list[KnowledgeRecord],
+        tasks: list[TaskRecord],
+        artifact_link_count: int,
+    ) -> dict[str, object]:
+        equipment_total = len(equipment_records)
+        controllers_total = len(controller_records)
+        knowledge_indexed = sum(1 for record in knowledge if record.status == "indexed")
+        failed_tasks = [task for task in tasks if task.status in {"failed", "error"}]
+        equipment_with_controller = sum(
+            1 for record in equipment_records if (record.payload_json or {}).get("controller_id")
+        )
+        controllers_with_addresses = sum(
+            1 for record in controller_records if (record.payload_json or {}).get("network_addresses")
+        )
+
+        checks = [
+            self._project_status_check(
+                "Equipment imported",
+                equipment_total > 0,
+                f"{equipment_total} equipment objects loaded" if equipment_total else "No equipment imported yet",
+            ),
+            self._project_status_check(
+                "Controller assignment coverage",
+                equipment_total == 0 or equipment_with_controller == equipment_total,
+                self._coverage_detail(equipment_with_controller, equipment_total, "equipment assigned to controllers"),
+            ),
+            self._project_status_check(
+                "Point coverage",
+                point_count > 0,
+                f"{point_count} structured points loaded" if point_count else "No points imported yet",
+            ),
+            self._project_status_check(
+                "Controller addressing",
+                controllers_total == 0 or controllers_with_addresses == controllers_total,
+                self._coverage_detail(controllers_with_addresses, controllers_total, "controllers with network addresses"),
+            ),
+            self._project_status_check(
+                "Knowledge indexed",
+                not documents or knowledge_indexed > 0,
+                self._coverage_detail(knowledge_indexed, len(knowledge), "knowledge records indexed"),
+            ),
+            self._project_status_check(
+                "Artifact lineage",
+                artifact_link_count > 0,
+                f"{artifact_link_count} artifact links recorded" if artifact_link_count else "No artifact links recorded yet",
+            ),
+            self._project_status_check(
+                "Task failures",
+                not failed_tasks,
+                f"{len(failed_tasks)} failed tasks" if failed_tasks else "No failed tasks recorded",
+            ),
+        ]
+        ready_count = sum(1 for check in checks if check["status"] == "ready")
+        score_pct = int(round((ready_count / len(checks)) * 100)) if checks else 0
+        if score_pct >= 85:
+            status = "ready"
+        elif score_pct >= 55:
+            status = "partial"
+        else:
+            status = "needs_attention"
+        return {
+            "status": status,
+            "score_pct": score_pct,
+            "checks": checks,
+            "equipment_with_controller": equipment_with_controller,
+            "equipment_total": equipment_total,
+            "controllers_with_addresses": controllers_with_addresses,
+            "controllers_total": controllers_total,
+            "knowledge_indexed": knowledge_indexed,
+            "knowledge_total": len(knowledge),
+            "failed_task_count": len(failed_tasks),
+            "artifact_link_count": artifact_link_count,
+        }
+
+    def _project_status_check(self, label: str, passed: bool, detail: str) -> dict[str, object]:
+        return {"label": label, "status": "ready" if passed else "attention", "detail": detail}
+
+    def _coverage_detail(self, complete: int, total: int, noun: str) -> str:
+        if total == 0:
+            return f"0 of 0 {noun}"
+        return f"{complete} of {total} {noun}"
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""

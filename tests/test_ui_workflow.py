@@ -117,6 +117,63 @@ def test_create_project_persists_form_fields_and_detail_loads() -> None:
     assert "Pytest Project" in response_text(detail)
 
 
+def test_project_detail_page_renders_engineering_status_summary() -> None:
+    project_id = create_project("status-project")
+    project = main.get_project(project_id)
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            building="Main",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 SAT shall maintain 55F.")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    main.save_project(project)
+
+    response = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Engineering Status" in text
+    assert "Controller Assignment Coverage" in text
+    assert "Controller Addressing" in text
+    assert "Knowledge Indexed" in text
+
+
 def test_project_memberships_page_renders_for_admin() -> None:
     project_id = create_project()
     admin_request = request(f"/project/{project_id}/memberships")

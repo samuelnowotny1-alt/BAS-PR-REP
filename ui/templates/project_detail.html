@@ -58,6 +58,57 @@
         </div>
     </div>
 
+    {% if project_view.engineering_status %}
+    <div class="mb-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Engineering Status</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Project readiness across structured imports, controller topology, knowledge ingestion, and lineage.</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ project_view.engineering_status.score_pct }}%</p>
+                    <p class="mt-1 text-xs uppercase tracking-[0.16em] text-gray-400">{{ project_view.engineering_status.status }}</p>
+                </div>
+            </div>
+            <div class="mt-5 grid gap-3 md:grid-cols-2">
+                {% for check in project_view.engineering_status.checks %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ check.label }}</p>
+                        <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
+                    </div>
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ check.detail }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Controller Assignment Coverage</p>
+                <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.engineering_status.equipment_with_controller }}/{{ project_view.engineering_status.equipment_total }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">equipment assigned to controllers</p>
+            </div>
+            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Controller Addressing</p>
+                <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.engineering_status.controllers_with_addresses }}/{{ project_view.engineering_status.controllers_total }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">controllers with network topology</p>
+            </div>
+            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Knowledge Indexed</p>
+                <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.engineering_status.knowledge_indexed }}/{{ project_view.engineering_status.knowledge_total }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">knowledge records indexed</p>
+            </div>
+            <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Lineage Health</p>
+                <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.engineering_status.artifact_link_count }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">artifact links · {{ project_view.engineering_status.failed_task_count }} failed tasks</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Quick Actions -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <a href="/project/{{ project_view.project_id }}/import" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
