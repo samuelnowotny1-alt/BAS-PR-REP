@@ -197,6 +197,44 @@ curl -I http://127.0.0.1:8000/
 curl -I https://bas.example.com
 ```
 
+## 11. Automated GitHub Checkpoints
+
+The repo includes three checkpoint helpers:
+
+- Manual push: `./scripts/push_checkpoint.sh`
+- Safe auto-push wrapper: `./scripts/push_checkpoint_safe.sh`
+- Cron installer: `./scripts/install_checkpoint_cron.sh`
+
+Manual examples:
+
+```bash
+./scripts/push_checkpoint.sh
+./scripts/push_checkpoint.sh --skip-tests --message "Manual checkpoint before parser refactor"
+```
+
+The safe wrapper runs the focused regression suite before commit/push and skips overlapping runs using `flock`.
+
+Install the 30-minute cron job:
+
+```bash
+chmod +x scripts/push_checkpoint.sh scripts/push_checkpoint_safe.sh scripts/install_checkpoint_cron.sh
+./scripts/install_checkpoint_cron.sh
+```
+
+Checkpoint cron logs:
+
+```bash
+tail -f logs/checkpoint_cron.log
+```
+
+If you need to customize the test gate for automated checkpoints:
+
+```bash
+export BAS_CHECKPOINT_TEST_CMD=".venv/bin/pytest tests/test_auth_and_database.py"
+```
+
+An example crontab entry is provided at `deploy/checkpoint_push.cron.example`.
+
 ## Notes
 
 - Persistent app data is stored in `./data`.

@@ -1,0 +1,2 @@
+# BAS Assistant checkpoint automation
+*/30 * * * * cd /home/bas/bas-assistant && /home/bas/bas-assistant/scripts/push_checkpoint_safe.sh >> /home/bas/bas-assistant/logs/checkpoint_cron.log 2>&1

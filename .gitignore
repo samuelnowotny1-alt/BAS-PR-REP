@@ -7,6 +7,7 @@ config/bas-assistant.env
 uploads/
 data/*.db
 logs/*.log
+logs/checkpoint_push.lock
 UI_VERIFICATION_REPORT.json
 verify_output.txt
 test_read.txt
