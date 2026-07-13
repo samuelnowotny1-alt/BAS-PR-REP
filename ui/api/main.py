@@ -46,6 +46,7 @@ from bas_assistant.reasoning import (
 from bas_assistant.station_sync import StationSyncService
 from bas_assistant.config import get_settings
 from bas_assistant.runtime import build_health_report, configure_logging, ensure_runtime_directories
+from bas_assistant.services import ArtifactEntityLink
 from ui.api.factory import create_application
 
 SETTINGS = get_settings()
@@ -144,6 +145,73 @@ def save_project(project: Project) -> None:
     project.update_timestamp()
     container.projects.save(project)
     projects[project.metadata.project_id] = project
+
+
+def build_tabular_import_links(
+    *,
+    importer: CSVImporter,
+    file_path: Path,
+    entity_type: str,
+    parser_name: str,
+    source_name: str,
+) -> list[ArtifactEntityLink]:
+    """Create explicit links for every structured object declared in a tabular upload."""
+    dataframe = importer._read_tabular_file(file_path)
+    if entity_type == "equipment":
+        keys = sorted(
+            {
+                str(row.get("Equipment ID", "")).strip()
+                for _, row in dataframe.iterrows()
+                if str(row.get("Equipment ID", "")).strip()
+            }
+        )
+    elif entity_type == "point":
+        keys = sorted(
+            {
+                str(row.get("Point Name", "")).strip()
+                for _, row in dataframe.iterrows()
+                if str(row.get("Point Name", "")).strip()
+            }
+        )
+    elif entity_type == "controller":
+        keys = sorted(
+            {
+                str(row.get("Controller ID", "")).strip()
+                for _, row in dataframe.iterrows()
+                if str(row.get("Controller ID", "")).strip()
+            }
+        )
+    else:
+        keys = []
+    return [
+        ArtifactEntityLink(
+            entity_type=entity_type,
+            entity_key=entity_key,
+            parser_name=parser_name,
+            metadata={"source_name": source_name},
+        )
+        for entity_key in keys
+    ]
+
+
+def persist_artifact_links(
+    *,
+    project: Project,
+    stored_upload,
+    links: list[ArtifactEntityLink],
+    parser_name: str,
+) -> dict[str, list[str]]:
+    """Persist artifact links for a stored upload and return reimport diff results."""
+    container.artifact_links.replace_links_for_document(
+        project_id=project.metadata.project_id,
+        document_id=stored_upload.document_record_id,
+        upload_id=stored_upload.upload_record_id,
+        parser_name=parser_name,
+        links=links,
+    )
+    return container.artifact_links.diff_against_previous_document(
+        document_id=stored_upload.document_record_id,
+    )
 
 
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
@@ -664,6 +732,48 @@ async def project_detail(request: Request, project_id: str):
     })
 
 
+@app.get("/project/{project_id}/equipment/{equipment_id}", response_class=HTMLResponse)
+async def equipment_detail_page(request: Request, project_id: str, equipment_id: str):
+    project = get_project(project_id)
+    detail = container.project_queries.equipment_detail(project_id, equipment_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "equipment", equipment_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_detail.html",
+        context={"project": project, "detail": detail, "current_user": get_current_user(request)},
+    )
+
+
+@app.get("/project/{project_id}/points/{point_name}", response_class=HTMLResponse)
+async def point_detail_page(request: Request, project_id: str, point_name: str):
+    project = get_project(project_id)
+    detail = container.project_queries.point_detail(project_id, point_name)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Point not found")
+    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "point", point_name)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_detail.html",
+        context={"project": project, "detail": detail, "current_user": get_current_user(request)},
+    )
+
+
+@app.get("/project/{project_id}/controllers/{controller_id}", response_class=HTMLResponse)
+async def controller_detail_page(request: Request, project_id: str, controller_id: str):
+    project = get_project(project_id)
+    detail = container.project_queries.controller_detail(project_id, controller_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "controller", controller_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_detail.html",
+        context={"project": project, "detail": detail, "current_user": get_current_user(request)},
+    )
+
+
 @app.get("/project/{project_id}/activity", response_class=HTMLResponse)
 async def project_activity_page(request: Request, project_id: str):
     project = get_project(project_id)
@@ -776,6 +886,18 @@ async def import_data(
             document_type="equipment_schedule",
         )
         result = importer.import_equipment_schedule(stored_upload.path, "equip_upload")
+        artifact_diff = persist_artifact_links(
+            project=project,
+            stored_upload=stored_upload,
+            links=build_tabular_import_links(
+                importer=importer,
+                file_path=stored_upload.path,
+                entity_type="equipment",
+                parser_name="csv_equipment_import",
+                source_name=stored_upload.source_document.name,
+            ),
+            parser_name="csv_equipment_import",
+        )
         container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["equipment"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.equipment_count}
         knowledge_result = container.knowledge.ingest_document(
@@ -791,6 +913,7 @@ async def import_data(
                 "import_result": results["equipment"],
                 "knowledge_status": knowledge_result.status,
                 "chunk_count": knowledge_result.chunk_count,
+                "artifact_diff": artifact_diff,
             },
         )
 
@@ -808,6 +931,18 @@ async def import_data(
             document_type="point_list",
         )
         result = importer.import_point_list(stored_upload.path, "points_upload")
+        artifact_diff = persist_artifact_links(
+            project=project,
+            stored_upload=stored_upload,
+            links=build_tabular_import_links(
+                importer=importer,
+                file_path=stored_upload.path,
+                entity_type="point",
+                parser_name="csv_points_import",
+                source_name=stored_upload.source_document.name,
+            ),
+            parser_name="csv_points_import",
+        )
         container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["points"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.points_count}
         knowledge_result = container.knowledge.ingest_document(
@@ -823,6 +958,7 @@ async def import_data(
                 "import_result": results["points"],
                 "knowledge_status": knowledge_result.status,
                 "chunk_count": knowledge_result.chunk_count,
+                "artifact_diff": artifact_diff,
             },
         )
 
@@ -840,6 +976,18 @@ async def import_data(
             document_type="controller_schedule",
         )
         result = importer.import_controller_schedule(stored_upload.path, "ctrl_upload")
+        artifact_diff = persist_artifact_links(
+            project=project,
+            stored_upload=stored_upload,
+            links=build_tabular_import_links(
+                importer=importer,
+                file_path=stored_upload.path,
+                entity_type="controller",
+                parser_name="csv_controllers_import",
+                source_name=stored_upload.source_document.name,
+            ),
+            parser_name="csv_controllers_import",
+        )
         container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["controllers"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.controllers_count}
         knowledge_result = container.knowledge.ingest_document(
@@ -855,6 +1003,7 @@ async def import_data(
                 "import_result": results["controllers"],
                 "knowledge_status": knowledge_result.status,
                 "chunk_count": knowledge_result.chunk_count,
+                "artifact_diff": artifact_diff,
             },
         )
 
@@ -887,12 +1036,20 @@ async def import_data(
         if container.parsers.can_parse(stored_upload.path):
             container.tasks.mark_status(task_id, status="parsing", detail={"parser": "niagara"})
             parser_result = container.parsers.parse(project=project, file_path=stored_upload.path)
+            artifact_diff = persist_artifact_links(
+                project=project,
+                stored_upload=stored_upload,
+                links=parser_result.links,
+                parser_name=parser_result.parser_name,
+            )
             results[stored_upload.source_document.name] = {
                 "success": parser_result.parsed,
                 "equipment_added": parser_result.equipment_added,
                 "points_added": parser_result.points_added,
+                "controllers_added": parser_result.controllers_added,
                 "warnings": parser_result.warnings,
                 "details": parser_result.details,
+                "artifact_diff": artifact_diff,
             }
             task_result["parser_result"] = results[stored_upload.source_document.name]
         container.tasks.complete_task(task_id, result=task_result)

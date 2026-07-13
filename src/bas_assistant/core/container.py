@@ -8,7 +8,7 @@ from bas_assistant.auth import AuthenticationService
 from bas_assistant.config import Settings
 from bas_assistant.database import DatabaseManager
 from bas_assistant.parsers import NiagaraArtifactParser
-from bas_assistant.services import DashboardService, JsonProjectRepository, KnowledgeIngestionService, ProjectQueryService, TaskService, UploadService
+from bas_assistant.services import ArtifactLinkService, DashboardService, JsonProjectRepository, KnowledgeIngestionService, ProjectQueryService, TaskService, UploadService
 
 
 @dataclass(slots=True)
@@ -21,6 +21,7 @@ class ApplicationContainer:
     projects: JsonProjectRepository
     project_queries: ProjectQueryService
     uploads: UploadService
+    artifact_links: ArtifactLinkService
     knowledge: KnowledgeIngestionService
     parsers: NiagaraArtifactParser
     tasks: TaskService
@@ -34,6 +35,7 @@ def build_container(settings: Settings) -> ApplicationContainer:
     projects = JsonProjectRepository(settings.data_dir, db=db)
     project_queries = ProjectQueryService(db)
     uploads = UploadService(settings.uploads_dir, db=db)
+    artifact_links = ArtifactLinkService(db)
     knowledge = KnowledgeIngestionService(db)
     parsers = NiagaraArtifactParser()
     tasks = TaskService(db)
@@ -53,6 +55,7 @@ def build_container(settings: Settings) -> ApplicationContainer:
         projects=projects,
         project_queries=project_queries,
         uploads=uploads,
+        artifact_links=artifact_links,
         knowledge=knowledge,
         parsers=parsers,
         tasks=tasks,

@@ -1,4 +1,5 @@
 import asyncio
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -131,6 +132,47 @@ def test_project_memberships_page_renders_for_admin() -> None:
 
     assert response.status_code == 200
     assert "Bulk Membership Management" in response_text(response)
+
+
+def test_object_detail_page_renders_artifact_provenance() -> None:
+    project_id = create_project("detail-project")
+    project = main.get_project(project_id)
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            provenance={"parser": "niagara_station_tree", "source_name": "station.zip"},
+        )
+    )
+    main.save_project(project)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=main.UploadFile(filename="station.zip", file=BytesIO(b"zip-bytes")),
+            category="archives",
+            document_type="archive",
+        )
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=stored_upload,
+        links=[
+            main.ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key="AHU-1",
+                parser_name="niagara_station_tree",
+                metadata={"source_name": "station.zip"},
+            )
+        ],
+        parser_name="niagara_station_tree",
+    )
+
+    response = run_async(main.equipment_detail_page(request(f"/project/{project_id}/equipment/AHU-1"), project_id, "AHU-1"))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Artifact Provenance" in text
+    assert "station.zip" in text
 
 
 def test_non_htmx_create_project_returns_redirect() -> None:

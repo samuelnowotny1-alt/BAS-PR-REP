@@ -11,7 +11,7 @@ from sqlalchemy import inspect, select
 from starlette.requests import Request
 
 from bas_assistant.auth import hash_password, verify_password
-from bas_assistant.database import EquipmentRecord, KnowledgeRecord, PointRecord, TaskRecord, UploadRecord, UserAccount
+from bas_assistant.database import ArtifactObjectLinkRecord, EquipmentRecord, KnowledgeRecord, PointRecord, TaskRecord, UploadRecord, UserAccount
 from bas_assistant.generators.px_graphics import generate_vav_px
 from bas_assistant.services.knowledge import KnowledgeIngestionService
 from ui.api import main
@@ -55,7 +55,7 @@ def test_database_bootstrap_creates_expected_tables_and_admin(
 
     table_names = set(inspect(main.container.db.engine).get_table_names())
 
-    assert {"users", "projects", "project_memberships", "documents", "uploads", "graphics", "equipment", "points", "controllers", "conversations", "knowledge", "tasks", "logs"}.issubset(table_names)
+    assert {"users", "projects", "project_memberships", "documents", "uploads", "graphics", "equipment", "points", "controllers", "conversations", "knowledge", "tasks", "logs", "artifact_object_links"}.issubset(table_names)
 
     with main.container.db.session() as session:
         admin = session.scalar(select(UserAccount).where(UserAccount.username == main.container.settings.bootstrap_admin_username))
@@ -488,10 +488,12 @@ def test_px_upload_parses_into_structured_equipment_and_points(tmp_path: Path) -
         equipment = list(session.scalars(select(EquipmentRecord)))
         points = list(session.scalars(select(PointRecord)))
         knowledge = list(session.scalars(select(KnowledgeRecord)))
+        links = list(session.scalars(select(ArtifactObjectLinkRecord)))
 
     assert any(record.equipment_key == "VAV-201" for record in equipment)
     assert points
     assert any(record.source_name == "VAV-201.px" for record in knowledge)
+    assert any(record.entity_type == "equipment" and record.entity_key == "VAV-201" for record in links)
 
 
 def test_niagara_station_zip_parses_manifest_content(tmp_path: Path) -> None:
@@ -596,6 +598,106 @@ def test_niagara_station_tree_zip_parses_slot_paths(tmp_path: Path) -> None:
     assert equipment is not None
     assert equipment.provenance["parser"] == "niagara_station_tree"
     assert point.controller_id == "MPC-1"
+
+
+def test_reimport_records_artifact_diff_against_previous_document(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'reimport.db'}",
+    )
+
+    project_id = "reimport-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Reimport Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    first_upload = UploadFile(filename="equipment.csv", file=BytesIO(b"Equipment ID,Equipment Type\nAHU-1,AHU\n"))
+    second_upload = UploadFile(filename="equipment.csv", file=BytesIO(b"Equipment ID,Equipment Type\nAHU-1,AHU\nAHU-2,AHU\n"))
+
+    asyncio.run(main.import_data(project_id=project_id, equipment_file=first_upload))
+    asyncio.run(main.import_data(project_id=project_id, equipment_file=second_upload))
+
+    with main.container.db.session() as session:
+        latest_task = session.scalar(
+            select(TaskRecord)
+            .where(TaskRecord.project_id.is_not(None), TaskRecord.task_type == "equipment_import")
+            .order_by(TaskRecord.id.desc())
+        )
+
+    assert latest_task is not None
+    artifact_diff = latest_task.result_json["result"]["artifact_diff"]
+    assert "equipment:AHU-2" in artifact_diff["added"]
+    assert "equipment:AHU-1" in artifact_diff["unchanged"]
+
+
+def test_niagara_xml_manifest_traverses_slot_hierarchy(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'xml_uploads.db'}",
+    )
+
+    project_id = "xml-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="XML Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    xml_payload = b"""<station>
+    <Drivers>
+      <BacnetNetwork>
+        <controller name="MPC-2">
+          <Points>
+            <point name="AHU-2_SAT" />
+          </Points>
+        </controller>
+      </BacnetNetwork>
+    </Drivers>
+    <Config>
+      <Equipment>
+        <Area name="Level1">
+          <equipment name="AHU-2" />
+        </Area>
+      </Equipment>
+    </Config>
+    </station>"""
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as archive:
+        archive.writestr("station.xml", xml_payload)
+    zip_buffer.seek(0)
+    upload = UploadFile(filename="station-xml.zip", file=zip_buffer)
+
+    response = asyncio.run(main.import_data(project_id=project_id, supporting_files=[upload]))
+
+    assert response.status_code == 303
+    project = main.get_project(project_id)
+    assert project.get_controller("MPC-2") is not None
+    assert project.get_equipment("AHU-2") is not None
+    assert project.get_point("AHU-2_SAT") is not None
 
 
 def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:

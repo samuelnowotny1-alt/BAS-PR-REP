@@ -26,6 +26,8 @@ class StoredUpload:
     document_type: str
     media_type: str | None
     metadata: dict[str, Any]
+    upload_record_id: int | None
+    document_record_id: int | None
 
 
 class UploadService:
@@ -101,33 +103,51 @@ class UploadService:
             "document_type": resolved_document_type,
             "checksum": checksum,
         }
+        upload_record_id = None
+        document_record_id = None
         with self.db.session() as session:
             project_record = session.scalar(
                 select(ProjectRecord).where(ProjectRecord.project_id == project.metadata.project_id)
             )
             project_db_id = project_record.id if project_record is not None else None
-            session.add(
-                UploadRecord(
-                    project_id=project_db_id,
-                    filename=safe_name,
-                    media_type=upload.content_type,
-                    category=resolved_category,
-                    stored_path=str(target_path),
-                    status="processed",
-                    metadata_json=metadata,
+            previous_document = session.scalar(
+                select(DocumentRecord)
+                .where(
+                    DocumentRecord.project_id == project_db_id,
+                    DocumentRecord.name == safe_name,
+                    DocumentRecord.document_type == resolved_document_type,
                 )
+                .order_by(DocumentRecord.created_at.desc())
             )
-            session.add(
-                DocumentRecord(
-                    project_id=project_db_id,
-                    external_id=source_document.id,
-                    name=safe_name,
-                    document_type=resolved_document_type,
-                    file_path=str(target_path),
-                    checksum=checksum,
-                    metadata_json={**metadata, "category": resolved_category},
-                )
+            if previous_document is not None:
+                metadata["previous_document_id"] = previous_document.id
+                metadata["previous_checksum"] = previous_document.checksum
+                metadata["is_reimport"] = True
+                metadata["checksum_changed"] = previous_document.checksum != checksum
+            upload_record = UploadRecord(
+                project_id=project_db_id,
+                filename=safe_name,
+                media_type=upload.content_type,
+                category=resolved_category,
+                stored_path=str(target_path),
+                status="processed",
+                metadata_json=metadata,
             )
+            session.add(upload_record)
+            session.flush()
+            upload_record_id = upload_record.id
+            document_record = DocumentRecord(
+                project_id=project_db_id,
+                external_id=source_document.id,
+                name=safe_name,
+                document_type=resolved_document_type,
+                file_path=str(target_path),
+                checksum=checksum,
+                metadata_json={**metadata, "category": resolved_category},
+            )
+            session.add(document_record)
+            session.flush()
+            document_record_id = document_record.id
         return StoredUpload(
             path=target_path,
             source_document=source_document,
@@ -135,6 +155,8 @@ class UploadService:
             document_type=resolved_document_type,
             media_type=upload.content_type,
             metadata=metadata,
+            upload_record_id=upload_record_id,
+            document_record_id=document_record_id,
         )
 
     def list_recent_uploads(

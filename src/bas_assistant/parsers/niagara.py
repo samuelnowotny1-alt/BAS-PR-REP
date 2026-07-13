@@ -11,6 +11,7 @@ from xml.etree import ElementTree as ET
 
 from bas_assistant.generators.px_graphics import PXFile
 from bas_assistant.models import Controller, Equipment, EquipmentType, Point, PointDirection, PointKind, PointSource, Project, Protocol
+from bas_assistant.services.artifact_links import ArtifactEntityLink
 
 
 @dataclass(slots=True)
@@ -22,6 +23,7 @@ class ArtifactParseResult:
     equipment_added: int = 0
     points_added: int = 0
     controllers_added: int = 0
+    links: list[ArtifactEntityLink] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     details: dict[str, object] = field(default_factory=dict)
 
@@ -47,6 +49,7 @@ class NiagaraArtifactParser:
         points_added = 0
         controllers_added = 0
         parsed_pages = 0
+        links: list[ArtifactEntityLink] = []
         warnings: list[str] = []
         manifest_hits = 0
         with zipfile.ZipFile(file_path) as archive, TemporaryDirectory() as temp_dir:
@@ -60,6 +63,8 @@ class NiagaraArtifactParser:
                     result = self._parse_px_file(project=project, file_path=target_path)
                     equipment_added += result.equipment_added
                     points_added += result.points_added
+                    controllers_added += result.controllers_added
+                    links.extend(result.links)
                     warnings.extend(result.warnings)
                     continue
                 if lower_member.endswith((".json", ".txt", ".csv", ".xml")):
@@ -68,7 +73,8 @@ class NiagaraArtifactParser:
                         manifest_hits += 1
                     equipment_added += result.equipment_added
                     points_added += result.points_added
-                    controllers_added += int(result.details.get("controllers_added", 0))
+                    controllers_added += result.controllers_added
+                    links.extend(result.links)
                     warnings.extend(result.warnings)
         return ArtifactParseResult(
             parsed=parsed_pages > 0 or manifest_hits > 0,
@@ -76,6 +82,7 @@ class NiagaraArtifactParser:
             equipment_added=equipment_added,
             points_added=points_added,
             controllers_added=controllers_added,
+            links=links,
             warnings=warnings,
             details={
                 "parsed_px_pages": parsed_pages,
@@ -104,6 +111,14 @@ class NiagaraArtifactParser:
             equipment_added = 1
 
         point_names = set()
+        links: list[ArtifactEntityLink] = [
+            ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key=equipment_id,
+                parser_name="niagara_px",
+                metadata={"source_name": file_path.name},
+            )
+        ]
         if px_file.root_widget is not None:
             self._collect_point_names(px_file.root_widget, point_names)
 
@@ -130,12 +145,21 @@ class NiagaraArtifactParser:
             )
             equipment.add_point(normalized_name)
             points_added += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="point",
+                    entity_key=normalized_name,
+                    parser_name="niagara_px",
+                    metadata={"binding_ord": point_name, "source_name": file_path.name},
+                )
+            )
 
         return ArtifactParseResult(
             parsed=True,
             parser_name="niagara_px",
             equipment_added=equipment_added,
             points_added=points_added,
+            links=links,
             details={
                 "px_name": px_file.name,
                 "widget_count": len(point_names),
@@ -203,7 +227,7 @@ class NiagaraArtifactParser:
 
     def _parse_xml_manifest(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
         root = ET.fromstring(file_path.read_text(encoding="utf-8", errors="ignore"))
-        text = " ".join(element.text.strip() for element in root.iter() if element.text and element.text.strip())
+        text = self._flatten_station_xml(root)
         return self._parse_manifest_text(project=project, text=text, source_name=file_path.name)
 
     def _parse_text_manifest(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
@@ -215,6 +239,7 @@ class NiagaraArtifactParser:
         points_added = 0
         controllers_added = 0
         station_tree_hits = 0
+        links: list[ArtifactEntityLink] = []
 
         for controller_id in sorted(set(re.findall(r"\b(?:JACE|MEC|MPC|VAVC|CTRL|UC)-?[A-Z0-9]+\b", text, flags=re.IGNORECASE))):
             normalized_controller = controller_id.upper()
@@ -232,6 +257,14 @@ class NiagaraArtifactParser:
                     )
                 )
                 controllers_added += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="controller",
+                    entity_key=normalized_controller,
+                    parser_name="niagara_station_manifest",
+                    metadata={"source_name": source_name},
+                )
+            )
 
         for equipment_id in sorted(set(re.findall(r"\b(?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+\b", text, flags=re.IGNORECASE))):
             normalized_equipment = equipment_id.upper()
@@ -249,6 +282,14 @@ class NiagaraArtifactParser:
                     )
                 )
                 equipment_added += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="equipment",
+                    entity_key=normalized_equipment,
+                    parser_name="niagara_station_manifest",
+                    metadata={"source_name": source_name},
+                )
+            )
 
         for equipment_id, point_name in re.findall(
             r"\b((?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+)[\s:_/-]+([A-Za-z][A-Za-z0-9_]{1,40})",
@@ -292,12 +333,21 @@ class NiagaraArtifactParser:
             if equipment is not None:
                 equipment.add_point(normalized_point)
             points_added += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="point",
+                    entity_key=normalized_point,
+                    parser_name="niagara_station_manifest",
+                    metadata={"source_name": source_name},
+                )
+            )
 
         tree_result = self._parse_station_tree_text(project=project, text=text, source_name=source_name)
         equipment_added += tree_result.equipment_added
         points_added += tree_result.points_added
         controllers_added += tree_result.controllers_added
         station_tree_hits = int(tree_result.details.get("station_tree_hits", 0))
+        links.extend(tree_result.links)
 
         return ArtifactParseResult(
             parsed=equipment_added > 0 or points_added > 0 or controllers_added > 0 or station_tree_hits > 0,
@@ -305,6 +355,7 @@ class NiagaraArtifactParser:
             equipment_added=equipment_added,
             points_added=points_added,
             controllers_added=controllers_added,
+            links=links,
             details={
                 "controllers_added": controllers_added,
                 "source_name": source_name,
@@ -327,12 +378,66 @@ class NiagaraArtifactParser:
         }
         return mapping.get(prefix, EquipmentType.CUSTOM)
 
+    def _flatten_station_xml(self, root: ET.Element) -> str:
+        """Extract Niagara-relevant identifiers from structured XML hierarchies."""
+        tokens: list[str] = []
+        self._collect_xml_tokens(root, tokens=tokens, path_segments=[])
+        return " ".join(token for token in tokens if token)
+
+    def _collect_xml_tokens(
+        self,
+        element: ET.Element,
+        *,
+        tokens: list[str],
+        path_segments: list[str],
+    ) -> None:
+        normalized_tag = element.tag.split("}", 1)[-1]
+        attrs = {key.split("}", 1)[-1]: value for key, value in element.attrib.items()}
+        segment = (
+            attrs.get("name")
+            or attrs.get("slot")
+            or attrs.get("slotName")
+            or attrs.get("displayName")
+            or normalized_tag
+        )
+        next_segments = [*path_segments, segment]
+
+        text_value = (element.text or "").strip()
+        if text_value:
+            tokens.append(text_value)
+        tokens.append(normalized_tag)
+        for value in attrs.values():
+            if value:
+                tokens.append(value)
+
+        path_text = "/".join(part for part in next_segments if part)
+        if path_text:
+            tokens.append(path_text)
+
+        if "Drivers" in next_segments and "Points" in next_segments:
+            point_index = next_segments.index("Points")
+            point_path = "/".join(next_segments[next_segments.index("Drivers"):])
+            tokens.append(f"station:|slot:/{point_path}")
+            if point_index >= 1 and point_index + 1 < len(next_segments):
+                controller = next_segments[point_index - 1]
+                point_name = next_segments[-1]
+                tokens.append(f"{controller} {point_name}")
+
+        if "Config" in next_segments and "Equipment" in next_segments:
+            equipment_path = "/".join(next_segments[next_segments.index("Config"):])
+            tokens.append(f"station:|slot:/{equipment_path}")
+            tokens.append(next_segments[-1])
+
+        for child in list(element):
+            self._collect_xml_tokens(child, tokens=tokens, path_segments=next_segments)
+
     def _parse_station_tree_text(self, *, project: Project, text: str, source_name: str) -> ArtifactParseResult:
         controller_map: dict[str, str] = {}
         equipment_added = 0
         points_added = 0
         controllers_added = 0
         station_tree_hits = 0
+        links: list[ArtifactEntityLink] = []
 
         for controller_id in sorted(set(re.findall(r"station:\|slot:/Drivers/[^/\s]+/([A-Za-z0-9_-]+)", text))):
             normalized_controller = controller_id.upper()
@@ -360,6 +465,14 @@ class NiagaraArtifactParser:
                         "parser": "niagara_station_tree",
                     }
             station_tree_hits += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="controller",
+                    entity_key=normalized_controller,
+                    parser_name="niagara_station_tree",
+                    metadata={"source_name": source_name},
+                )
+            )
 
         point_pattern = re.compile(
             r"station:\|slot:/Drivers/[^/\s]+/([A-Za-z0-9_-]+)/Points/([A-Za-z0-9_:\-]+)"
@@ -396,6 +509,14 @@ class NiagaraArtifactParser:
             controller = project.get_controller(normalized_controller)
             if controller is not None:
                 controller.add_equipment(equipment_id)
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="equipment",
+                    entity_key=equipment_id,
+                    parser_name="niagara_station_tree",
+                    metadata={"controller_id": normalized_controller, "source_name": source_name},
+                )
+            )
             normalized_point = point_token
             if project.get_point(normalized_point) is None:
                 project.add_point(
@@ -430,6 +551,14 @@ class NiagaraArtifactParser:
             if controller is not None:
                 controller.add_point(normalized_point)
             station_tree_hits += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="point",
+                    entity_key=normalized_point,
+                    parser_name="niagara_station_tree",
+                    metadata={"controller_id": normalized_controller, "source_name": source_name},
+                )
+            )
 
         for equipment_id in sorted(set(re.findall(r"station:\|slot:/Config/Equipment/(?:[^/\s]+/)*([A-Za-z0-9_-]+)", text))):
             normalized_equipment = equipment_id.upper()
@@ -456,6 +585,14 @@ class NiagaraArtifactParser:
                         "parser": "niagara_station_tree",
                     }
             station_tree_hits += 1
+            links.append(
+                ArtifactEntityLink(
+                    entity_type="equipment",
+                    entity_key=normalized_equipment,
+                    parser_name="niagara_station_tree",
+                    metadata={"source_name": source_name},
+                )
+            )
 
         return ArtifactParseResult(
             parsed=station_tree_hits > 0,
@@ -463,6 +600,7 @@ class NiagaraArtifactParser:
             equipment_added=equipment_added,
             points_added=points_added,
             controllers_added=controllers_added,
+            links=links,
             details={"station_tree_hits": station_tree_hits},
         )
 

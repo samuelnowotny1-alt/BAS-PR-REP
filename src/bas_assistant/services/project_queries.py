@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 
 from bas_assistant.auth.schemas import UserIdentity
 from bas_assistant.database import (
+    ArtifactObjectLinkRecord,
     ControllerRecord,
     DatabaseManager,
     DocumentRecord,
@@ -229,6 +230,83 @@ class ProjectQueryService:
             ],
         }
 
+    def equipment_detail(self, project_id: str, equipment_id: str) -> dict[str, object] | None:
+        """Return detailed view data for an equipment object."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            record = session.scalar(
+                select(EquipmentRecord).where(
+                    EquipmentRecord.project_id == project.id,
+                    EquipmentRecord.equipment_key == equipment_id,
+                )
+            )
+            if record is None:
+                return None
+            point_records = list(
+                session.scalars(
+                    select(PointRecord)
+                    .where(PointRecord.project_id == project.id, PointRecord.equipment_key == equipment_id)
+                    .order_by(PointRecord.point_name)
+                )
+            )
+        payload = dict(record.payload_json or {})
+        return {
+            "entity_type": "equipment",
+            "project_id": project_id,
+            "title": equipment_id,
+            "subtitle": record.equipment_type,
+            "payload": payload,
+            "linked_points": [point.point_name for point in point_records],
+        }
+
+    def point_detail(self, project_id: str, point_name: str) -> dict[str, object] | None:
+        """Return detailed view data for a point object."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            record = session.scalar(
+                select(PointRecord).where(
+                    PointRecord.project_id == project.id,
+                    PointRecord.point_name == point_name,
+                )
+            )
+            if record is None:
+                return None
+        return {
+            "entity_type": "point",
+            "project_id": project_id,
+            "title": point_name,
+            "subtitle": record.point_kind,
+            "payload": dict(record.payload_json or {}),
+            "linked_points": [],
+        }
+
+    def controller_detail(self, project_id: str, controller_id: str) -> dict[str, object] | None:
+        """Return detailed view data for a controller object."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            record = session.scalar(
+                select(ControllerRecord).where(
+                    ControllerRecord.project_id == project.id,
+                    ControllerRecord.controller_key == controller_id,
+                )
+            )
+            if record is None:
+                return None
+        return {
+            "entity_type": "controller",
+            "project_id": project_id,
+            "title": controller_id,
+            "subtitle": record.controller_type or "controller",
+            "payload": dict(record.payload_json or {}),
+            "linked_points": list((record.payload_json or {}).get("owned_point_names", [])),
+        }
+
     def activity_view(self, project_id: str) -> dict[str, object] | None:
         """Return project activity history including task status transitions."""
         with self.db.session() as session:
@@ -408,3 +486,38 @@ class ProjectQueryService:
             "error": result_json.get("error"),
             "status_history": list(result_json.get("status_history", [])),
         }
+
+    def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
+        """Return explicit artifact links for an entity."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return []
+            rows = list(
+                session.execute(
+                    select(
+                        ArtifactObjectLinkRecord.parser_name,
+                        ArtifactObjectLinkRecord.relationship_type,
+                        ArtifactObjectLinkRecord.metadata_json,
+                        DocumentRecord.name,
+                        DocumentRecord.document_type,
+                    )
+                    .join(DocumentRecord, ArtifactObjectLinkRecord.document_id == DocumentRecord.id)
+                    .where(
+                        ArtifactObjectLinkRecord.project_id == project.id,
+                        ArtifactObjectLinkRecord.entity_type == entity_type,
+                        ArtifactObjectLinkRecord.entity_key == entity_key,
+                    )
+                    .order_by(ArtifactObjectLinkRecord.created_at.desc())
+                )
+            )
+        return [
+            {
+                "parser_name": parser_name,
+                "relationship_type": relationship_type,
+                "metadata": dict(metadata_json or {}),
+                "document_name": document_name,
+                "document_type": document_type,
+            }
+            for parser_name, relationship_type, metadata_json, document_name, document_type in rows
+        ]

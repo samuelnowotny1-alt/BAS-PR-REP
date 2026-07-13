@@ -1,5 +1,6 @@
 """Service layer exports."""
 
+from .artifact_links import ArtifactEntityLink, ArtifactLinkService
 from .dashboard import DashboardService, DashboardSnapshot
 from .knowledge import KnowledgeIngestionService, KnowledgeIngestionResult
 from .project_queries import ProjectQueryService
@@ -10,6 +11,8 @@ from .uploads import UploadService
 __all__ = [
     "DashboardService",
     "DashboardSnapshot",
+    "ArtifactEntityLink",
+    "ArtifactLinkService",
     "JsonProjectRepository",
     "KnowledgeIngestionResult",
     "KnowledgeIngestionService",

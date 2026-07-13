@@ -130,10 +130,22 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for equip in project_view.equipment %}
                     <tr class="table-row">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">{{ equip.id }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <a href="/project/{{ project_view.project_id }}/equipment/{{ equip.id }}" class="text-orange-600 hover:text-orange-700 dark:text-orange-300 dark:hover:text-orange-200">
+                                {{ equip.id }}
+                            </a>
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.building or '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.controller_id or '-' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {% if equip.controller_id %}
+                            <a href="/project/{{ project_view.project_id }}/controllers/{{ equip.controller_id }}" class="hover:text-blue-500">
+                                {{ equip.controller_id }}
+                            </a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 min-w-[360px]">
                             <form method="post" action="/project/{{ project_view.project_id }}/equipment/{{ equip.id }}/graphics-config" class="space-y-2">
                                 <input
@@ -164,7 +176,9 @@
                             </div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.point_count }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {{ equip.point_count }}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if equip.status == 'operational' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200

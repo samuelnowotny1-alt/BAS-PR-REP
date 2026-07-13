@@ -102,6 +102,35 @@ class UploadRecord(Base):
     project: Mapped[ProjectRecord | None] = relationship()
 
 
+class ArtifactObjectLinkRecord(Base):
+    """Explicit linkage between uploaded artifacts and structured BAS objects."""
+
+    __tablename__ = "artifact_object_links"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id",
+            "entity_type",
+            "entity_key",
+            "relationship_type",
+            name="uq_artifact_object_link",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    document_id: Mapped[int | None] = mapped_column(ForeignKey("documents.id"), nullable=True, index=True)
+    upload_id: Mapped[int | None] = mapped_column(ForeignKey("uploads.id"), nullable=True, index=True)
+    entity_type: Mapped[str] = mapped_column(String(64), index=True)
+    entity_key: Mapped[str] = mapped_column(String(160), index=True)
+    relationship_type: Mapped[str] = mapped_column(String(64), default="source", index=True)
+    parser_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    metadata_json: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    project: Mapped[ProjectRecord | None] = relationship()
+    document: Mapped[DocumentRecord | None] = relationship()
+    upload: Mapped[UploadRecord | None] = relationship()
+
+
 class GraphicRecord(Base):
     """Generated graphics or imported graphic artifacts."""
 

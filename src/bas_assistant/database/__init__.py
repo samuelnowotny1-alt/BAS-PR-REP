@@ -2,6 +2,7 @@
 
 from .models import (
     ApplicationLogRecord,
+    ArtifactObjectLinkRecord,
     ControllerRecord,
     ConversationRecord,
     DocumentRecord,
@@ -20,6 +21,7 @@ from .session import DatabaseManager
 
 __all__ = [
     "ApplicationLogRecord",
+    "ArtifactObjectLinkRecord",
     "ControllerRecord",
     "ConversationRecord",
     "DatabaseManager",

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ detail.title }} - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-6">
+    <div class="card p-6">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">{{ detail.entity_type }}</p>
+                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ detail.title }}</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ detail.subtitle }}</p>
+            </div>
+            <a href="/project/{{ project.metadata.project_id }}" class="btn-secondary">Back To Project</a>
+        </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Structured Data</h2>
+            <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+                <table class="w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                        {% for key, value in detail.payload.items() %}
+                        <tr>
+                            <td class="w-56 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{{ key }}</td>
+                            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><pre class="whitespace-pre-wrap font-mono text-xs">{{ value }}</pre></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">No structured payload available.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if detail.linked_points %}
+            <div class="mt-5">
+                <h3 class="text-sm font-semibold uppercase tracking-[0.16em] text-gray-400">Linked Points</h3>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for point_name in detail.linked_points %}
+                    <a href="/project/{{ project.metadata.project_id }}/points/{{ point_name }}" class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-200">
+                        {{ point_name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Artifact Provenance</h2>
+            <div class="mt-4 space-y-3">
+                {% for link in detail.artifact_links %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ link.document_name }}</p>
+                        <span class="text-[11px] uppercase tracking-[0.18em] text-gray-400">{{ link.relationship_type }}</span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ link.document_type }} · {{ link.parser_name }}</p>
+                    {% if link.metadata %}
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        {% for meta_key, meta_value in link.metadata.items() %}
+                        <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ meta_key }}={{ meta_value }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 dark:text-gray-400">No explicit artifact links recorded for this object yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
