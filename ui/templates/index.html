@@ -143,19 +143,19 @@
                     </div>
                     <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ project_id }}</span>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-1">{{ project.metadata.name }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ project.metadata.client or 'No client' }}</p>
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-1">{{ project.name }}</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ project.client or 'No client' }}</p>
                 <div class="grid grid-cols-3 gap-4 text-center">
                     <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.equipment|length }}</p>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.equipment_count }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
                     </div>
                     <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.points|length }}</p>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.point_count }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Points</p>
                     </div>
                     <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.controllers|length }}</p>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.controller_count }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400">Controllers</p>
                     </div>
                 </div>

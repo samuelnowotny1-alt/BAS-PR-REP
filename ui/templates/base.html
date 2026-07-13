@@ -219,6 +219,12 @@
                         </a>
                         {% endif %}
                         {% if session_user %}
+                        {% if session_user.role == 'admin' %}
+                        <a href="/admin/users" class="new-project-link">
+                            <i class="fas fa-user-shield"></i>
+                            <span>Users</span>
+                        </a>
+                        {% endif %}
                         <div class="hidden text-sm text-gray-500 dark:text-gray-300 md:block">
                             {{ session_user.username }} · {{ session_user.role }}
                         </div>

@@ -36,6 +36,21 @@ class UserAccount(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class ProjectMembershipRecord(Base):
+    """Project-scoped access control for users."""
+
+    __tablename__ = "project_memberships"
+    __table_args__ = (UniqueConstraint("user_id", "project_id", name="uq_project_memberships_user_project"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    access_level: Mapped[str] = mapped_column(String(32), default="viewer", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    user: Mapped[UserAccount] = relationship()
+    project: Mapped[ProjectRecord] = relationship()
+
+
 class ProjectRecord(Base):
     """Database index for BAS projects."""
 

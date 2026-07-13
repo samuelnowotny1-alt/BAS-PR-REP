@@ -383,6 +383,15 @@ def project_for_request(request: Request) -> Project | None:
     return None
 
 
+def project_id_from_path(path: str) -> str | None:
+    segments = [segment for segment in path.split("/") if segment]
+    if len(segments) >= 2 and segments[0] == "project":
+        return segments[1]
+    if len(segments) >= 3 and segments[0] == "api" and segments[1] == "project":
+        return segments[2]
+    return None
+
+
 @app.middleware("http")
 async def log_request_middleware(request: Request, call_next):
     start_time = time.perf_counter()
@@ -404,8 +413,14 @@ async def authentication_middleware(request: Request, call_next):
     if not is_protected_path(request.url.path):
         return await call_next(request)
     if get_current_user(request) is not None:
+        current_user = get_current_user(request)
         try:
             require_route_permission(request)
+            project_id = project_id_from_path(request.url.path)
+            if current_user is not None and project_id is not None:
+                can_write = request.method.upper() not in {"GET", "HEAD", "OPTIONS"}
+                if not container.auth.can_access_project(current_user, project_id, write=can_write):
+                    raise HTTPException(status_code=403, detail=f"Access denied for project '{project_id}'")
         except HTTPException as exc:
             if request.url.path.startswith("/api/"):
                 return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
@@ -558,21 +573,22 @@ async def logout(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    dashboard = container.dashboard.snapshot()
+    current_user = get_current_user(request)
+    dashboard = container.dashboard.snapshot(current_user)
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "projects": dashboard.projects,
             "dashboard": dashboard,
-            "current_user": get_current_user(request),
+            "current_user": current_user,
         },
     )
 
 
 @app.get("/project/new", response_class=HTMLResponse)
 async def new_project_page(request: Request):
-    return templates.TemplateResponse(request=request, name="project_new.html")
+    return templates.TemplateResponse(request=request, name="project_new.html", context={"current_user": get_current_user(request)})
 
 
 @app.post("/project/new")
@@ -771,6 +787,15 @@ async def import_data(
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
         )
+        if container.parsers.can_parse(stored_upload.path):
+            parser_result = container.parsers.parse(project=project, file_path=stored_upload.path)
+            results[stored_upload.source_document.name] = {
+                "success": parser_result.parsed,
+                "equipment_added": parser_result.equipment_added,
+                "points_added": parser_result.points_added,
+                "warnings": parser_result.warnings,
+                "details": parser_result.details,
+            }
 
     save_project(project)
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)
@@ -1283,60 +1308,78 @@ async def fix_gap(gap_id: str):
 
 @app.get("/api/project/{project_id}/summary")
 async def api_project_summary(project_id: str):
-    project = get_project(project_id)
-    return {
-        "project_id": project.metadata.project_id,
-        "name": project.metadata.name,
-        "equipment_count": len(project.equipment),
-        "points_count": len(project.points),
-        "controllers_count": len(project.controllers),
-        "validation_status": project.validation_status,
-    }
+    summary = container.project_queries.summary(project_id)
+    if summary is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return summary
 
 
 @app.get("/api/project/{project_id}/equipment")
 async def api_equipment_list(project_id: str):
-    project = get_project(project_id)
-    return [
-        {
-            "id": e.id,
-            "type": e.type.value,
-            "controller": e.controller_id,
-            "points": len(e.point_names),
-            "status": e.status,
-        }
-        for e in project.equipment
-    ]
+    return container.project_queries.equipment_list(project_id)
 
 
 @app.get("/api/project/{project_id}/points")
 async def api_points_list(project_id: str):
-    project = get_project(project_id)
-    return [
-        {
-            "name": p.name,
-            "equipment": p.equipment_id,
-            "kind": p.kind.value,
-            "units": p.units,
-            "controller": p.controller_id,
-        }
-        for p in project.points
-    ]
+    return container.project_queries.points_list(project_id)
 
 
 @app.get("/api/project/{project_id}/controllers")
 async def api_controllers_list(project_id: str):
-    project = get_project(project_id)
-    return [
-        {
-            "id": c.id,
-            "type": c.type,
-            "protocols": [p.value for p in c.protocols],
-            "equipment": len(c.serves_equipment_ids),
-            "points": len(c.owned_point_names),
-        }
-        for c in project.controllers
-    ]
+    return container.project_queries.controllers_list(project_id)
+
+
+@app.get("/admin/users", response_class=HTMLResponse)
+async def admin_users_page(request: Request):
+    current_user = get_current_user(request)
+    if current_user is None or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_users.html",
+        context={
+            "current_user": current_user,
+            "managed_users": container.auth.list_users(),
+            "available_projects": container.project_queries.list_project_cards(),
+        },
+    )
+
+
+@app.post("/admin/users")
+async def admin_create_user(
+    request: Request,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: str = Form(...),
+    project_ids: list[str] | None = Form(None),
+    access_level: str = Form("viewer"),
+):
+    current_user = get_current_user(request)
+    if current_user is None or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        container.auth.create_user(
+            username=username.strip(),
+            email=email.strip(),
+            password=password,
+            role=role,
+            project_ids=project_ids or [],
+            access_level=access_level,
+        )
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin_users.html",
+            context={
+                "current_user": current_user,
+                "managed_users": container.auth.list_users(),
+                "available_projects": container.project_queries.list_project_cards(),
+                "error_message": str(exc),
+            },
+            status_code=400,
+        )
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 @app.post("/project/{project_id}/assumptions/add")

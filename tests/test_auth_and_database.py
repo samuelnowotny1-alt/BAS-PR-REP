@@ -1,4 +1,6 @@
 import asyncio
+import sys
+import types
 from io import BytesIO
 from pathlib import Path
 
@@ -8,7 +10,9 @@ from sqlalchemy import inspect, select
 from starlette.requests import Request
 
 from bas_assistant.auth import hash_password, verify_password
-from bas_assistant.database import EquipmentRecord, KnowledgeRecord, UploadRecord, UserAccount
+from bas_assistant.database import EquipmentRecord, KnowledgeRecord, PointRecord, UploadRecord, UserAccount
+from bas_assistant.generators.px_graphics import generate_vav_px
+from bas_assistant.services.knowledge import KnowledgeIngestionService
 from ui.api import main
 
 
@@ -50,7 +54,7 @@ def test_database_bootstrap_creates_expected_tables_and_admin(
 
     table_names = set(inspect(main.container.db.engine).get_table_names())
 
-    assert {"users", "projects", "documents", "uploads", "graphics", "equipment", "points", "controllers", "conversations", "knowledge", "tasks", "logs"}.issubset(table_names)
+    assert {"users", "projects", "project_memberships", "documents", "uploads", "graphics", "equipment", "points", "controllers", "conversations", "knowledge", "tasks", "logs"}.issubset(table_names)
 
     with main.container.db.session() as session:
         admin = session.scalar(select(UserAccount).where(UserAccount.username == main.container.settings.bootstrap_admin_username))
@@ -143,6 +147,117 @@ def test_role_permissions_block_viewer_writes_and_allow_engineer(tmp_path: Path)
     assert engineer_response.status_code == 200
 
 
+def test_project_scoped_permissions_limit_viewer_access(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'project_scope.db'}",
+    )
+    asyncio.run(
+        main.api_create_project(
+            project_id="allowed-project",
+            name="Allowed Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+    asyncio.run(
+        main.api_create_project(
+            project_id="blocked-project",
+            name="Blocked Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    async def ok_response(_request: Request) -> PlainTextResponse:
+        return PlainTextResponse("ok")
+
+    allowed_request = request("/project/allowed-project")
+    allowed_request.scope["session"]["user"] = {
+        "id": 2,
+        "username": "viewer",
+        "email": "viewer@example.com",
+        "role": "viewer",
+        "assigned_project_ids": ["allowed-project"],
+    }
+    allowed_response = asyncio.run(main.authentication_middleware(allowed_request, ok_response))
+    assert allowed_response.status_code == 200
+
+    blocked_request = request("/project/blocked-project")
+    blocked_request.scope["session"]["user"] = {
+        "id": 2,
+        "username": "viewer",
+        "email": "viewer@example.com",
+        "role": "viewer",
+        "assigned_project_ids": ["allowed-project"],
+    }
+    blocked_response = asyncio.run(main.authentication_middleware(blocked_request, ok_response))
+    assert blocked_response.status_code == 403
+
+
+def test_admin_user_management_creates_user_with_project_assignment(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'admin_users.db'}",
+    )
+    asyncio.run(
+        main.api_create_project(
+            project_id="admin-project",
+            name="Admin Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    admin_request = request("/admin/users", method="POST")
+    admin_request.scope["session"]["user"] = {
+        "id": 1,
+        "username": "admin",
+        "email": "admin@example.com",
+        "role": "admin",
+        "assigned_project_ids": [],
+    }
+    response = asyncio.run(
+        main.admin_create_user(
+            admin_request,
+            username="fieldtech",
+            email="fieldtech@example.com",
+            password="FieldTech123!",
+            role="technician",
+            project_ids=["admin-project"],
+            access_level="viewer",
+        )
+    )
+    assert response.status_code == 303
+
+    users = main.container.auth.list_users()
+    created_user = next(user for user in users if user.username == "fieldtech")
+    assert created_user.assigned_projects
+    assert created_user.assigned_projects[0]["project_id"] == "admin-project"
+
+
 def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     main.configure_runtime_paths(
         data_dir=tmp_path / "data",
@@ -197,3 +312,75 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     assert len(equipment) == 1
     assert knowledge
     assert any(record.source_name == "sequence.txt" and record.status == "indexed" for record in knowledge)
+
+
+def test_px_upload_parses_into_structured_equipment_and_points(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'px_uploads.db'}",
+    )
+
+    project_id = "graphics-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Graphics Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    px_xml = generate_vav_px("Zone VAV", "VAV-201").to_string().encode("utf-8")
+    px_upload = UploadFile(filename="VAV-201.px", file=BytesIO(px_xml))
+
+    response = asyncio.run(
+        main.import_data(
+            project_id=project_id,
+            equipment_file=None,
+            points_file=None,
+            controllers_file=None,
+            supporting_files=[px_upload],
+        )
+    )
+
+    assert response.status_code == 303
+    with main.container.db.session() as session:
+        equipment = list(session.scalars(select(EquipmentRecord)))
+        points = list(session.scalars(select(PointRecord)))
+        knowledge = list(session.scalars(select(KnowledgeRecord)))
+
+    assert any(record.equipment_key == "VAV-201" for record in equipment)
+    assert points
+    assert any(record.source_name == "VAV-201.px" for record in knowledge)
+
+
+def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:
+    pdf_path = tmp_path / "sequence.pdf"
+    pdf_path.write_bytes(b"%PDF-test")
+
+    class _FakePage:
+        def extract_text(self) -> str:
+            return "Supply fan enables on schedule."
+
+    class _FakeReader:
+        def __init__(self, _path: str) -> None:
+            self.pages = [_FakePage()]
+
+    fake_module = types.ModuleType("pypdf")
+    fake_module.PdfReader = _FakeReader
+    monkeypatch.setitem(sys.modules, "pypdf", fake_module)
+
+    service = KnowledgeIngestionService(main.container.db)
+    text, status, metadata = service._extract_pdf_text(pdf_path)
+
+    assert "Supply fan enables on schedule." in text
+    assert status == "indexed"
+    assert metadata["page_count"] == 1
