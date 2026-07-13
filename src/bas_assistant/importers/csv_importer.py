@@ -323,6 +323,20 @@ class CSVImporter:
                         network_number=None,
                     ))
 
+                mstp_mac = self._parse_str(
+                    row.get("MS/TP MAC")
+                    or row.get("MSTP MAC")
+                    or row.get("MAC Address")
+                )
+                mstp_network = self._parse_int(row.get("Network Number"))
+                if mstp_mac:
+                    from ..models.controller import ControllerNetworkAddress
+                    controller.network_addresses.append(ControllerNetworkAddress(
+                        protocol=Protocol.BACNET_MSTP,
+                        address=mstp_mac,
+                        network_number=mstp_network,
+                    ))
+
                 equip_str = str(row.get("Serves Equipment", "")).strip()
                 if equip_str:
                     controller.serves_equipment_ids = [e.strip() for e in equip_str.split(",")]

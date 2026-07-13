@@ -29,8 +29,7 @@ from bas_assistant.generators import (
     generate_reports,
 )
 from bas_assistant.importers import CSVImporter
-from bas_assistant.models import Project, ProjectMetadata, Protocol, UnitSystem
-from bas_assistant.models.controller import ControllerNetworkAddress
+from bas_assistant.models import Project, ProjectMetadata, UnitSystem
 from bas_assistant.reasoning import analyze_gaps
 from bas_assistant.validation import ValidationEngine
 
@@ -1013,33 +1012,6 @@ def _build_project_metadata(project_id: str, project_name: str) -> ProjectMetada
     )
 
 
-def _apply_demo_controller_networks(project: Project) -> None:
-    for blueprint in CONTROLLER_BLUEPRINTS:
-        if "BACnet/MSTP" not in blueprint["Protocols"]:
-            continue
-
-        controller = project.get_controller(blueprint["Controller ID"])
-        if controller is None:
-            continue
-
-        mstp_address = str(blueprint.get("MS/TP MAC", "")).strip()
-        if not mstp_address:
-            continue
-
-        already_present = any(address.protocol == Protocol.BACNET_MSTP for address in controller.network_addresses)
-        if already_present:
-            continue
-
-        network_number_raw = str(blueprint.get("Network Number", "")).strip()
-        controller.network_addresses.append(
-            ControllerNetworkAddress(
-                protocol=Protocol.BACNET_MSTP,
-                address=mstp_address,
-                network_number=int(network_number_raw) if network_number_raw else None,
-            )
-        )
-
-
 def load_demo_project(
     data_dir: Path,
     examples_dir: Path,
@@ -1078,8 +1050,6 @@ def load_demo_project(
         print(f"    WARN: {warning}")
     for error in ctrl_result.errors:
         print(f"    ERROR: {error}")
-
-    _apply_demo_controller_networks(project)
 
     project_dir.mkdir(parents=True, exist_ok=True)
     with project_file.open("w") as handle:

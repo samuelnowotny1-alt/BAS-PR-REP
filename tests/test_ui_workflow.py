@@ -652,6 +652,27 @@ def test_csv_importer_warns_on_invalid_graphic_sections(tmp_path: Path) -> None:
     assert main.equipment_graphic_sections(equipment) == "outside_air,filter"
 
 
+def test_csv_importer_reads_controller_network_addresses(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="CSV-CTRL", name="CSV Controller Project"))
+    importer = CSVImporter(project)
+    csv_path = tmp_path / "controller_schedule.csv"
+    csv_path.write_text(
+        "Controller ID,Protocols,IP Address,MS/TP MAC,Network Number,Owned Points\n"
+        "MPC-1,\"BACnet/IP,BACnet/MSTP\",192.168.10.10,11,2001,\"AHU-1 SAT\"\n"
+    )
+
+    result = importer.import_controller_schedule(csv_path, "controller_csv")
+
+    assert result.success
+    controller = project.get_controller("MPC-1")
+    assert controller is not None
+    assert {protocol.value for protocol in controller.protocols} == {"BACnet/IP", "BACnet/MSTP"}
+    assert {(address.protocol.value, address.address, address.network_number) for address in controller.network_addresses} == {
+        ("BACnet/IP", "192.168.10.10", None),
+        ("BACnet/MSTP", "11", 2001),
+    }
+
+
 def test_equipment_graphic_preset_route_applies_sections() -> None:
     project_id = create_project()
     project = main.projects[project_id]
