@@ -234,6 +234,7 @@ class ProjectQueryService:
                 }
                 for record in tasks
             ],
+            "import_activity": self._build_import_activity(tasks),
             "engineering_status": self._build_project_engineering_status(
                 equipment_records=equipment_records,
                 controller_records=controller_records,
@@ -945,6 +946,56 @@ class ProjectQueryService:
         if total == 0:
             return f"0 of 0 {noun}"
         return f"{complete} of {total} {noun}"
+
+    def _build_import_activity(self, tasks: list[TaskRecord]) -> dict[str, object]:
+        relevant_types = {"equipment_import", "points_import", "controllers_import", "artifact_ingestion"}
+        import_tasks = [task for task in tasks if task.task_type in relevant_types]
+        warning_items: list[dict[str, object]] = []
+        completed_imports = 0
+
+        for task in import_tasks:
+            result_json = dict(task.result_json or {})
+            result = dict(result_json.get("result") or {})
+            filename = (task.payload_json or {}).get("filename") or task.task_type
+
+            import_result = dict(result.get("import_result") or {})
+            parser_result = dict(result.get("parser_result") or {})
+
+            import_warnings = list(import_result.get("warnings") or [])
+            import_errors = list(import_result.get("errors") or [])
+            parser_warnings = list(parser_result.get("warnings") or [])
+
+            if task.status == "completed":
+                completed_imports += 1
+
+            for warning in import_warnings + parser_warnings:
+                warning_items.append(
+                    {
+                        "task_type": task.task_type,
+                        "filename": filename,
+                        "message": warning,
+                        "updated_at": task.updated_at,
+                    }
+                )
+            for error in import_errors:
+                warning_items.append(
+                    {
+                        "task_type": task.task_type,
+                        "filename": filename,
+                        "message": error,
+                        "updated_at": task.updated_at,
+                        "severity": "error",
+                    }
+                )
+
+        warning_items.sort(key=lambda item: item["updated_at"], reverse=True)
+        return {
+            "task_count": len(import_tasks),
+            "completed_count": completed_imports,
+            "warning_count": sum(1 for item in warning_items if item.get("severity") != "error"),
+            "error_count": sum(1 for item in warning_items if item.get("severity") == "error"),
+            "items": warning_items[:8],
+        }
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""

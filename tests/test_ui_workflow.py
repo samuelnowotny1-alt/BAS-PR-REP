@@ -174,6 +174,35 @@ def test_project_detail_page_renders_engineering_status_summary() -> None:
     assert "Knowledge Indexed" in text
 
 
+def test_project_detail_page_surfaces_import_and_parser_signals() -> None:
+    project_id = create_project("import-signals-project")
+    task_id = main.container.tasks.create_task(
+        project_id=project_id,
+        task_type="equipment_import",
+        payload={"filename": "equipment.csv"},
+    )
+    main.container.tasks.complete_task(
+        task_id,
+        result={
+            "import_result": {
+                "success": True,
+                "message": "Imported 1 equipment items",
+                "warnings": ["Equipment 'AHU-1': ignored invalid graphic sections mystery_box"],
+                "errors": [],
+                "count": 1,
+            }
+        },
+    )
+
+    response = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Import & Parser Signals" in text
+    assert "equipment.csv" in text
+    assert "ignored invalid graphic sections mystery_box" in text
+
+
 def test_project_memberships_page_renders_for_admin() -> None:
     project_id = create_project()
     admin_request = request(f"/project/{project_id}/memberships")
