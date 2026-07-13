@@ -25,14 +25,45 @@
                         </div>
                         <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ task.status }}</span>
                     </div>
+                    <div class="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-800">
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Outcome Summary</p>
+                                <p class="mt-2 text-sm font-medium text-gray-900 dark:text-white">{{ task.outcome_summary.summary_text }}</p>
+                                {% if task.outcome_summary.filename %}
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ task.outcome_summary.filename }}</p>
+                                {% endif %}
+                            </div>
+                            {% if task.outcome_summary.metrics %}
+                            <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                                {% for metric in task.outcome_summary.metrics %}
+                                <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center dark:border-gray-700 dark:bg-gray-900">
+                                    <p class="text-[11px] uppercase tracking-[0.16em] text-gray-400">{{ metric.label }}</p>
+                                    <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{{ metric.value }}</p>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
                     <div class="mt-4 grid gap-3 md:grid-cols-2">
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Payload</p>
                             <pre class="mt-2 overflow-x-auto rounded-xl bg-white p-3 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ task.payload }}</pre>
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Result</p>
-                            <pre class="mt-2 overflow-x-auto rounded-xl bg-white p-3 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ task.result or task.error }}</pre>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Signals</p>
+                            <div class="mt-2 space-y-2">
+                                {% for message in task.warning_messages %}
+                                <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-900/20 dark:text-amber-200">{{ message }}</div>
+                                {% endfor %}
+                                {% for message in task.error_messages %}
+                                <div class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200">{{ message }}</div>
+                                {% endfor %}
+                                {% if not task.warning_messages and not task.error_messages %}
+                                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200">No warnings or errors recorded for this task.</div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                     {% if task.artifact_diff %}

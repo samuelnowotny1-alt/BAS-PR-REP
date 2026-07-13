@@ -738,7 +738,14 @@ class ProjectQueryService:
 
     def _task_to_view(self, task: TaskRecord) -> dict[str, object]:
         result_json = dict(task.result_json or {})
-        result = result_json.get("result", {})
+        result = dict(result_json.get("result") or {})
+        import_result = dict(result.get("import_result") or {})
+        parser_result = dict(result.get("parser_result") or {})
+        warning_messages = list(import_result.get("warnings") or []) + list(parser_result.get("warnings") or [])
+        error_messages = list(import_result.get("errors") or [])
+        if result_json.get("error"):
+            error_messages.append(str(result_json["error"]))
+        outcome_summary = self._task_outcome_summary(task.task_type, task.payload_json or {}, result, import_result, parser_result)
         return {
             "id": task.id,
             "task_type": task.task_type,
@@ -751,6 +758,9 @@ class ProjectQueryService:
             "status_history": list(result_json.get("status_history", [])),
             "artifact_diff": dict(result.get("artifact_diff") or {}),
             "generated_documents": list(result.get("generated_documents") or []),
+            "outcome_summary": outcome_summary,
+            "warning_messages": warning_messages,
+            "error_messages": error_messages,
         }
 
     def _format_controller_address(self, address: dict[str, object]) -> str:
@@ -995,6 +1005,45 @@ class ProjectQueryService:
             "warning_count": sum(1 for item in warning_items if item.get("severity") != "error"),
             "error_count": sum(1 for item in warning_items if item.get("severity") == "error"),
             "items": warning_items[:8],
+        }
+
+    def _task_outcome_summary(
+        self,
+        task_type: str,
+        payload: dict[str, object],
+        result: dict[str, object],
+        import_result: dict[str, object],
+        parser_result: dict[str, object],
+    ) -> dict[str, object]:
+        filename = str(payload.get("filename") or "")
+        metrics: list[dict[str, object]] = []
+        summary_text = filename or task_type
+
+        if import_result:
+            count = import_result.get("count")
+            summary_text = str(import_result.get("message") or summary_text)
+            metrics.append({"label": "Imported", "value": count if count not in (None, "") else "-"})
+            metrics.append({"label": "Warnings", "value": len(import_result.get("warnings") or [])})
+            metrics.append({"label": "Errors", "value": len(import_result.get("errors") or [])})
+        elif parser_result:
+            summary_text = filename or "Parsed supporting artifact"
+            metrics.append({"label": "Equipment", "value": parser_result.get("equipment_added", 0)})
+            metrics.append({"label": "Points", "value": parser_result.get("points_added", 0)})
+            metrics.append({"label": "Controllers", "value": parser_result.get("controllers_added", 0)})
+            metrics.append({"label": "Warnings", "value": len(parser_result.get("warnings") or [])})
+        elif result.get("generated_documents"):
+            summary_text = f"{len(result.get('generated_documents') or [])} generated documents"
+            metrics.append({"label": "Generated", "value": len(result.get("generated_documents") or [])})
+        elif result.get("knowledge_status"):
+            summary_text = f"Knowledge status: {result.get('knowledge_status')}"
+            metrics.append({"label": "Chunks", "value": result.get("chunk_count", 0)})
+        else:
+            summary_text = filename or task_type
+
+        return {
+            "filename": filename,
+            "summary_text": summary_text,
+            "metrics": metrics,
         }
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:

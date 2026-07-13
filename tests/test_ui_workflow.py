@@ -479,6 +479,36 @@ def test_generation_post_handlers_render() -> None:
         assert response_text(response), handler.__name__
 
 
+def test_project_activity_page_renders_task_outcome_summaries() -> None:
+    project_id = create_project("activity-project")
+    task_id = main.container.tasks.create_task(
+        project_id=project_id,
+        task_type="equipment_import",
+        payload={"filename": "equipment.csv"},
+    )
+    main.container.tasks.complete_task(
+        task_id,
+        result={
+            "import_result": {
+                "success": True,
+                "message": "Imported 2 equipment items",
+                "warnings": ["Equipment 'AHU-1': ignored invalid graphic sections mystery_box"],
+                "errors": [],
+                "count": 2,
+            }
+        },
+    )
+
+    response = run_async(main.project_activity_page(request(f"/project/{project_id}/activity"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Outcome Summary" in text
+    assert "Imported 2 equipment items" in text
+    assert "ignored invalid graphic sections mystery_box" in text
+    assert "Warnings" in text
+
+
 def test_graphics_preview_pages_prefers_equipment_pages() -> None:
     project = Project(
         metadata=ProjectMetadata(project_id="preview-test", name="Preview Test"),
