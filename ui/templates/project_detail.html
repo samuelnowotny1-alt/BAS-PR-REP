@@ -131,7 +131,7 @@
                     {% for equip in project_view.equipment %}
                     <tr class="table-row">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">{{ equip.id }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type.value }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.building or '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.controller_id or '-' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 min-w-[360px]">
@@ -173,6 +173,9 @@
                                 {% else %}bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200{% endif %}">
                                 {{ equip.status|capitalize }}
                             </span>
+                            {% if equip.provenance %}
+                            <p class="mt-2 text-xs text-gray-400">{{ equip.provenance.parser }} · {{ equip.provenance.source_name }}</p>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

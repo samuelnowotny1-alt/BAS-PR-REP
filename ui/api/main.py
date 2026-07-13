@@ -660,7 +660,45 @@ async def project_detail(request: Request, project_id: str):
         "project": project,
         "project_view": project_view,
         "graphic_presets_for": equipment_graphic_presets,
+        "current_user": get_current_user(request),
     })
+
+
+@app.get("/project/{project_id}/activity", response_class=HTMLResponse)
+async def project_activity_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    activity_view = container.project_queries.activity_view(project_id)
+    if activity_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="project_activity.html",
+        context={
+            "project": project,
+            "activity_view": activity_view,
+            "current_user": get_current_user(request),
+        },
+    )
+
+
+@app.get("/project/{project_id}/memberships", response_class=HTMLResponse)
+async def project_memberships_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    current_user = get_current_user(request)
+    if current_user is None or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    memberships_view = container.project_queries.memberships_view(project_id)
+    if memberships_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="project_memberships.html",
+        context={
+            "project": project,
+            "memberships_view": memberships_view,
+            "current_user": current_user,
+        },
+    )
 
 
 @app.post("/project/{project_id}/equipment/{equipment_id}/graphics-config")
@@ -1477,6 +1515,27 @@ async def admin_update_user(
             status_code=400,
         )
     return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@app.post("/project/{project_id}/memberships")
+async def project_memberships_update(
+    request: Request,
+    project_id: str,
+):
+    current_user = get_current_user(request)
+    if current_user is None or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    form = await request.form()
+    assignments: list[tuple[int, str]] = []
+    for key, value in form.multi_items():
+        if not key.startswith("user_access_"):
+            continue
+        if not value:
+            continue
+        user_id = int(key.removeprefix("user_access_"))
+        assignments.append((user_id, str(value)))
+    container.auth.set_project_memberships(project_id=project_id, assignments=assignments)
+    return RedirectResponse(url=f"/project/{project_id}/memberships", status_code=303)
 
 
 @app.post("/project/{project_id}/assumptions/add")

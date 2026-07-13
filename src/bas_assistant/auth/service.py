@@ -180,6 +180,30 @@ class AuthenticationService:
             raise ValueError(f"User '{user_id}' not found after update")
         return managed_user
 
+    def set_project_memberships(
+        self,
+        *,
+        project_id: str,
+        assignments: list[tuple[int, str]],
+    ) -> None:
+        """Replace all explicit memberships for a project."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                raise ValueError(f"Project '{project_id}' not found")
+            session.execute(delete(ProjectMembershipRecord).where(ProjectMembershipRecord.project_id == project.id))
+            for user_id, access_level in assignments:
+                user = session.get(UserAccount, user_id)
+                if user is None:
+                    continue
+                session.add(
+                    ProjectMembershipRecord(
+                        user_id=user_id,
+                        project_id=project.id,
+                        access_level=access_level,
+                    )
+                )
+
     def project_ids_for_user(self, user_id: int) -> list[str]:
         """Return assigned project IDs for a user."""
         with self.db.session() as session:

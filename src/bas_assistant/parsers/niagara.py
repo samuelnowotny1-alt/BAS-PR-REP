@@ -21,6 +21,7 @@ class ArtifactParseResult:
     parser_name: str
     equipment_added: int = 0
     points_added: int = 0
+    controllers_added: int = 0
     warnings: list[str] = field(default_factory=list)
     details: dict[str, object] = field(default_factory=dict)
 
@@ -74,6 +75,7 @@ class NiagaraArtifactParser:
             parser_name="niagara_station_archive",
             equipment_added=equipment_added,
             points_added=points_added,
+            controllers_added=controllers_added,
             warnings=warnings,
             details={
                 "parsed_px_pages": parsed_pages,
@@ -88,7 +90,16 @@ class NiagaraArtifactParser:
         equipment = project.get_equipment(equipment_id)
         equipment_added = 0
         if equipment is None:
-            equipment = Equipment(id=equipment_id, type=EquipmentType.CUSTOM, subtype="NiagaraPX")
+            equipment = Equipment(
+                id=equipment_id,
+                type=EquipmentType.CUSTOM,
+                subtype="NiagaraPX",
+                provenance={
+                    "source_type": "px",
+                    "source_name": file_path.name,
+                    "parser": "niagara_px",
+                },
+            )
             project.add_equipment(equipment)
             equipment_added = 1
 
@@ -109,6 +120,12 @@ class NiagaraArtifactParser:
                     direction=PointDirection.INPUT,
                     source=PointSource.MANUAL,
                     description=f"Imported from PX binding {point_name}",
+                    provenance={
+                        "source_type": "px",
+                        "source_name": file_path.name,
+                        "binding_ord": point_name,
+                        "parser": "niagara_px",
+                    },
                 )
             )
             equipment.add_point(normalized_name)
@@ -197,6 +214,7 @@ class NiagaraArtifactParser:
         equipment_added = 0
         points_added = 0
         controllers_added = 0
+        station_tree_hits = 0
 
         for controller_id in sorted(set(re.findall(r"\b(?:JACE|MEC|MPC|VAVC|CTRL|UC)-?[A-Z0-9]+\b", text, flags=re.IGNORECASE))):
             normalized_controller = controller_id.upper()
@@ -206,6 +224,11 @@ class NiagaraArtifactParser:
                         id=normalized_controller,
                         type="niagara",
                         protocols=[Protocol.BACNET_IP],
+                        provenance={
+                            "source_type": "station_metadata",
+                            "source_name": source_name,
+                            "parser": "niagara_station_manifest",
+                        },
                     )
                 )
                 controllers_added += 1
@@ -218,6 +241,11 @@ class NiagaraArtifactParser:
                         id=normalized_equipment,
                         type=self._infer_equipment_type(normalized_equipment),
                         subtype="NiagaraStation",
+                        provenance={
+                            "source_type": "station_metadata",
+                            "source_name": source_name,
+                            "parser": "niagara_station_manifest",
+                        },
                     )
                 )
                 equipment_added += 1
@@ -234,6 +262,11 @@ class NiagaraArtifactParser:
                         id=normalized_equipment,
                         type=self._infer_equipment_type(normalized_equipment),
                         subtype="NiagaraStation",
+                        provenance={
+                            "source_type": "station_metadata",
+                            "source_name": source_name,
+                            "parser": "niagara_station_manifest",
+                        },
                     )
                 )
                 equipment_added += 1
@@ -248,6 +281,11 @@ class NiagaraArtifactParser:
                     direction=PointDirection.INPUT,
                     source=PointSource.BACNET,
                     description=f"Imported from Niagara station metadata in {source_name}",
+                    provenance={
+                        "source_type": "station_metadata",
+                        "source_name": source_name,
+                        "parser": "niagara_station_manifest",
+                    },
                 )
             )
             equipment = project.get_equipment(normalized_equipment)
@@ -255,14 +293,22 @@ class NiagaraArtifactParser:
                 equipment.add_point(normalized_point)
             points_added += 1
 
+        tree_result = self._parse_station_tree_text(project=project, text=text, source_name=source_name)
+        equipment_added += tree_result.equipment_added
+        points_added += tree_result.points_added
+        controllers_added += tree_result.controllers_added
+        station_tree_hits = int(tree_result.details.get("station_tree_hits", 0))
+
         return ArtifactParseResult(
-            parsed=equipment_added > 0 or points_added > 0 or controllers_added > 0,
+            parsed=equipment_added > 0 or points_added > 0 or controllers_added > 0 or station_tree_hits > 0,
             parser_name="niagara_station_manifest",
             equipment_added=equipment_added,
             points_added=points_added,
+            controllers_added=controllers_added,
             details={
                 "controllers_added": controllers_added,
                 "source_name": source_name,
+                "station_tree_hits": station_tree_hits,
             },
         )
 
@@ -280,3 +326,148 @@ class NiagaraArtifactParser:
             "RF": EquipmentType.RETURN_FAN,
         }
         return mapping.get(prefix, EquipmentType.CUSTOM)
+
+    def _parse_station_tree_text(self, *, project: Project, text: str, source_name: str) -> ArtifactParseResult:
+        controller_map: dict[str, str] = {}
+        equipment_added = 0
+        points_added = 0
+        controllers_added = 0
+        station_tree_hits = 0
+
+        for controller_id in sorted(set(re.findall(r"station:\|slot:/Drivers/[^/\s]+/([A-Za-z0-9_-]+)", text))):
+            normalized_controller = controller_id.upper()
+            controller_map[normalized_controller] = normalized_controller
+            if project.get_controller(normalized_controller) is None:
+                project.add_controller(
+                    Controller(
+                        id=normalized_controller,
+                        type="niagara_station",
+                        protocols=[Protocol.BACNET_IP],
+                        provenance={
+                            "source_type": "station_tree",
+                            "source_name": source_name,
+                            "parser": "niagara_station_tree",
+                        },
+                    )
+                )
+                controllers_added += 1
+            else:
+                controller = project.get_controller(normalized_controller)
+                if controller is not None:
+                    controller.provenance = {
+                        "source_type": "station_tree",
+                        "source_name": source_name,
+                        "parser": "niagara_station_tree",
+                    }
+            station_tree_hits += 1
+
+        point_pattern = re.compile(
+            r"station:\|slot:/Drivers/[^/\s]+/([A-Za-z0-9_-]+)/Points/([A-Za-z0-9_:\-]+)"
+        )
+        for controller_id, raw_point_name in point_pattern.findall(text):
+            normalized_controller = controller_id.upper()
+            point_token = re.sub(r"[^A-Za-z0-9_\-]+", "_", raw_point_name).strip("_").upper()
+            equipment_id = self._infer_equipment_id_from_point_token(point_token)
+            if equipment_id is None:
+                continue
+            equipment = project.get_equipment(equipment_id)
+            if equipment is None:
+                equipment = Equipment(
+                    id=equipment_id,
+                    type=self._infer_equipment_type(equipment_id),
+                    subtype="NiagaraStationTree",
+                    controller_id=normalized_controller,
+                    provenance={
+                        "source_type": "station_tree",
+                        "source_name": source_name,
+                        "parser": "niagara_station_tree",
+                    },
+                )
+                project.add_equipment(equipment)
+                equipment_added += 1
+            else:
+                if equipment.controller_id is None:
+                    equipment.controller_id = normalized_controller
+                equipment.provenance = {
+                    "source_type": "station_tree",
+                    "source_name": source_name,
+                    "parser": "niagara_station_tree",
+                }
+            controller = project.get_controller(normalized_controller)
+            if controller is not None:
+                controller.add_equipment(equipment_id)
+            normalized_point = point_token
+            if project.get_point(normalized_point) is None:
+                project.add_point(
+                    Point(
+                        name=normalized_point,
+                        equipment_id=equipment_id,
+                        controller_id=normalized_controller,
+                        kind=self._infer_point_kind(raw_point_name),
+                        direction=PointDirection.INPUT,
+                        source=PointSource.BACNET,
+                        description=f"Imported from Niagara station tree in {source_name}",
+                        provenance={
+                            "source_type": "station_tree",
+                            "source_name": source_name,
+                            "point_ord": raw_point_name,
+                            "parser": "niagara_station_tree",
+                        },
+                    )
+                )
+                points_added += 1
+            else:
+                point = project.get_point(normalized_point)
+                if point is not None:
+                    point.controller_id = normalized_controller
+                    point.provenance = {
+                        "source_type": "station_tree",
+                        "source_name": source_name,
+                        "point_ord": raw_point_name,
+                        "parser": "niagara_station_tree",
+                    }
+            equipment.add_point(normalized_point)
+            if controller is not None:
+                controller.add_point(normalized_point)
+            station_tree_hits += 1
+
+        for equipment_id in sorted(set(re.findall(r"station:\|slot:/Config/Equipment/(?:[^/\s]+/)*([A-Za-z0-9_-]+)", text))):
+            normalized_equipment = equipment_id.upper()
+            if project.get_equipment(normalized_equipment) is None:
+                project.add_equipment(
+                    Equipment(
+                        id=normalized_equipment,
+                        type=self._infer_equipment_type(normalized_equipment),
+                        subtype="NiagaraStationTree",
+                        provenance={
+                            "source_type": "station_tree",
+                            "source_name": source_name,
+                            "parser": "niagara_station_tree",
+                        },
+                    )
+                )
+                equipment_added += 1
+            else:
+                equipment = project.get_equipment(normalized_equipment)
+                if equipment is not None:
+                    equipment.provenance = {
+                        "source_type": "station_tree",
+                        "source_name": source_name,
+                        "parser": "niagara_station_tree",
+                    }
+            station_tree_hits += 1
+
+        return ArtifactParseResult(
+            parsed=station_tree_hits > 0,
+            parser_name="niagara_station_tree",
+            equipment_added=equipment_added,
+            points_added=points_added,
+            controllers_added=controllers_added,
+            details={"station_tree_hits": station_tree_hits},
+        )
+
+    def _infer_equipment_id_from_point_token(self, point_name: str) -> str | None:
+        match = re.match(r"((?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+)_", point_name)
+        if match:
+            return match.group(1).upper()
+        return None

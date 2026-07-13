@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ memberships_view.project_name }} Access - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Project Access</h1>
+        <p class="mt-1 text-gray-500 dark:text-gray-400">{{ memberships_view.project_name }} · {{ memberships_view.project_id }}</p>
+    </div>
+
+    <div class="card p-6">
+        <div class="flex items-center justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Bulk Membership Management</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Assign access levels per user for this project. Empty selection removes explicit access.</p>
+            </div>
+        </div>
+        <form method="post" action="/project/{{ memberships_view.project_id }}/memberships" class="mt-6 space-y-4">
+            <div class="space-y-3">
+                {% for user in memberships_view.users %}
+                <div class="grid gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-[1.3fr_1fr] dark:border-gray-700 dark:bg-gray-900">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ user.username }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ user.email }} · {{ user.role }}{% if not user.is_active %} · inactive{% endif %}</p>
+                    </div>
+                    <select class="input-field" name="user_access_{{ user.id }}">
+                        <option value="" {% if not user.access_level %}selected{% endif %}>No explicit access</option>
+                        <option value="viewer" {% if user.access_level == 'viewer' %}selected{% endif %}>Viewer</option>
+                        <option value="editor" {% if user.access_level == 'editor' %}selected{% endif %}>Editor</option>
+                        <option value="owner" {% if user.access_level == 'owner' %}selected{% endif %}>Owner</option>
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-lock mr-2"></i>
+                    Save Project Access
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

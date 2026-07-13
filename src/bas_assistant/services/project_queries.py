@@ -21,8 +21,6 @@ from bas_assistant.database import (
     UploadRecord,
     UserAccount,
 )
-
-
 @dataclass(slots=True)
 class ProjectQueryScope:
     """Project filter scope derived from the current user."""
@@ -171,6 +169,7 @@ class ProjectQueryService:
                     "graphic_sections": ((payload.get("template") or {}).get("parameters") or {}).get("graphic_sections", ""),
                     "point_count": len(payload.get("point_names", [])),
                     "status": record.status,
+                    "provenance": dict(payload.get("provenance") or {}),
                 }
             )
 
@@ -214,6 +213,7 @@ class ProjectQueryService:
             ],
             "tasks": [
                 {
+                    "id": record.id,
                     "task_type": record.task_type,
                     "status": record.status,
                     "updated_at": record.updated_at,
@@ -226,6 +226,73 @@ class ProjectQueryService:
                     "access_level": access_level,
                 }
                 for username, access_level in memberships
+            ],
+        }
+
+    def activity_view(self, project_id: str) -> dict[str, object] | None:
+        """Return project activity history including task status transitions."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            tasks = list(
+                session.scalars(
+                    select(TaskRecord)
+                    .where(TaskRecord.project_id == project.id)
+                    .order_by(TaskRecord.updated_at.desc(), TaskRecord.created_at.desc())
+                    .limit(40)
+                )
+            )
+            uploads = list(
+                session.scalars(
+                    select(UploadRecord)
+                    .where(UploadRecord.project_id == project.id)
+                    .order_by(UploadRecord.created_at.desc())
+                    .limit(20)
+                )
+            )
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "tasks": [self._task_to_view(task) for task in tasks],
+            "uploads": [
+                {
+                    "filename": upload.filename,
+                    "category": upload.category,
+                    "status": upload.status,
+                    "created_at": upload.created_at,
+                    "metadata": dict(upload.metadata_json or {}),
+                }
+                for upload in uploads
+            ],
+        }
+
+    def memberships_view(self, project_id: str) -> dict[str, object] | None:
+        """Return project membership management data."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            users = list(session.scalars(select(UserAccount).order_by(UserAccount.username)))
+            memberships = list(
+                session.scalars(
+                    select(ProjectMembershipRecord).where(ProjectMembershipRecord.project_id == project.id)
+                )
+            )
+        membership_map = {membership.user_id: membership.access_level for membership in memberships}
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "users": [
+                {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "role": user.role,
+                    "is_active": user.is_active,
+                    "access_level": membership_map.get(user.id, ""),
+                }
+                for user in users
             ],
         }
 
@@ -327,3 +394,17 @@ class ProjectQueryService:
         for project_id, count in rows:
             counts[project_id] = int(count)
         return counts
+
+    def _task_to_view(self, task: TaskRecord) -> dict[str, object]:
+        result_json = dict(task.result_json or {})
+        return {
+            "id": task.id,
+            "task_type": task.task_type,
+            "status": task.status,
+            "created_at": task.created_at,
+            "updated_at": task.updated_at,
+            "payload": dict(task.payload_json or {}),
+            "result": result_json.get("result", {}),
+            "error": result_json.get("error"),
+            "status_history": list(result_json.get("status_history", [])),
+        }

@@ -114,6 +114,25 @@ def test_create_project_persists_form_fields_and_detail_loads() -> None:
     assert "Pytest Project" in response_text(detail)
 
 
+def test_project_memberships_page_renders_for_admin() -> None:
+    project_id = create_project()
+    admin_request = request(f"/project/{project_id}/memberships")
+    admin_request.scope["session"] = {
+        "user": {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@example.com",
+            "role": "admin",
+            "assigned_project_ids": [],
+        }
+    }
+
+    response = run_async(main.project_memberships_page(admin_request, project_id))
+
+    assert response.status_code == 200
+    assert "Bulk Membership Management" in response_text(response)
+
+
 def test_non_htmx_create_project_returns_redirect() -> None:
     response = run_async(
         main.create_project(
@@ -140,6 +159,7 @@ def test_main_project_pages_render_for_empty_project() -> None:
 
     page_calls = [
         (main.project_detail, f"/project/{project_id}"),
+        (main.project_activity_page, f"/project/{project_id}/activity"),
         (main.import_page, f"/project/{project_id}/import"),
         (main.validate_page, f"/project/{project_id}/validate"),
         (main.gaps_page, f"/project/{project_id}/gaps"),

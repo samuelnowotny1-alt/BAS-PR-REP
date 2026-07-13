@@ -68,6 +68,7 @@ class Point(BaseModel):
     # Metadata
     description: str | None = Field(default=None)
     tags: list[str] = Field(default_factory=list)
+    provenance: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("name")
     @classmethod

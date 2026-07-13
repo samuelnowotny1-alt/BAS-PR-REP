@@ -171,6 +171,17 @@
                     <span class="sidebar-link-icon"><i class="fas fa-plug"></i></span>
                     <span class="sidebar-link-label">Station Sync</span>
                 </a>
+                <a href="/project/{{ project.metadata.project_id }}/activity" class="sidebar-link {% if '/activity' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-clock-rotate-left"></i></span>
+                    <span class="sidebar-link-label">Activity</span>
+                </a>
+                {% set session_user = request.scope.get('session', {}).get('user') if request is defined else none %}
+                {% if session_user and session_user.role == 'admin' %}
+                <a href="/project/{{ project.metadata.project_id }}/memberships" class="sidebar-link {% if '/memberships' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-user-lock"></i></span>
+                    <span class="sidebar-link-label">Access</span>
+                </a>
+                {% endif %}
                 <a href="/project/{{ project.metadata.project_id }}/sequence" class="sidebar-link {% if '/sequence' in request.url.path %}active{% endif %}">
                     <span class="sidebar-link-icon"><i class="fas fa-code"></i></span>
                     <span class="sidebar-link-label">Sequence Parser</span>

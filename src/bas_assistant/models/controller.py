@@ -68,6 +68,7 @@ class Controller(BaseModel):
     # Metadata
     tags: list[str] = Field(default_factory=list)
     notes: str | None = None
+    provenance: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("id")
     @classmethod

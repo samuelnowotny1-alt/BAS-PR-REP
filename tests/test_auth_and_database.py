@@ -318,6 +318,74 @@ def test_admin_user_management_updates_role_and_memberships(tmp_path: Path) -> N
     assert managed.assigned_projects[0]["access_level"] == "editor"
 
 
+def test_project_bulk_membership_update_route(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'project_memberships.db'}",
+    )
+    asyncio.run(
+        main.api_create_project(
+            project_id="team-project",
+            name="Team Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+    engineer = main.container.auth.create_user(
+        username="designeng",
+        email="designeng@example.com",
+        password="DesignEng123!",
+        role="engineer",
+    )
+    viewer = main.container.auth.create_user(
+        username="readonly",
+        email="readonly@example.com",
+        password="ReadOnly123!",
+        role="viewer",
+    )
+
+    async def set_form() -> Request:
+        req = request("/project/team-project/memberships", method="POST")
+        req.scope["session"]["user"] = {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@example.com",
+            "role": "admin",
+            "assigned_project_ids": [],
+        }
+        return req
+
+    membership_request = asyncio.run(set_form())
+
+    async def fake_form():
+        from starlette.datastructures import FormData
+        return FormData(
+            {
+                f"user_access_{engineer.id}": "editor",
+                f"user_access_{viewer.id}": "viewer",
+            }
+        )
+
+    membership_request.form = fake_form  # type: ignore[method-assign]
+    response = asyncio.run(main.project_memberships_update(membership_request, "team-project"))
+
+    assert response.status_code == 303
+    updated_users = main.container.auth.list_users()
+    eng = next(user for user in updated_users if user.id == engineer.id)
+    ro = next(user for user in updated_users if user.id == viewer.id)
+    assert eng.assigned_projects[0]["project_id"] == "team-project"
+    assert eng.assigned_projects[0]["access_level"] == "editor"
+    assert ro.assigned_projects[0]["access_level"] == "viewer"
+
+
 def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     main.configure_runtime_paths(
         data_dir=tmp_path / "data",
@@ -472,6 +540,62 @@ def test_niagara_station_zip_parses_manifest_content(tmp_path: Path) -> None:
     assert project.get_equipment("VAV-201") is not None
     assert project.controllers
     assert any(point.name.startswith("AHU-1_") for point in project.points)
+
+
+def test_niagara_station_tree_zip_parses_slot_paths(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'tree_uploads.db'}",
+    )
+
+    project_id = "tree-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Tree Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as archive:
+        archive.writestr(
+            "station_tree.txt",
+            "station:|slot:/Drivers/BacnetNetwork/MPC-1/Points/AHU-1_SAT\n"
+            "station:|slot:/Config/Equipment/Admin/1/AHU-1\n",
+        )
+    zip_buffer.seek(0)
+    zip_upload = UploadFile(filename="station-tree.zip", file=zip_buffer)
+
+    response = asyncio.run(
+        main.import_data(
+            project_id=project_id,
+            equipment_file=None,
+            points_file=None,
+            controllers_file=None,
+            supporting_files=[zip_upload],
+        )
+    )
+
+    assert response.status_code == 303
+    project = main.get_project(project_id)
+    controller = project.get_controller("MPC-1")
+    point = project.get_point("AHU-1_SAT")
+    equipment = project.get_equipment("AHU-1")
+    assert controller is not None
+    assert point is not None
+    assert equipment is not None
+    assert equipment.provenance["parser"] == "niagara_station_tree"
+    assert point.controller_id == "MPC-1"
 
 
 def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:
