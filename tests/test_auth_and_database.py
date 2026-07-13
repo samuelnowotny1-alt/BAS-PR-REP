@@ -1,6 +1,7 @@
 import asyncio
 import sys
 import types
+import zipfile
 from io import BytesIO
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from sqlalchemy import inspect, select
 from starlette.requests import Request
 
 from bas_assistant.auth import hash_password, verify_password
-from bas_assistant.database import EquipmentRecord, KnowledgeRecord, PointRecord, UploadRecord, UserAccount
+from bas_assistant.database import EquipmentRecord, KnowledgeRecord, PointRecord, TaskRecord, UploadRecord, UserAccount
 from bas_assistant.generators.px_graphics import generate_vav_px
 from bas_assistant.services.knowledge import KnowledgeIngestionService
 from ui.api import main
@@ -258,6 +259,65 @@ def test_admin_user_management_creates_user_with_project_assignment(tmp_path: Pa
     assert created_user.assigned_projects[0]["project_id"] == "admin-project"
 
 
+def test_admin_user_management_updates_role_and_memberships(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'admin_update.db'}",
+    )
+    for project_id in ("project-a", "project-b"):
+        asyncio.run(
+            main.api_create_project(
+                project_id=project_id,
+                name=project_id,
+                client="Client",
+                location="Site",
+                unit_system="IP",
+                design_phase="DD",
+                engineer="Engineer",
+                programmer="Programmer",
+                cx_agent="Cx",
+                naming_standard="ASHRAE-135",
+            )
+        )
+
+    created = main.container.auth.create_user(
+        username="operator",
+        email="operator@example.com",
+        password="Operator123!",
+        role="viewer",
+        project_ids=["project-a"],
+        access_level="viewer",
+    )
+    admin_request = request("/admin/users/1", method="POST")
+    admin_request.scope["session"]["user"] = {
+        "id": 1,
+        "username": "admin",
+        "email": "admin@example.com",
+        "role": "admin",
+        "assigned_project_ids": [],
+    }
+
+    response = asyncio.run(
+        main.admin_update_user(
+            admin_request,
+            user_id=created.id,
+            role="engineer",
+            is_active="false",
+            project_ids=["project-b"],
+            access_level="editor",
+        )
+    )
+
+    assert response.status_code == 303
+    managed = next(user for user in main.container.auth.list_users() if user.id == created.id)
+    assert managed.role == "engineer"
+    assert managed.is_active is False
+    assert managed.assigned_projects[0]["project_id"] == "project-b"
+    assert managed.assigned_projects[0]["access_level"] == "editor"
+
+
 def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     main.configure_runtime_paths(
         data_dir=tmp_path / "data",
@@ -305,6 +365,7 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
         uploads = list(session.scalars(select(UploadRecord)))
         equipment = list(session.scalars(select(EquipmentRecord)))
         knowledge = list(session.scalars(select(KnowledgeRecord)))
+        tasks = list(session.scalars(select(TaskRecord)))
 
     assert len(uploads) == 2
     assert any(record.filename == "equipment.csv" for record in uploads)
@@ -312,6 +373,9 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     assert len(equipment) == 1
     assert knowledge
     assert any(record.source_name == "sequence.txt" and record.status == "indexed" for record in knowledge)
+    assert tasks
+    assert any(record.task_type == "equipment_import" and record.status == "completed" for record in tasks)
+    assert any(record.task_type == "artifact_ingestion" and record.status == "completed" for record in tasks)
 
 
 def test_px_upload_parses_into_structured_equipment_and_points(tmp_path: Path) -> None:
@@ -360,6 +424,54 @@ def test_px_upload_parses_into_structured_equipment_and_points(tmp_path: Path) -
     assert any(record.equipment_key == "VAV-201" for record in equipment)
     assert points
     assert any(record.source_name == "VAV-201.px" for record in knowledge)
+
+
+def test_niagara_station_zip_parses_manifest_content(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'zip_uploads.db'}",
+    )
+
+    project_id = "station-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Station Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as archive:
+        archive.writestr("station_manifest.txt", "Controller JACE-01 serves AHU-1 SAT and VAV-201 ZN-T")
+    zip_buffer.seek(0)
+    zip_upload = UploadFile(filename="station.zip", file=zip_buffer)
+
+    response = asyncio.run(
+        main.import_data(
+            project_id=project_id,
+            equipment_file=None,
+            points_file=None,
+            controllers_file=None,
+            supporting_files=[zip_upload],
+        )
+    )
+
+    assert response.status_code == 303
+    project = main.get_project(project_id)
+    assert project.get_equipment("AHU-1") is not None
+    assert project.get_equipment("VAV-201") is not None
+    assert project.controllers
+    assert any(point.name.startswith("AHU-1_") for point in project.points)
 
 
 def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:

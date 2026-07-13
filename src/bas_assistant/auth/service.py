@@ -153,6 +153,33 @@ class AuthenticationService:
                 assigned_project_ids=self.project_ids_for_user(user.id),
             )
 
+    def update_user(
+        self,
+        *,
+        user_id: int,
+        role: str,
+        is_active: bool,
+        project_ids: list[str] | None = None,
+        access_level: str | None = None,
+    ) -> ManagedUser:
+        """Update an existing user and replace explicit project assignments."""
+        with self.db.session() as session:
+            user = session.get(UserAccount, user_id)
+            if user is None:
+                raise ValueError(f"User '{user_id}' not found")
+            user.role = role
+            user.is_active = is_active
+            self._replace_memberships(
+                session,
+                user_id=user.id,
+                project_ids=project_ids or [],
+                access_level=access_level or self.default_access_level_for_role(role),
+            )
+        managed_user = next((managed for managed in self.list_users() if managed.id == user_id), None)
+        if managed_user is None:
+            raise ValueError(f"User '{user_id}' not found after update")
+        return managed_user
+
     def project_ids_for_user(self, user_id: int) -> list[str]:
         """Return assigned project IDs for a user."""
         with self.db.session() as session:

@@ -653,10 +653,12 @@ async def api_create_project(
 @app.get("/project/{project_id}", response_class=HTMLResponse)
 async def project_detail(request: Request, project_id: str):
     project = get_project(project_id)
+    project_view = container.project_queries.detail_view(project_id)
+    if project_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
         "project": project,
-        "graphic_sections_for": equipment_graphic_sections,
-        "graphic_section_errors_for": equipment_graphic_section_errors,
+        "project_view": project_view,
         "graphic_presets_for": equipment_graphic_presets,
     })
 
@@ -720,8 +722,15 @@ async def import_data(
     project = get_project(project_id)
     importer = CSVImporter(project)
     results = {}
+    current_user = None
 
     if equipment_file and getattr(equipment_file, "filename", None):
+        task_id = container.tasks.create_task(
+            project_id=project_id,
+            task_type="equipment_import",
+            payload={"filename": equipment_file.filename},
+            created_by_user_id=current_user.id if current_user is not None else None,
+        )
         stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=equipment_file,
@@ -729,16 +738,31 @@ async def import_data(
             document_type="equipment_schedule",
         )
         result = importer.import_equipment_schedule(stored_upload.path, "equip_upload")
+        container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["equipment"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.equipment_count}
-        container.knowledge.ingest_document(
+        knowledge_result = container.knowledge.ingest_document(
             project=project,
             file_path=stored_upload.path,
             source_name=stored_upload.source_document.name,
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
         )
+        container.tasks.complete_task(
+            task_id,
+            result={
+                "import_result": results["equipment"],
+                "knowledge_status": knowledge_result.status,
+                "chunk_count": knowledge_result.chunk_count,
+            },
+        )
 
     if points_file and getattr(points_file, "filename", None):
+        task_id = container.tasks.create_task(
+            project_id=project_id,
+            task_type="points_import",
+            payload={"filename": points_file.filename},
+            created_by_user_id=current_user.id if current_user is not None else None,
+        )
         stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=points_file,
@@ -746,16 +770,31 @@ async def import_data(
             document_type="point_list",
         )
         result = importer.import_point_list(stored_upload.path, "points_upload")
+        container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["points"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.points_count}
-        container.knowledge.ingest_document(
+        knowledge_result = container.knowledge.ingest_document(
             project=project,
             file_path=stored_upload.path,
             source_name=stored_upload.source_document.name,
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
         )
+        container.tasks.complete_task(
+            task_id,
+            result={
+                "import_result": results["points"],
+                "knowledge_status": knowledge_result.status,
+                "chunk_count": knowledge_result.chunk_count,
+            },
+        )
 
     if controllers_file and getattr(controllers_file, "filename", None):
+        task_id = container.tasks.create_task(
+            project_id=project_id,
+            task_type="controllers_import",
+            payload={"filename": controllers_file.filename},
+            created_by_user_id=current_user.id if current_user is not None else None,
+        )
         stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=controllers_file,
@@ -763,31 +802,52 @@ async def import_data(
             document_type="controller_schedule",
         )
         result = importer.import_controller_schedule(stored_upload.path, "ctrl_upload")
+        container.tasks.mark_status(task_id, status="ingested", detail={"stored_path": str(stored_upload.path)})
         results["controllers"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.controllers_count}
-        container.knowledge.ingest_document(
+        knowledge_result = container.knowledge.ingest_document(
             project=project,
             file_path=stored_upload.path,
             source_name=stored_upload.source_document.name,
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
+        container.tasks.complete_task(
+            task_id,
+            result={
+                "import_result": results["controllers"],
+                "knowledge_status": knowledge_result.status,
+                "chunk_count": knowledge_result.chunk_count,
+            },
         )
 
     normalized_supporting_files = supporting_files if isinstance(supporting_files, list) else []
     for supporting_file in normalized_supporting_files:
         if not getattr(supporting_file, "filename", None):
             continue
+        task_id = container.tasks.create_task(
+            project_id=project_id,
+            task_type="artifact_ingestion",
+            payload={"filename": supporting_file.filename},
+            created_by_user_id=current_user.id if current_user is not None else None,
+        )
         stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=supporting_file,
         )
-        container.knowledge.ingest_document(
+        container.tasks.mark_status(task_id, status="stored", detail={"stored_path": str(stored_upload.path)})
+        knowledge_result = container.knowledge.ingest_document(
             project=project,
             file_path=stored_upload.path,
             source_name=stored_upload.source_document.name,
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
         )
+        task_result = {
+            "knowledge_status": knowledge_result.status,
+            "chunk_count": knowledge_result.chunk_count,
+        }
         if container.parsers.can_parse(stored_upload.path):
+            container.tasks.mark_status(task_id, status="parsing", detail={"parser": "niagara"})
             parser_result = container.parsers.parse(project=project, file_path=stored_upload.path)
             results[stored_upload.source_document.name] = {
                 "success": parser_result.parsed,
@@ -796,6 +856,8 @@ async def import_data(
                 "warnings": parser_result.warnings,
                 "details": parser_result.details,
             }
+            task_result["parser_result"] = results[stored_upload.source_document.name]
+        container.tasks.complete_task(task_id, result=task_result)
 
     save_project(project)
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)
@@ -1364,6 +1426,41 @@ async def admin_create_user(
             email=email.strip(),
             password=password,
             role=role,
+            project_ids=project_ids or [],
+            access_level=access_level,
+        )
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin_users.html",
+            context={
+                "current_user": current_user,
+                "managed_users": container.auth.list_users(),
+                "available_projects": container.project_queries.list_project_cards(),
+                "error_message": str(exc),
+            },
+            status_code=400,
+        )
+    return RedirectResponse(url="/admin/users", status_code=303)
+
+
+@app.post("/admin/users/{user_id}")
+async def admin_update_user(
+    request: Request,
+    user_id: int,
+    role: str = Form(...),
+    is_active: str = Form("false"),
+    project_ids: list[str] | None = Form(None),
+    access_level: str = Form("viewer"),
+):
+    current_user = get_current_user(request)
+    if current_user is None or current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    try:
+        container.auth.update_user(
+            user_id=user_id,
+            role=role,
+            is_active=is_active.lower() == "true",
             project_ids=project_ids or [],
             access_level=access_level,
         )

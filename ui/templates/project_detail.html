@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block page_title %}{{ project.metadata.name }} - BAS Assistant{% endblock %}
+{% block page_title %}{{ project_view.name }} - BAS Assistant{% endblock %}
 
 {% block content %}
 <div class="max-w-7xl mx-auto">
@@ -8,29 +8,29 @@
     <div class="mb-8">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-gray-800 dark:text-white">{{ project.metadata.name }}</h1>
-                <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.project_id }}</p>
+                <h1 class="text-3xl font-bold text-gray-800 dark:text-white">{{ project_view.name }}</h1>
+                <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project_view.project_id }}</p>
                 <div class="flex flex-wrap gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
-                    {% if project.metadata.client %}
-                    <span><i class="fas fa-building mr-1"></i>{{ project.metadata.client }}</span>
+                    {% if project_view.client %}
+                    <span><i class="fas fa-building mr-1"></i>{{ project_view.client }}</span>
                     {% endif %}
-                    {% if project.metadata.location %}
-                    <span><i class="fas fa-map-marker-alt mr-1"></i>{{ project.metadata.location }}</span>
+                    {% if project_view.location %}
+                    <span><i class="fas fa-map-marker-alt mr-1"></i>{{ project_view.location }}</span>
                     {% endif %}
-                    <span><i class="fas fa-ruler-combined mr-1"></i>{{ project.metadata.unit_system.value }}</span>
-                    {% if project.metadata.design_phase %}
-                    <span><i class="fas fa-calendar-alt mr-1"></i>{{ project.metadata.design_phase }}</span>
+                    <span><i class="fas fa-ruler-combined mr-1"></i>{{ project_view.metadata.unit_system }}</span>
+                    {% if project_view.metadata.design_phase %}
+                    <span><i class="fas fa-calendar-alt mr-1"></i>{{ project_view.metadata.design_phase }}</span>
                     {% endif %}
                 </div>
             </div>
             <div class="flex items-center gap-4">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                    {% if project.validation_status == 'valid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
-                    {% elif project.validation_status == 'warning' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
+                    {% if project_view.validation_status == 'valid' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                    {% elif project_view.validation_status == 'warning' %}bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                     {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
-                    {{ project.validation_status|capitalize }}
+                    {{ project_view.validation_status|capitalize }}
                 </span>
-                <a href="/project/{{ project.metadata.project_id }}/validate" class="btn-secondary">
+                <a href="/project/{{ project_view.project_id }}/validate" class="btn-secondary">
                     <i class="fas fa-sync mr-2"></i>
                     Re-validate
                 </a>
@@ -42,65 +42,65 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <p class="text-sm text-gray-500 dark:text-gray-400">Equipment</p>
-            <p class="text-3xl font-bold text-orange-500 mt-1">{{ project.equipment|length }}</p>
+            <p class="text-3xl font-bold text-orange-500 mt-1">{{ project_view.equipment_count }}</p>
         </div>
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <p class="text-sm text-gray-500 dark:text-gray-400">Points</p>
-            <p class="text-3xl font-bold text-blue-500 mt-1">{{ project.points|length }}</p>
+            <p class="text-3xl font-bold text-blue-500 mt-1">{{ project_view.point_count }}</p>
         </div>
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <p class="text-sm text-gray-500 dark:text-gray-400">Controllers</p>
-            <p class="text-3xl font-bold text-green-500 mt-1">{{ project.controllers|length }}</p>
+            <p class="text-3xl font-bold text-green-500 mt-1">{{ project_view.controller_count }}</p>
         </div>
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <p class="text-sm text-gray-500 dark:text-gray-400">Source Docs</p>
-            <p class="text-3xl font-bold text-purple-500 mt-1">{{ project.source_documents|length }}</p>
+            <p class="text-3xl font-bold text-purple-500 mt-1">{{ project_view.source_document_count }}</p>
         </div>
     </div>
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <a href="/project/{{ project.metadata.project_id }}/import" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/import" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-upload text-3xl text-orange-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Import Data</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">CSV upload for equipment, points, controllers</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/validate" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/validate" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-check-circle text-3xl text-blue-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Validate</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Run validation rules</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/gaps" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/gaps" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-search text-3xl text-orange-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Gap Analysis</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Find missing data & issues</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/checkout" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/checkout" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-clipboard-check text-3xl text-orange-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Checkout Sheets</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Generate commissioning sheets</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/reports" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/reports" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-file-alt text-3xl text-blue-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Reports</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Submittal package generation</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/graphics" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/graphics" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-chart-area text-3xl text-purple-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Graphics</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">PX page generation</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/logic" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/logic" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-sitemap text-3xl text-green-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Logic</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Control logic diagrams</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/export" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/export" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-download text-3xl text-orange-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Export</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Vendor formats (Niagara, BACnet, etc.)</p>
         </a>
-        <a href="/project/{{ project.metadata.project_id }}/station-sync" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/station-sync" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-plug text-3xl text-blue-500 mb-2"></i>
             <h3 class="font-semibold text-gray-800 dark:text-white">Station Sync</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Configure Niagara target and preview live sync</p>
@@ -108,11 +108,11 @@
     </div>
 
     <!-- Equipment Table -->
-    {% if project.equipment %}
+    {% if project_view.equipment %}
     <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Equipment</h2>
-            <span class="text-sm text-gray-500 dark:text-gray-400">{{ project.equipment|length }} items</span>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ project_view.equipment_count }} items</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full">
@@ -128,18 +128,18 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {% for equip in project.equipment %}
+                    {% for equip in project_view.equipment %}
                     <tr class="table-row">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-white">{{ equip.id }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type.value }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.building or '-' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.controller_id or '-' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 min-w-[360px]">
-                            <form method="post" action="/project/{{ project.metadata.project_id }}/equipment/{{ equip.id }}/graphics-config" class="space-y-2">
+                            <form method="post" action="/project/{{ project_view.project_id }}/equipment/{{ equip.id }}/graphics-config" class="space-y-2">
                                 <input
                                     type="text"
                                     name="graphic_sections"
-                                    value="{{ graphic_sections_for(equip) }}"
+                                    value="{{ equip.graphic_sections }}"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     placeholder="outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge"
                                 >
@@ -150,11 +150,11 @@
                                     <button type="submit" class="btn-secondary text-sm whitespace-nowrap">Save</button>
                                 </div>
                             </form>
-                            {% set preset_map = graphic_presets_for(equip) %}
+                            {% set preset_map = graphic_presets_for(project.get_equipment(equip.id)) %}
                             {% if preset_map %}
                             <div class="mt-3 flex flex-wrap gap-2">
                                 {% for preset_name, preset_value in preset_map.items() %}
-                                <form method="post" action="/project/{{ project.metadata.project_id }}/equipment/{{ equip.id }}/graphics-preset">
+                                <form method="post" action="/project/{{ project_view.project_id }}/equipment/{{ equip.id }}/graphics-preset">
                                     <input type="hidden" name="preset_value" value="{{ preset_value }}">
                                     <button type="submit" class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 hover:bg-orange-100 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-300 dark:hover:bg-orange-900/30">
                                         {{ preset_name }}
@@ -163,14 +163,8 @@
                                 {% endfor %}
                             </div>
                             {% endif %}
-                            {% set invalid_sections = graphic_section_errors_for(equip) %}
-                            {% if invalid_sections %}
-                            <div class="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
-                                Invalid sections saved: {{ invalid_sections|join(', ') }}
-                            </div>
-                            {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.point_names|length }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.point_count }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if equip.status == 'operational' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
@@ -188,14 +182,80 @@
     </div>
     {% endif %}
 
+    <div class="mt-8 grid gap-6 xl:grid-cols-3">
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Recent Uploads</h2>
+            <div class="mt-4 space-y-3">
+                {% for upload in project_view.uploads %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ upload.filename }}</span>
+                        <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ upload.status }}</span>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ upload.category }}</p>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 dark:text-gray-400">No uploads yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Knowledge & Docs</h2>
+            <div class="mt-4 space-y-3">
+                {% for document in project_view.documents %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ document.name }}</p>
+                    <p class="mt-1 text-xs uppercase tracking-[0.16em] text-gray-400">{{ document.document_type }}</p>
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500 dark:text-gray-400">No documents indexed yet.</p>
+                {% endfor %}
+                {% for item in project_view.knowledge %}
+                <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900/40 dark:bg-blue-900/20">
+                    <p class="truncate text-sm font-medium text-blue-900 dark:text-blue-100">{{ item.source_name }}</p>
+                    <p class="mt-1 text-xs text-blue-600 dark:text-blue-300">{{ item.status }} · {{ item.chunk_count }} chunks</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card p-6">
+            <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Project Activity</h2>
+            <div class="mt-4 space-y-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Members</p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        {% for membership in project_view.memberships %}
+                        <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ membership.username }} · {{ membership.access_level }}</span>
+                        {% else %}
+                        <span class="text-sm text-gray-500 dark:text-gray-400">No explicit members.</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="pt-2">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Recent Tasks</p>
+                    <div class="mt-2 space-y-2">
+                        {% for task in project_view.tasks %}
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">{{ task.task_type }}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ task.status }} · {{ task.updated_at }}</p>
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No task activity yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Validation Status -->
-    {% if project.validation_status != 'valid' %}
+    {% if project_view.validation_status != 'valid' %}
     <div class="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
         <div class="flex items-center">
             <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
             <div>
                 <h3 class="font-semibold text-yellow-800 dark:text-yellow-200">Validation Issues Found</h3>
-                <p class="text-yellow-700 dark:text-yellow-300">Project has validation issues. <a href="/project/{{ project.metadata.project_id }}/validate" class="underline">View details</a> or <a href="/project/{{ project.metadata.project_id }}/gaps" class="underline">run gap analysis</a>.</p>
+                <p class="text-yellow-700 dark:text-yellow-300">Project has validation issues. <a href="/project/{{ project_view.project_id }}/validate" class="underline">View details</a> or <a href="/project/{{ project_view.project_id }}/gaps" class="underline">run gap analysis</a>.</p>
             </div>
         </div>
     </div>

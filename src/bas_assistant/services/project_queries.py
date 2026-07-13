@@ -8,7 +8,19 @@ from dataclasses import dataclass
 from sqlalchemy import func, select
 
 from bas_assistant.auth.schemas import UserIdentity
-from bas_assistant.database import ControllerRecord, DatabaseManager, EquipmentRecord, PointRecord, ProjectMembershipRecord, ProjectRecord
+from bas_assistant.database import (
+    ControllerRecord,
+    DatabaseManager,
+    DocumentRecord,
+    EquipmentRecord,
+    KnowledgeRecord,
+    PointRecord,
+    ProjectMembershipRecord,
+    ProjectRecord,
+    TaskRecord,
+    UploadRecord,
+    UserAccount,
+)
 
 
 @dataclass(slots=True)
@@ -78,11 +90,144 @@ class ProjectQueryService:
             return {
                 "project_id": project.project_id,
                 "name": project.name,
+                "client": project.client,
+                "location": project.location,
+                "metadata": dict(project.metadata_json or {}),
                 "equipment_count": equipment_count,
                 "points_count": point_count,
                 "controllers_count": controller_count,
                 "validation_status": project.status,
             }
+
+    def detail_view(self, project_id: str) -> dict[str, object] | None:
+        """Return a DB-backed detail view for a project."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            equipment_records = list(
+                session.scalars(
+                    select(EquipmentRecord)
+                    .where(EquipmentRecord.project_id == project.id)
+                    .order_by(EquipmentRecord.equipment_key)
+                )
+            )
+            point_count = session.scalar(
+                select(func.count()).select_from(PointRecord).where(PointRecord.project_id == project.id)
+            ) or 0
+            controller_count = session.scalar(
+                select(func.count()).select_from(ControllerRecord).where(ControllerRecord.project_id == project.id)
+            ) or 0
+            documents = list(
+                session.scalars(
+                    select(DocumentRecord)
+                    .where(DocumentRecord.project_id == project.id)
+                    .order_by(DocumentRecord.created_at.desc())
+                    .limit(8)
+                )
+            )
+            uploads = list(
+                session.scalars(
+                    select(UploadRecord)
+                    .where(UploadRecord.project_id == project.id)
+                    .order_by(UploadRecord.created_at.desc())
+                    .limit(8)
+                )
+            )
+            knowledge = list(
+                session.scalars(
+                    select(KnowledgeRecord)
+                    .where(KnowledgeRecord.project_id == project.id)
+                    .order_by(KnowledgeRecord.created_at.desc())
+                    .limit(8)
+                )
+            )
+            tasks = list(
+                session.scalars(
+                    select(TaskRecord)
+                    .where(TaskRecord.project_id == project.id)
+                    .order_by(TaskRecord.updated_at.desc(), TaskRecord.created_at.desc())
+                    .limit(8)
+                )
+            )
+            memberships = list(
+                session.execute(
+                    select(UserAccount.username, ProjectMembershipRecord.access_level)
+                    .join(ProjectMembershipRecord, ProjectMembershipRecord.user_id == UserAccount.id)
+                    .where(ProjectMembershipRecord.project_id == project.id)
+                    .order_by(UserAccount.username)
+                )
+            )
+
+        equipment_view = []
+        for record in equipment_records:
+            payload = dict(record.payload_json or {})
+            equipment_view.append(
+                {
+                    "id": record.equipment_key,
+                    "type": record.equipment_type,
+                    "building": payload.get("building"),
+                    "controller_id": payload.get("controller_id"),
+                    "graphic_sections": ((payload.get("template") or {}).get("parameters") or {}).get("graphic_sections", ""),
+                    "point_count": len(payload.get("point_names", [])),
+                    "status": record.status,
+                }
+            )
+
+        return {
+            "project_id": project.project_id,
+            "name": project.name,
+            "client": project.client,
+            "location": project.location,
+            "metadata": dict(project.metadata_json or {}),
+            "validation_status": project.status,
+            "equipment_count": len(equipment_records),
+            "point_count": int(point_count),
+            "controller_count": int(controller_count),
+            "source_document_count": len(documents),
+            "equipment": equipment_view,
+            "documents": [
+                {
+                    "name": record.name,
+                    "document_type": record.document_type,
+                    "created_at": record.created_at,
+                }
+                for record in documents
+            ],
+            "uploads": [
+                {
+                    "filename": record.filename,
+                    "category": record.category,
+                    "status": record.status,
+                    "created_at": record.created_at,
+                }
+                for record in uploads
+            ],
+            "knowledge": [
+                {
+                    "source_name": record.source_name,
+                    "source_type": record.source_type,
+                    "status": record.status,
+                    "chunk_count": record.chunk_count,
+                }
+                for record in knowledge
+            ],
+            "tasks": [
+                {
+                    "task_type": record.task_type,
+                    "status": record.status,
+                    "updated_at": record.updated_at,
+                }
+                for record in tasks
+            ],
+            "memberships": [
+                {
+                    "username": username,
+                    "access_level": access_level,
+                }
+                for username, access_level in memberships
+            ],
+        }
 
     def equipment_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured equipment records for a project."""

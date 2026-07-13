@@ -7,9 +7,10 @@ import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from xml.etree import ElementTree as ET
 
 from bas_assistant.generators.px_graphics import PXFile
-from bas_assistant.models import Equipment, EquipmentType, Point, PointDirection, PointKind, PointSource, Project
+from bas_assistant.models import Controller, Equipment, EquipmentType, Point, PointDirection, PointKind, PointSource, Project, Protocol
 
 
 @dataclass(slots=True)
@@ -43,27 +44,42 @@ class NiagaraArtifactParser:
     def _parse_station_archive(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
         equipment_added = 0
         points_added = 0
+        controllers_added = 0
         parsed_pages = 0
         warnings: list[str] = []
+        manifest_hits = 0
         with zipfile.ZipFile(file_path) as archive, TemporaryDirectory() as temp_dir:
             for member in archive.namelist():
-                if not member.lower().endswith(".px"):
-                    continue
-                parsed_pages += 1
                 target_path = Path(temp_dir) / Path(member).name
                 target_path.parent.mkdir(parents=True, exist_ok=True)
                 target_path.write_bytes(archive.read(member))
-                result = self._parse_px_file(project=project, file_path=target_path)
-                equipment_added += result.equipment_added
-                points_added += result.points_added
-                warnings.extend(result.warnings)
+                lower_member = member.lower()
+                if lower_member.endswith(".px"):
+                    parsed_pages += 1
+                    result = self._parse_px_file(project=project, file_path=target_path)
+                    equipment_added += result.equipment_added
+                    points_added += result.points_added
+                    warnings.extend(result.warnings)
+                    continue
+                if lower_member.endswith((".json", ".txt", ".csv", ".xml")):
+                    result = self._parse_station_metadata_file(project=project, file_path=target_path)
+                    if result.parsed:
+                        manifest_hits += 1
+                    equipment_added += result.equipment_added
+                    points_added += result.points_added
+                    controllers_added += int(result.details.get("controllers_added", 0))
+                    warnings.extend(result.warnings)
         return ArtifactParseResult(
-            parsed=parsed_pages > 0,
+            parsed=parsed_pages > 0 or manifest_hits > 0,
             parser_name="niagara_station_archive",
             equipment_added=equipment_added,
             points_added=points_added,
             warnings=warnings,
-            details={"parsed_px_pages": parsed_pages},
+            details={
+                "parsed_px_pages": parsed_pages,
+                "parsed_metadata_files": manifest_hits,
+                "controllers_added": controllers_added,
+            },
         )
 
     def _parse_px_file(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
@@ -145,3 +161,122 @@ class NiagaraArtifactParser:
         if any(token in upper_name for token in {"STATUS", "ALARM", "FAIL"}):
             return PointKind.STATUS
         return PointKind.SENSOR
+
+    def _parse_station_metadata_file(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
+        suffix = file_path.suffix.lower()
+        try:
+            if suffix == ".json":
+                return self._parse_json_manifest(project=project, file_path=file_path)
+            if suffix == ".xml":
+                return self._parse_xml_manifest(project=project, file_path=file_path)
+            return self._parse_text_manifest(project=project, file_path=file_path)
+        except Exception as exc:
+            return ArtifactParseResult(
+                parsed=False,
+                parser_name="niagara_station_manifest",
+                warnings=[f"{file_path.name}: {exc}"],
+            )
+
+    def _parse_json_manifest(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
+        import json
+
+        payload = json.loads(file_path.read_text(encoding="utf-8", errors="ignore"))
+        text = json.dumps(payload)
+        return self._parse_manifest_text(project=project, text=text, source_name=file_path.name)
+
+    def _parse_xml_manifest(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
+        root = ET.fromstring(file_path.read_text(encoding="utf-8", errors="ignore"))
+        text = " ".join(element.text.strip() for element in root.iter() if element.text and element.text.strip())
+        return self._parse_manifest_text(project=project, text=text, source_name=file_path.name)
+
+    def _parse_text_manifest(self, *, project: Project, file_path: Path) -> ArtifactParseResult:
+        text = file_path.read_text(encoding="utf-8", errors="ignore")
+        return self._parse_manifest_text(project=project, text=text, source_name=file_path.name)
+
+    def _parse_manifest_text(self, *, project: Project, text: str, source_name: str) -> ArtifactParseResult:
+        equipment_added = 0
+        points_added = 0
+        controllers_added = 0
+
+        for controller_id in sorted(set(re.findall(r"\b(?:JACE|MEC|MPC|VAVC|CTRL|UC)-?[A-Z0-9]+\b", text, flags=re.IGNORECASE))):
+            normalized_controller = controller_id.upper()
+            if project.get_controller(normalized_controller) is None:
+                project.add_controller(
+                    Controller(
+                        id=normalized_controller,
+                        type="niagara",
+                        protocols=[Protocol.BACNET_IP],
+                    )
+                )
+                controllers_added += 1
+
+        for equipment_id in sorted(set(re.findall(r"\b(?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+\b", text, flags=re.IGNORECASE))):
+            normalized_equipment = equipment_id.upper()
+            if project.get_equipment(normalized_equipment) is None:
+                project.add_equipment(
+                    Equipment(
+                        id=normalized_equipment,
+                        type=self._infer_equipment_type(normalized_equipment),
+                        subtype="NiagaraStation",
+                    )
+                )
+                equipment_added += 1
+
+        for equipment_id, point_name in re.findall(
+            r"\b((?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+)[\s:_/-]+([A-Za-z][A-Za-z0-9_]{1,40})",
+            text,
+            flags=re.IGNORECASE,
+        ):
+            normalized_equipment = equipment_id.upper()
+            if project.get_equipment(normalized_equipment) is None:
+                project.add_equipment(
+                    Equipment(
+                        id=normalized_equipment,
+                        type=self._infer_equipment_type(normalized_equipment),
+                        subtype="NiagaraStation",
+                    )
+                )
+                equipment_added += 1
+            normalized_point = f"{normalized_equipment}_{re.sub(r'[^A-Za-z0-9_]+', '_', point_name).upper()}"
+            if project.get_point(normalized_point) is not None:
+                continue
+            project.add_point(
+                Point(
+                    name=normalized_point,
+                    equipment_id=normalized_equipment,
+                    kind=self._infer_point_kind(point_name),
+                    direction=PointDirection.INPUT,
+                    source=PointSource.BACNET,
+                    description=f"Imported from Niagara station metadata in {source_name}",
+                )
+            )
+            equipment = project.get_equipment(normalized_equipment)
+            if equipment is not None:
+                equipment.add_point(normalized_point)
+            points_added += 1
+
+        return ArtifactParseResult(
+            parsed=equipment_added > 0 or points_added > 0 or controllers_added > 0,
+            parser_name="niagara_station_manifest",
+            equipment_added=equipment_added,
+            points_added=points_added,
+            details={
+                "controllers_added": controllers_added,
+                "source_name": source_name,
+            },
+        )
+
+    def _infer_equipment_type(self, equipment_id: str) -> EquipmentType:
+        prefix = equipment_id.split("-", 1)[0].upper()
+        mapping = {
+            "AHU": EquipmentType.AHU,
+            "RTU": EquipmentType.RTU,
+            "VAV": EquipmentType.VAV,
+            "FCU": EquipmentType.FAN_COIL,
+            "CHWP": EquipmentType.PUMP_CHW,
+            "HWP": EquipmentType.PUMP_HW,
+            "EF": EquipmentType.EXHAUST_FAN,
+            "SF": EquipmentType.SUPPLY_FAN,
+            "RF": EquipmentType.RETURN_FAN,
+        }
+        return mapping.get(prefix, EquipmentType.CUSTOM)
