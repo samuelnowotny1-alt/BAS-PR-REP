@@ -592,12 +592,17 @@ class ProjectQueryService:
             {
                 "id": record.controller_key,
                 "type": record.controller_type,
-                "protocols": [record.protocol] if record.protocol else [],
+                "protocols": list(payload.get("protocols") or ([record.protocol] if record.protocol else [])),
+                "addresses": [
+                    self._format_controller_address(address)
+                    for address in payload.get("network_addresses", [])
+                ],
                 "equipment": len(record.payload_json.get("serves_equipment_ids", [])),
                 "points": len(record.payload_json.get("owned_point_names", [])),
                 "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
             }
             for record in records
+            for payload in [dict(record.payload_json or {})]
         ]
 
     def count_project_memberships(self, project_id: str) -> int:
@@ -643,6 +648,14 @@ class ProjectQueryService:
             "artifact_diff": dict(result.get("artifact_diff") or {}),
             "generated_documents": list(result.get("generated_documents") or []),
         }
+
+    def _format_controller_address(self, address: dict[str, object]) -> str:
+        protocol = str(address.get("protocol") or "").strip()
+        raw_address = str(address.get("address") or "").strip()
+        network_number = address.get("network_number")
+        if network_number not in (None, ""):
+            return f"{protocol} {raw_address} (net {network_number})".strip()
+        return f"{protocol} {raw_address}".strip()
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""

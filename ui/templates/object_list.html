@@ -31,6 +31,8 @@
                         {% else %}
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">ID</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Protocols</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Addresses</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Equipment</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Points</th>
                         <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Source</th>
@@ -57,13 +59,15 @@
                         {% else %}
                         <td class="px-6 py-4 text-sm font-medium"><a href="/project/{{ project.metadata.project_id }}/controllers/{{ row.id }}" class="text-orange-600 dark:text-orange-300">{{ row.id }}</a></td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ row.type }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ row.protocols|join(', ') if row.protocols else '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ row.addresses|join(', ') if row.addresses else '-' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ row.equipment }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ row.points }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ row.source_name or '-' }}</td>
                         {% endif %}
                     </tr>
                     {% else %}
-                    <tr><td colspan="6" class="px-6 py-8 text-sm text-gray-500">No {{ entity_type }} records available.</td></tr>
+                    <tr><td colspan="{% if entity_type == 'controller' %}7{% else %}6{% endif %}" class="px-6 py-8 text-sm text-gray-500">No {{ entity_type }} records available.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

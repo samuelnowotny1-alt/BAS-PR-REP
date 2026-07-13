@@ -181,7 +181,17 @@ def test_object_list_pages_render() -> None:
     project_id = create_project("asset-pages")
     project = main.get_project(project_id)
     project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
-    project.controllers.append(main.Controller(id="MPC-1", type="niagara"))
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="niagara",
+            protocols=[Protocol.BACNET_IP, Protocol.BACNET_MSTP],
+            network_addresses=[
+                ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.0.0.5"),
+                ControllerNetworkAddress(protocol=Protocol.BACNET_MSTP, address="11", network_number=2001),
+            ],
+        )
+    )
     project.points.append(
         main.Point(
             name="AHU-1_SAT",
@@ -201,6 +211,8 @@ def test_object_list_pages_render() -> None:
     assert "AHU-1" in response_text(equipment_response)
     assert "AHU-1_SAT" in response_text(points_response)
     assert "MPC-1" in response_text(controllers_response)
+    assert "BACnet/IP" in response_text(controllers_response)
+    assert "10.0.0.5" in response_text(controllers_response)
 
 
 def test_project_documents_page_and_download_render() -> None:
