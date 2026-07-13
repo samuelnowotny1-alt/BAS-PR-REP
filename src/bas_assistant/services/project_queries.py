@@ -389,6 +389,52 @@ class ProjectQueryService:
             ],
         }
 
+    def documents_view(self, project_id: str) -> dict[str, object] | None:
+        """Return document library data for a project."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            documents = list(
+                session.scalars(
+                    select(DocumentRecord)
+                    .where(DocumentRecord.project_id == project.id)
+                    .order_by(DocumentRecord.created_at.desc(), DocumentRecord.name)
+                )
+            )
+            links = list(
+                session.execute(
+                    select(
+                        ArtifactObjectLinkRecord.document_id,
+                        func.count(),
+                    )
+                    .where(ArtifactObjectLinkRecord.project_id == project.id)
+                    .group_by(ArtifactObjectLinkRecord.document_id)
+                )
+            )
+        link_counts = {document_id: int(count) for document_id, count in links}
+        rows = []
+        for document in documents:
+            metadata = dict(document.metadata_json or {})
+            rows.append(
+                {
+                    "id": document.id,
+                    "name": document.name,
+                    "document_type": document.document_type,
+                    "created_at": document.created_at,
+                    "file_path": document.file_path,
+                    "linked_object_count": link_counts.get(document.id, 0),
+                    "is_generated": document.document_type.startswith("generated_"),
+                    "category": metadata.get("category", ""),
+                    "metadata": metadata,
+                }
+            )
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "documents": rows,
+        }
+
     def equipment_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured equipment records for a project."""
         with self.db.session() as session:

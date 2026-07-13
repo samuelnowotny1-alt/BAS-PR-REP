@@ -17,7 +17,16 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
+
+
+def _resolved_database_url() -> str:
+    configured_url = config.get_main_option("sqlalchemy.url")
+    if configured_url and configured_url != "sqlite:///./data/bas_assistant.db":
+        return configured_url
+    return settings.database_url
+
+
+config.set_main_option("sqlalchemy.url", _resolved_database_url())
 target_metadata = Base.metadata
 
 

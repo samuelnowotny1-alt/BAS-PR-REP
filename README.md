@@ -17,7 +17,8 @@ Turn sequences of operation → validated, vendor-ready deliverables (Niagara, B
 - **Sequence Parser** — Natural language SOO → structured logic + points + graphics
 - **Troubleshooting** — Trend/alarm/loop analysis with confidence scoring
 - **Assumptions Tracker** — Categorized, statused, impact-linked engineering assumptions
-- **Web UI** — htmx + Tailwind, dark mode, responsive sidebar
+- **Web UI** — htmx + Tailwind, dark mode, responsive sidebar, document library, object lineage
+- **Authentication** — Bootstrap admin, role-based access, project memberships
 
 ## Quickstart
 
@@ -114,6 +115,7 @@ bas export project.json -o export/ --format all
 |------|-----|---------|
 | Home | `/` | Project list + create new |
 | Project Detail | `/project/{id}` | Dashboard with counts |
+| Documents | `/project/{id}/documents` | Upload and generated artifact library |
 | Import | `/project/{id}/import` | Upload 3 CSVs |
 | Validate | `/project/{id}/validate` | Run 50+ rules, export JSON/CSV |
 | Gap Analysis | `/project/{id}/gaps` | AI-assisted completeness check |
@@ -159,7 +161,7 @@ Environment variables:
 
 ```bash
 pytest tests/ -v
-# 22 tests passing
+# focused regression suite currently passes in CI/dev runs
 ```
 
 ## License

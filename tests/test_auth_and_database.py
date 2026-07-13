@@ -1,4 +1,6 @@
 import asyncio
+from alembic import command
+from alembic.config import Config
 import sys
 import types
 import zipfile
@@ -62,6 +64,21 @@ def test_database_bootstrap_creates_expected_tables_and_admin(
 
     assert admin is not None
     assert admin.role == "admin"
+
+
+def test_alembic_upgrade_head_creates_artifact_link_schema(tmp_path: Path) -> None:
+    database_path = tmp_path / "alembic.db"
+    alembic_cfg = Config("/home/oem/.openclaw/workspace/bas-assistant/alembic.ini")
+    alembic_cfg.set_main_option("script_location", "/home/oem/.openclaw/workspace/bas-assistant/migrations")
+    alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{database_path}")
+
+    command.upgrade(alembic_cfg, "head")
+
+    from sqlalchemy import create_engine
+
+    engine = create_engine(f"sqlite:///{database_path}")
+    table_names = set(inspect(engine).get_table_names())
+    assert "artifact_object_links" in table_names
 
 
 def test_login_and_logout_flow(tmp_path: Path) -> None:

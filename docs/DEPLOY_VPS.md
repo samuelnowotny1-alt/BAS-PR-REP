@@ -6,7 +6,7 @@ This app already has a working Dockerfile and Compose setup. The safest producti
 - bound to `127.0.0.1:8000`
 - Nginx reverse proxy on `80/443`
 - TLS via Let's Encrypt
-- access control at the proxy layer, because the app has no built-in authentication
+- app auth enabled with bootstrap admin credentials and session-based login
 
 ## Prerequisites
 
@@ -110,9 +110,15 @@ https://bas.example.com
 
 ## 7. Add access control
 
-The BAS Assistant UI does not include authentication. Do not expose it publicly without protection.
+The BAS Assistant UI now includes built-in authentication, but you should still protect the public edge.
 
-Minimum option: Nginx basic auth.
+Recommended options:
+
+- Keep BAS auth enabled for application users
+- Restrict by IP in Nginx where practical
+- Put it behind Cloudflare Access or Tailscale for administrative deployments
+
+Optional extra layer: Nginx basic auth.
 
 ```bash
 sudo htpasswd -c /etc/nginx/.htpasswd-bas-assistant yourusername

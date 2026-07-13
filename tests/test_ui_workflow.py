@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fastapi import UploadFile
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
@@ -199,6 +200,28 @@ def test_object_list_pages_render() -> None:
     assert "AHU-1" in response_text(equipment_response)
     assert "AHU-1_SAT" in response_text(points_response)
     assert "MPC-1" in response_text(controllers_response)
+
+
+def test_project_documents_page_and_download_render() -> None:
+    project_id = create_project("docs-project")
+    project = main.get_project(project_id)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU shall start on occupancy.")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.save_project(project)
+
+    page_response = run_async(main.project_documents_page(request(f"/project/{project_id}/documents"), project_id))
+    download_response = run_async(main.project_document_download(project_id, stored_upload.document_record_id))
+
+    assert "Document Library" in response_text(page_response)
+    assert page_response.status_code == 200
+    assert download_response.status_code == 200
+    assert download_response.headers["content-disposition"].endswith('filename="sequence.txt"')
 
 
 def test_non_htmx_create_project_returns_redirect() -> None:

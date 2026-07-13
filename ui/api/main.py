@@ -1108,6 +1108,37 @@ async def project_activity_page(request: Request, project_id: str):
     )
 
 
+@app.get("/project/{project_id}/documents", response_class=HTMLResponse)
+async def project_documents_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    documents_view = container.project_queries.documents_view(project_id)
+    if documents_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="project_documents.html",
+        context={
+            "project": project,
+            "documents_view": documents_view,
+            "current_user": get_current_user(request),
+        },
+    )
+
+
+@app.get("/project/{project_id}/documents/{document_id}/download")
+async def project_document_download(project_id: str, document_id: int):
+    documents_view = container.project_queries.documents_view(project_id)
+    if documents_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    document = next((row for row in documents_view["documents"] if row["id"] == document_id), None)
+    if document is None or not document.get("file_path"):
+        raise HTTPException(status_code=404, detail="Document not found")
+    file_path = Path(str(document["file_path"]))
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Document file missing")
+    return FileResponse(path=file_path, filename=str(document["name"]))
+
+
 @app.get("/project/{project_id}/memberships", response_class=HTMLResponse)
 async def project_memberships_page(request: Request, project_id: str):
     project = get_project(project_id)
