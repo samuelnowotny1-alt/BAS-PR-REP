@@ -435,6 +435,95 @@ class ProjectQueryService:
             "documents": rows,
         }
 
+    def document_detail(self, project_id: str, document_id: int) -> dict[str, object] | None:
+        """Return detail view for a specific project document."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            document = session.get(DocumentRecord, document_id)
+            if document is None or document.project_id != project.id:
+                return None
+            links = list(
+                session.execute(
+                    select(
+                        ArtifactObjectLinkRecord.entity_type,
+                        ArtifactObjectLinkRecord.entity_key,
+                        ArtifactObjectLinkRecord.relationship_type,
+                        ArtifactObjectLinkRecord.parser_name,
+                        ArtifactObjectLinkRecord.metadata_json,
+                    )
+                    .where(ArtifactObjectLinkRecord.document_id == document.id)
+                    .order_by(
+                        ArtifactObjectLinkRecord.entity_type,
+                        ArtifactObjectLinkRecord.entity_key,
+                    )
+                )
+            )
+            knowledge = session.scalar(
+                select(KnowledgeRecord).where(
+                    KnowledgeRecord.project_id == project.id,
+                    KnowledgeRecord.source_name == document.name,
+                    KnowledgeRecord.source_type == document.document_type,
+                )
+            )
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "id": document.id,
+            "name": document.name,
+            "document_type": document.document_type,
+            "file_path": document.file_path,
+            "created_at": document.created_at,
+            "metadata": dict(document.metadata_json or {}),
+            "linked_objects": [
+                {
+                    "entity_type": entity_type,
+                    "entity_key": entity_key,
+                    "relationship_type": relationship_type,
+                    "parser_name": parser_name,
+                    "metadata": dict(metadata_json or {}),
+                }
+                for entity_type, entity_key, relationship_type, parser_name, metadata_json in links
+            ],
+            "knowledge": {
+                "status": knowledge.status if knowledge is not None else "not_ingested",
+                "chunk_count": knowledge.chunk_count if knowledge is not None else 0,
+                "metadata": dict(knowledge.metadata_json or {}) if knowledge is not None else {},
+            },
+        }
+
+    def knowledge_view(self, project_id: str) -> dict[str, object] | None:
+        """Return knowledge records for a project."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            records = list(
+                session.scalars(
+                    select(KnowledgeRecord)
+                    .where(KnowledgeRecord.project_id == project.id)
+                    .order_by(KnowledgeRecord.created_at.desc(), KnowledgeRecord.source_name)
+                )
+            )
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "records": [
+                {
+                    "id": record.id,
+                    "source_name": record.source_name,
+                    "source_type": record.source_type,
+                    "status": record.status,
+                    "chunk_count": record.chunk_count,
+                    "content_hash": record.content_hash,
+                    "metadata": dict(record.metadata_json or {}),
+                    "created_at": record.created_at,
+                }
+                for record in records
+            ],
+        }
+
     def equipment_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured equipment records for a project."""
         with self.db.session() as session:

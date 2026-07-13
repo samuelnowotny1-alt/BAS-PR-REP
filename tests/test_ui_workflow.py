@@ -213,13 +213,26 @@ def test_project_documents_page_and_download_render() -> None:
             document_type="text_document",
         )
     )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
     main.save_project(project)
 
     page_response = run_async(main.project_documents_page(request(f"/project/{project_id}/documents"), project_id))
+    detail_response = run_async(main.project_document_detail_page(request(f"/project/{project_id}/documents/{stored_upload.document_record_id}"), project_id, stored_upload.document_record_id))
+    knowledge_response = run_async(main.project_knowledge_page(request(f"/project/{project_id}/knowledge"), project_id))
     download_response = run_async(main.project_document_download(project_id, stored_upload.document_record_id))
 
     assert "Document Library" in response_text(page_response)
+    assert "Knowledge Status" in response_text(detail_response)
+    assert "Knowledge Library" in response_text(knowledge_response)
     assert page_response.status_code == 200
+    assert detail_response.status_code == 200
+    assert knowledge_response.status_code == 200
     assert download_response.status_code == 200
     assert download_response.headers["content-disposition"].endswith('filename="sequence.txt"')
 
@@ -251,6 +264,8 @@ def test_main_project_pages_render_for_empty_project() -> None:
     page_calls = [
         (main.project_detail, f"/project/{project_id}"),
         (main.project_activity_page, f"/project/{project_id}/activity"),
+        (main.project_documents_page, f"/project/{project_id}/documents"),
+        (main.project_knowledge_page, f"/project/{project_id}/knowledge"),
         (main.import_page, f"/project/{project_id}/import"),
         (main.validate_page, f"/project/{project_id}/validate"),
         (main.gaps_page, f"/project/{project_id}/gaps"),

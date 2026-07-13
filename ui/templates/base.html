@@ -151,6 +151,10 @@
                     <span class="sidebar-link-icon"><i class="fas fa-folder-open"></i></span>
                     <span class="sidebar-link-label">Documents</span>
                 </a>
+                <a href="/project/{{ project.metadata.project_id }}/knowledge" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-book-open"></i></span>
+                    <span class="sidebar-link-label">Knowledge</span>
+                </a>
                 <a href="/project/{{ project.metadata.project_id }}/import" class="sidebar-link {% if '/import' in request.url.path %}active{% endif %}">
                     <span class="sidebar-link-icon"><i class="fas fa-file-import"></i></span>
                     <span class="sidebar-link-label">Import Data</span>

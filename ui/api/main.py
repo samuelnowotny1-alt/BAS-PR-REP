@@ -1125,6 +1125,23 @@ async def project_documents_page(request: Request, project_id: str):
     )
 
 
+@app.get("/project/{project_id}/documents/{document_id}", response_class=HTMLResponse)
+async def project_document_detail_page(request: Request, project_id: str, document_id: int):
+    project = get_project(project_id)
+    detail = container.project_queries.document_detail(project_id, document_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="document_detail.html",
+        context={
+            "project": project,
+            "detail": detail,
+            "current_user": get_current_user(request),
+        },
+    )
+
+
 @app.get("/project/{project_id}/documents/{document_id}/download")
 async def project_document_download(project_id: str, document_id: int):
     documents_view = container.project_queries.documents_view(project_id)
@@ -1137,6 +1154,23 @@ async def project_document_download(project_id: str, document_id: int):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Document file missing")
     return FileResponse(path=file_path, filename=str(document["name"]))
+
+
+@app.get("/project/{project_id}/knowledge", response_class=HTMLResponse)
+async def project_knowledge_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    knowledge_view = container.project_queries.knowledge_view(project_id)
+    if knowledge_view is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return templates.TemplateResponse(
+        request=request,
+        name="project_knowledge.html",
+        context={
+            "project": project,
+            "knowledge_view": knowledge_view,
+            "current_user": get_current_user(request),
+        },
+    )
 
 
 @app.get("/project/{project_id}/memberships", response_class=HTMLResponse)
