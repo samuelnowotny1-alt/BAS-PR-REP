@@ -72,6 +72,11 @@ def refresh_projects_cache() -> dict[str, Project]:
     return projects
 
 
+def sync_container_runtime_hooks() -> None:
+    """Attach runtime-dependent callbacks to container services."""
+    container.dashboard.health_report_factory = current_health_report
+
+
 @asynccontextmanager
 async def lifespan_factory(_container):
     logger.info(
@@ -123,6 +128,7 @@ def configure_runtime_paths(
     ensure_runtime_directories(updated_settings)
     container = build_container(updated_settings)
     app.state.container = container
+    sync_container_runtime_hooks()
     refresh_projects_cache()
 
 
@@ -362,6 +368,14 @@ def request_expects_json(request: Request) -> bool:
     return request.url.path.startswith("/api/") or "application/json" in accept_header
 
 
+def is_protected_path(path: str) -> bool:
+    """Return whether a request path requires authentication."""
+    public_prefixes = ("/login", "/health", "/healthz", "/api/health", "/static", "/output")
+    if path in {"/favicon.ico"} or path.startswith(public_prefixes):
+        return False
+    return path == "/" or path.startswith("/project") or path.startswith("/api/")
+
+
 def project_for_request(request: Request) -> Project | None:
     segments = [segment for segment in request.url.path.split("/") if segment]
     if len(segments) >= 2 and segments[0] == "project":
@@ -383,6 +397,17 @@ async def log_request_middleware(request: Request, call_next):
         duration,
     )
     return response
+
+
+@app.middleware("http")
+async def authentication_middleware(request: Request, call_next):
+    if not is_protected_path(request.url.path):
+        return await call_next(request)
+    if get_current_user(request) is not None:
+        return await call_next(request)
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=401, content={"detail": "Authentication required"})
+    return RedirectResponse(url="/login", status_code=303)
 
 
 @app.exception_handler(HTTPException)
@@ -430,6 +455,9 @@ def current_health_report() -> dict[str, object]:
         }
     )
     return build_health_report(runtime_settings, loaded_projects=len(projects))
+
+
+sync_container_runtime_hooks()
 
 
 def create_project_from_form(
@@ -515,10 +543,15 @@ async def logout(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
+    dashboard = container.dashboard.snapshot()
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"projects": projects, "current_user": get_current_user(request)},
+        context={
+            "projects": dashboard.projects,
+            "dashboard": dashboard,
+            "current_user": get_current_user(request),
+        },
     )
 
 
@@ -641,6 +674,7 @@ async def import_page(request: Request, project_id: str):
     project = get_project(project_id)
     return templates.TemplateResponse(request=request, name="import.html", context={
         "project": project,
+        "recent_uploads": container.uploads.list_recent_uploads(project_id=project_id, limit=8),
     })
 
 
@@ -655,36 +689,35 @@ async def import_data(
     importer = CSVImporter(project)
     results = {}
 
-    # Save uploaded files temporarily
-    import tempfile
-    import os
-
     if equipment_file and getattr(equipment_file, "filename", None):
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as f:
-            content = await equipment_file.read()
-            f.write(content)
-            temp_path = f.name
-        result = importer.import_equipment_schedule(Path(temp_path), "equip_upload")
+        upload_path = await container.uploads.save_project_upload(
+            project=project,
+            upload=equipment_file,
+            category="equipment",
+            document_type="equipment_schedule",
+        )
+        result = importer.import_equipment_schedule(upload_path, "equip_upload")
         results["equipment"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.equipment_count}
-        os.unlink(temp_path)
 
     if points_file and getattr(points_file, "filename", None):
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as f:
-            content = await points_file.read()
-            f.write(content)
-            temp_path = f.name
-        result = importer.import_point_list(Path(temp_path), "points_upload")
+        upload_path = await container.uploads.save_project_upload(
+            project=project,
+            upload=points_file,
+            category="points",
+            document_type="point_list",
+        )
+        result = importer.import_point_list(upload_path, "points_upload")
         results["points"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.points_count}
-        os.unlink(temp_path)
 
     if controllers_file and getattr(controllers_file, "filename", None):
-        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as f:
-            content = await controllers_file.read()
-            f.write(content)
-            temp_path = f.name
-        result = importer.import_controller_schedule(Path(temp_path), "ctrl_upload")
+        upload_path = await container.uploads.save_project_upload(
+            project=project,
+            upload=controllers_file,
+            category="controllers",
+            document_type="controller_schedule",
+        )
+        result = importer.import_controller_schedule(upload_path, "ctrl_upload")
         results["controllers"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.controllers_count}
-        os.unlink(temp_path)
 
     save_project(project)
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)

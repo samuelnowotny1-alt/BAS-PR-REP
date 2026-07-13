@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import desc, select
 
 from bas_assistant.database import DatabaseManager, ProjectRecord
 from bas_assistant.models import Project
@@ -37,6 +37,13 @@ class JsonProjectRepository:
         project = self._load_project_file(project_file)
         self._cache[project_id] = project
         return project
+
+    def list_summaries(self) -> list[ProjectRecord]:
+        """Return persisted project summary records from the database when available."""
+        if self.db is None:
+            return []
+        with self.db.session() as session:
+            return list(session.scalars(select(ProjectRecord).order_by(desc(ProjectRecord.updated_at), ProjectRecord.name)))
 
     def save(self, project: Project) -> None:
         """Persist and index a project."""

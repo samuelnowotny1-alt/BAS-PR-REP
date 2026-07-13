@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from bas_assistant.auth import AuthenticationService
 from bas_assistant.config import Settings
 from bas_assistant.database import DatabaseManager
-from bas_assistant.services import JsonProjectRepository
+from bas_assistant.services import DashboardService, JsonProjectRepository, UploadService
 
 
 @dataclass(slots=True)
@@ -18,6 +18,8 @@ class ApplicationContainer:
     db: DatabaseManager
     auth: AuthenticationService
     projects: JsonProjectRepository
+    uploads: UploadService
+    dashboard: DashboardService
 
 
 def build_container(settings: Settings) -> ApplicationContainer:
@@ -25,6 +27,20 @@ def build_container(settings: Settings) -> ApplicationContainer:
     db = DatabaseManager(settings)
     db.create_all()
     projects = JsonProjectRepository(settings.data_dir, db=db)
+    uploads = UploadService(settings.uploads_dir, db=db)
     auth = AuthenticationService(db, settings)
     auth.ensure_bootstrap_admin()
-    return ApplicationContainer(settings=settings, db=db, auth=auth, projects=projects)
+    dashboard = DashboardService(
+        db=db,
+        project_repository=projects,
+        upload_service=uploads,
+        health_report_factory=lambda: {},
+    )
+    return ApplicationContainer(
+        settings=settings,
+        db=db,
+        auth=auth,
+        projects=projects,
+        uploads=uploads,
+        dashboard=dashboard,
+    )
