@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from ..models import Project
+from ..models import Project, Protocol
 
 
 @dataclass
@@ -143,6 +143,23 @@ class ReportGenerator:
         for ctrl in self.project.controllers:
             points = self.project.get_points_for_controller(ctrl.id)
             equip = self.project.get_equipment_for_controller(ctrl.id)
+            ip_addresses = [
+                address.address
+                for address in ctrl.network_addresses
+                if address.protocol == Protocol.BACNET_IP
+            ]
+            mstp_macs = [
+                address.address
+                for address in ctrl.network_addresses
+                if address.protocol == Protocol.BACNET_MSTP
+            ]
+            network_numbers = sorted(
+                {
+                    str(address.network_number)
+                    for address in ctrl.network_addresses
+                    if address.network_number is not None
+                }
+            )
 
             point_counts = {}
             for p in points:
@@ -159,6 +176,9 @@ class ReportGenerator:
                 "Firmware": ctrl.firmware_version or "",
                 "Type": ctrl.type,
                 "Protocols": ", ".join(p.value for p in ctrl.protocols),
+                "IP Addresses": ", ".join(ip_addresses),
+                "MS/TP MACs": ", ".join(mstp_macs),
+                "Network Numbers": ", ".join(network_numbers),
                 "Panel Location": ctrl.panel_location or "",
                 "Electrical Panel": ctrl.electrical_panel or "",
                 "Circuit": ctrl.circuit or "",

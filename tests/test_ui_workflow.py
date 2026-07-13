@@ -3,13 +3,14 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import pytest
 from fastapi import UploadFile
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
 from bas_assistant.importers import CSVImporter
-from bas_assistant.models import Equipment, EquipmentType, Project, ProjectMetadata, UnitSystem
+from bas_assistant.models import Controller, ControllerNetworkAddress, Equipment, EquipmentType, Project, ProjectMetadata, Protocol, UnitSystem
 from bas_assistant.models.station_sync import StationProbeResult
 from bas_assistant.models.types import ValidationCategory, ValidationSeverity
 from bas_assistant.validation import ValidationReport, ValidationResult
@@ -559,6 +560,10 @@ def test_sample_csv_api_generates_expected_templates(
     assert (examples_dir / "equipment_schedule.csv").exists()
     assert (examples_dir / "point_list.csv").exists()
     assert (examples_dir / "controller_schedule.csv").exists()
+    controller_template = (examples_dir / "controller_schedule.csv").read_text()
+    assert "MS/TP MAC" in controller_template
+    assert "Network Number" in controller_template
+    assert "BACnet/IP,BACnet/MSTP" in controller_template
 
 
 def test_add_assumption_redirects_with_valid_category() -> None:
@@ -704,3 +709,41 @@ def test_report_generation_handles_empty_point_list(tmp_path: Path) -> None:
 
     assert "point_schedule" in report_paths
     assert report_paths["point_schedule"].exists()
+
+
+def test_controller_schedule_report_includes_network_address_columns(tmp_path: Path) -> None:
+    project = Project(
+        metadata=ProjectMetadata(
+            project_id="controller-report-project",
+            name="Controller Report Project",
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            name="Main Plant Controller",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP, Protocol.BACNET_MSTP],
+            network_addresses=[
+                ControllerNetworkAddress(
+                    protocol=Protocol.BACNET_IP,
+                    address="192.168.1.10",
+                ),
+                ControllerNetworkAddress(
+                    protocol=Protocol.BACNET_MSTP,
+                    address="11",
+                    network_number=2001,
+                ),
+            ],
+        )
+    )
+
+    report_paths = generate_reports(project, tmp_path / "reports")
+
+    controller_schedule = pd.read_excel(report_paths["controller_schedule"], sheet_name="Controller Schedule")
+    network_summary = pd.read_excel(report_paths["controller_schedule"], sheet_name="Network Addresses")
+
+    assert controller_schedule.loc[0, "IP Addresses"] == "192.168.1.10"
+    assert str(controller_schedule.loc[0, "MS/TP MACs"]) == "11"
+    assert str(controller_schedule.loc[0, "Network Numbers"]) == "2001"
+    assert set(network_summary["Protocol"]) == {"BACnet/IP", "BACnet/MSTP"}
