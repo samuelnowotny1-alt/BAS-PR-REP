@@ -49,6 +49,12 @@ def isolated_ui_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     data_dir.mkdir()
     monkeypatch.setattr(main, "OUTPUT_DIR", output_dir)
     monkeypatch.setattr(main, "DATA_DIR", data_dir)
+    main.configure_runtime_paths(
+        data_dir=data_dir,
+        output_dir=output_dir,
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'bas_assistant_test.db'}",
+    )
     main.projects.clear()
 
 

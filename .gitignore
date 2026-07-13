@@ -3,6 +3,13 @@ __pycache__/
 .pytest_cache/
 *.pyc
 *.pyo
+config/bas-assistant.env
+uploads/
+data/*.db
+logs/*.log
+UI_VERIFICATION_REPORT.json
+verify_output.txt
+test_read.txt
 
 examples/sample-hvac-output/
 examples/sample-hvac-validation.json

@@ -43,19 +43,16 @@
             @apply bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700;
         }
         .app-shell {
-            @apply min-h-screen lg:flex;
+            @apply min-h-screen;
         }
         .sidebar-overlay {
-            @apply fixed inset-0 z-30 hidden bg-slate-950/45 lg:hidden;
+            @apply fixed inset-0 z-30 hidden bg-slate-950/45;
         }
         .sidebar-shell {
-            @apply fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 -translate-x-full flex-col border-r border-gray-200 bg-white transition-all duration-300 dark:border-gray-700 dark:bg-gray-900 lg:static lg:translate-x-0;
+            @apply fixed inset-y-0 left-0 z-40 flex w-72 max-w-[calc(100vw-1.5rem)] -translate-x-full flex-col border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 dark:border-gray-700 dark:bg-gray-900;
         }
         .sidebar-shell.is-open {
             @apply translate-x-0;
-        }
-        .sidebar-shell.is-collapsed {
-            @apply lg:w-24;
         }
         .sidebar-brand {
             @apply flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800;
@@ -90,24 +87,6 @@
         .sidebar-link-label {
             @apply truncate text-sm;
         }
-        .sidebar-shell.is-collapsed .sidebar-brand,
-        .sidebar-shell.is-collapsed .sidebar-meta {
-            @apply px-3;
-        }
-        .sidebar-shell.is-collapsed .sidebar-meta {
-            @apply py-3;
-        }
-        .sidebar-shell.is-collapsed .sidebar-meta-copy,
-        .sidebar-shell.is-collapsed .sidebar-brand-copy,
-        .sidebar-shell.is-collapsed .sidebar-link-label {
-            @apply hidden;
-        }
-        .sidebar-shell.is-collapsed .sidebar-link {
-            @apply justify-center px-2;
-        }
-        .sidebar-shell.is-collapsed .sidebar-link-icon {
-            @apply h-11 w-11;
-        }
         .content-shell {
             @apply flex min-w-0 flex-1 flex-col;
         }
@@ -134,10 +113,7 @@
                             <div class="truncate text-xs text-gray-500 dark:text-gray-400">Project Workspace</div>
                         </div>
                     </a>
-                    <button type="button" class="topbar-button hidden lg:inline-flex" onclick="toggleDesktopSidebar()" title="Collapse sidebar">
-                        <i class="fas fa-panel-left"></i>
-                    </button>
-                    <button type="button" class="topbar-button lg:hidden" onclick="closeSidebar()" title="Close sidebar">
+                    <button type="button" class="topbar-button" onclick="closeSidebar()" title="Hide sidebar">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -222,7 +198,7 @@
                 <div class="flex items-center justify-between gap-4 px-4 py-3 lg:px-6">
                     <div class="flex min-w-0 items-center gap-3">
                         {% if project %}
-                        <button type="button" class="topbar-button lg:hidden" onclick="openSidebar()" title="Open sidebar">
+                        <button type="button" class="topbar-button" onclick="openSidebar()" title="Open sidebar">
                             <i class="fas fa-bars"></i>
                         </button>
                         {% else %}
@@ -235,10 +211,25 @@
                         {% endif %}
                     </div>
                     <div class="flex items-center gap-3">
+                        {% set session_user = request.scope.get('session', {}).get('user') if request is defined else none %}
                         {% if not project %}
                         <a href="/project/new" class="new-project-link">
                             <i class="fas fa-plus-circle"></i>
                             <span>New Project</span>
+                        </a>
+                        {% endif %}
+                        {% if session_user %}
+                        <div class="hidden text-sm text-gray-500 dark:text-gray-300 md:block">
+                            {{ session_user.username }} · {{ session_user.role }}
+                        </div>
+                        <form method="post" action="/logout">
+                            <button type="submit" class="topbar-button" title="Log out">
+                                <i class="fas fa-right-from-bracket"></i>
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="/login" class="topbar-button" title="Log in">
+                            <i class="fas fa-user"></i>
                         </a>
                         {% endif %}
                         <button onclick="toggleDarkMode()" class="topbar-button" title="Toggle dark mode">
@@ -303,38 +294,29 @@
         }
         
         function openSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
-            if (!sidebar || !overlay) return;
-            sidebar.classList.add('is-open');
-            overlay.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
+            setSidebarState(true);
         }
 
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             if (!sidebar || !overlay) return;
-            sidebar.classList.remove('is-open');
-            overlay.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
+            setSidebarState(false);
         }
 
-        function applyDesktopSidebarState(collapsed) {
+        function setSidebarState(isOpen, persist = true) {
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
             if (!sidebar) return;
-            sidebar.classList.toggle('is-collapsed', collapsed);
-            localStorage.setItem('sidebarCollapsed', collapsed ? 'true' : 'false');
-        }
-
-        function toggleDesktopSidebar() {
-            if (window.innerWidth < 1024) {
-                openSidebar();
-                return;
+            const shouldLockScroll = isOpen && window.innerWidth < 1024;
+            sidebar.classList.toggle('is-open', isOpen);
+            if (overlay) {
+                overlay.classList.toggle('hidden', !isOpen);
             }
-            const sidebar = document.getElementById('sidebar');
-            if (!sidebar) return;
-            applyDesktopSidebarState(!sidebar.classList.contains('is-collapsed'));
+            document.body.classList.toggle('overflow-hidden', shouldLockScroll);
+            if (persist) {
+                localStorage.setItem('sidebarOpen', isOpen ? 'true' : 'false');
+            }
         }
 
         // Initialize
@@ -342,17 +324,21 @@
             initDarkMode();
             const sidebar = document.getElementById('sidebar');
             if (sidebar) {
-                applyDesktopSidebarState(localStorage.getItem('sidebarCollapsed') === 'true');
+                setSidebarState(localStorage.getItem('sidebarOpen') === 'true', false);
                 document.querySelectorAll('#sidebar a').forEach((link) => {
                     link.addEventListener('click', () => {
-                        if (window.innerWidth < 1024) {
-                            closeSidebar();
-                        }
+                        closeSidebar();
                     });
                 });
             }
             window.addEventListener('resize', () => {
-                if (window.innerWidth >= 1024) {
+                const isOpen = document.getElementById('sidebar')?.classList.contains('is-open') ?? false;
+                if (isOpen) {
+                    setSidebarState(true, false);
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
                     closeSidebar();
                 }
             });

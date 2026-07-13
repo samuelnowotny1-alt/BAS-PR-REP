@@ -1,0 +1,23 @@
+services:
+  bas-assistant:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: bas-assistant
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ../data:/app/data
+      - ../output:/app/ui/output
+      - ../examples:/app/examples:ro
+    environment:
+      BAS_DATA_DIR: /app/data
+      BAS_OUTPUT_DIR: /app/ui/output
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

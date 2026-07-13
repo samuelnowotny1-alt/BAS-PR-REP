@@ -43,6 +43,9 @@ pip install -e ".[dev]"
 # Run web UI
 uvicorn ui.api.main:app --host 0.0.0.0 --port 8000
 
+# Or use the bundled launcher
+./scripts/run_ui_server.sh
+
 # Or run CLI
 bas --help
 ```
@@ -122,6 +125,17 @@ bas export project.json -o export/ --format all
 | Sequence Parser | `/project/{id}/sequence` | Paste SOO → structured logic |
 | Troubleshooting | `/project/{id}/troubleshoot` | Trend/alarm analysis |
 | Assumptions | `/project/{id}/assumptions` | Track engineering assumptions |
+| Health | `/healthz` | Runtime health status for service monitoring |
+
+## Production Runtime
+
+- Environment example: `config/bas-assistant.env.example`
+- Local launcher: `scripts/run_ui_server.sh`
+- Production launcher: `scripts/start_production.sh`
+- Health check: `scripts/healthcheck.sh`
+- Example systemd unit: `deploy/bas-assistant.service.example`
+- Database migrations: `alembic upgrade head`
+- Bootstrap auth: admin account is created from `BAS_BOOTSTRAP_ADMIN_*` settings
 
 ## Architecture Principles
 

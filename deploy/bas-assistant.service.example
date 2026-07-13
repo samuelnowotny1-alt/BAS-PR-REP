@@ -1,0 +1,21 @@
+[Unit]
+Description=BAS Assistant FastAPI Service
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bas
+Group=bas
+WorkingDirectory=/home/bas/bas-assistant
+EnvironmentFile=/home/bas/bas-assistant/config/bas-assistant.env
+ExecStart=/home/bas/bas-assistant/.venv/bin/python -m uvicorn ui.api.main:app --host 127.0.0.1 --port 8000 --proxy-headers
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

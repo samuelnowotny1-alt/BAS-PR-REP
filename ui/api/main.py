@@ -2,7 +2,11 @@
 
 import csv
 import json
+import logging
+import os
 import shutil
+import time
+from contextlib import asynccontextmanager
 from io import StringIO
 from pathlib import Path
 from typing import Optional, List
@@ -14,6 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from bas_assistant.auth import get_current_user
+from bas_assistant.core import build_container
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
@@ -38,30 +44,52 @@ from bas_assistant.reasoning import (
     AssumptionTracker, AssumptionStatus, AssumptionCategory
 )
 from bas_assistant.station_sync import StationSyncService
+from bas_assistant.config import get_settings
+from bas_assistant.runtime import build_health_report, configure_logging, ensure_runtime_directories
+from ui.api.factory import create_application
 
-# Paths
-import os
+SETTINGS = get_settings()
+configure_logging(SETTINGS)
+logger = logging.getLogger(__name__)
+ensure_runtime_directories(SETTINGS)
+
 BASE_DIR = Path(__file__).parent.parent
-STATIC_DIR = BASE_DIR / "static"
-TEMPLATES_DIR = BASE_DIR / "templates"
-
-# Use environment variables for data directories (Docker-friendly)
-DATA_DIR = Path(os.environ.get("BAS_DATA_DIR", BASE_DIR / "data"))
-OUTPUT_DIR = Path(os.environ.get("BAS_OUTPUT_DIR", BASE_DIR / "output"))
-
-# Ensure directories exist
-STATIC_DIR.mkdir(exist_ok=True)
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-(OUTPUT_DIR / "projects").mkdir(parents=True, exist_ok=True)
+STATIC_DIR = Path(os.environ.get("BAS_STATIC_DIR", SETTINGS.static_dir))
+TEMPLATES_DIR = Path(os.environ.get("BAS_TEMPLATES_DIR", SETTINGS.templates_dir))
+DATA_DIR = Path(os.environ.get("BAS_DATA_DIR", SETTINGS.data_dir))
+OUTPUT_DIR = Path(os.environ.get("BAS_OUTPUT_DIR", SETTINGS.output_dir))
 
 # In-memory project store
 projects: dict[str, Project] = {}
 assumption_trackers: dict[str, AssumptionTracker] = {}
 station_sync_passwords: dict[str, str] = {}
 
+
+def refresh_projects_cache() -> dict[str, Project]:
+    """Refresh the module-level project cache from the repository."""
+    projects.clear()
+    projects.update(container.projects.list_projects())
+    return projects
+
+
+@asynccontextmanager
+async def lifespan_factory(_container):
+    logger.info(
+        "Starting BAS Assistant",
+        extra={
+            "environment": SETTINGS.environment,
+            "data_dir": str(DATA_DIR),
+            "output_dir": str(OUTPUT_DIR),
+        },
+    )
+    load_projects_from_disk()
+    logger.info("Loaded %s projects into memory", len(projects))
+    yield
+    logger.info("Shutting down BAS Assistant")
+
+
 # FastAPI app
-app = FastAPI(title="BAS Assistant", version="0.1.0")
+app, container = create_application(settings=SETTINGS, lifespan_factory=lifespan_factory)
 
 # Static files
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -72,20 +100,44 @@ templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 
 # Helper functions
+def configure_runtime_paths(
+    *,
+    data_dir: Path | None = None,
+    output_dir: Path | None = None,
+    uploads_dir: Path | None = None,
+    database_url: str | None = None,
+) -> None:
+    """Reconfigure runtime storage for tests and alternate deployments."""
+    global DATA_DIR, OUTPUT_DIR, container
+
+    DATA_DIR = data_dir or DATA_DIR
+    OUTPUT_DIR = output_dir or OUTPUT_DIR
+    updated_settings = SETTINGS.model_copy(
+        update={
+            "data_dir": DATA_DIR,
+            "output_dir": OUTPUT_DIR,
+            "uploads_dir": uploads_dir or SETTINGS.uploads_dir,
+            "database_url": database_url or SETTINGS.database_url,
+        }
+    )
+    ensure_runtime_directories(updated_settings)
+    container = build_container(updated_settings)
+    app.state.container = container
+    refresh_projects_cache()
+
+
 def get_project(project_id: str) -> Project:
-    if project_id not in projects:
+    project = container.projects.get(project_id)
+    if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    return projects[project_id]
+    projects[project_id] = project
+    return project
 
 
 def save_project(project: Project) -> None:
-    projects[project.metadata.project_id] = project
     project.update_timestamp()
-    # Save to disk
-    project_dir = DATA_DIR / "projects" / project.metadata.project_id
-    project_dir.mkdir(parents=True, exist_ok=True)
-    with open(project_dir / "project.json", "w") as f:
-        f.write(project.model_dump_json(indent=2))
+    container.projects.save(project)
+    projects[project.metadata.project_id] = project
 
 
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
@@ -282,16 +334,10 @@ def validate_equipment_graphic_sections(equipment: Equipment, raw_value: str) ->
 
 
 def load_projects_from_disk() -> None:
-    project_dir = DATA_DIR / "projects"
-    if project_dir.exists():
-        for project_file in project_dir.glob("*/project.json"):
-            try:
-                with open(project_file) as f:
-                    data = json.load(f)
-                project = Project.model_validate(data)
-                projects[project.metadata.project_id] = project
-            except Exception as e:
-                print(f"Failed to load project {project_file}: {e}")
+    try:
+        refresh_projects_cache()
+    except Exception:
+        logger.exception("Failed to load projects from repository")
 
 
 def serialize_validation_findings(report) -> list[dict[str, str]]:
@@ -311,8 +357,79 @@ def serialize_validation_findings(report) -> list[dict[str, str]]:
     return findings
 
 
-# Load projects on startup
-load_projects_from_disk()
+def request_expects_json(request: Request) -> bool:
+    accept_header = request.headers.get("accept", "")
+    return request.url.path.startswith("/api/") or "application/json" in accept_header
+
+
+def project_for_request(request: Request) -> Project | None:
+    segments = [segment for segment in request.url.path.split("/") if segment]
+    if len(segments) >= 2 and segments[0] == "project":
+        return projects.get(segments[1])
+    return None
+
+
+@app.middleware("http")
+async def log_request_middleware(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start_time
+    response.headers["X-Process-Time"] = f"{duration:.4f}"
+    logger.info(
+        "%s %s -> %s in %.4fs",
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration,
+    )
+    return response
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.warning("HTTP error %s on %s: %s", exc.status_code, request.url.path, exc.detail)
+    if request_expects_json(request):
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        context={
+            "project": project_for_request(request),
+            "error_title": f"HTTP {exc.status_code}",
+            "error_message": str(exc.detail),
+        },
+        status_code=exc.status_code,
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled application error on %s", request.url.path)
+    if request_expects_json(request):
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
+    return templates.TemplateResponse(
+        request=request,
+        name="error.html",
+        context={
+            "project": project_for_request(request),
+            "error_title": "Unexpected Error",
+            "error_message": "The request could not be completed. Review server logs for details.",
+        },
+        status_code=500,
+    )
+
+
+def current_health_report() -> dict[str, object]:
+    runtime_settings = SETTINGS.model_copy(
+        update={
+            "data_dir": DATA_DIR,
+            "output_dir": OUTPUT_DIR,
+            "static_dir": STATIC_DIR,
+            "templates_dir": TEMPLATES_DIR,
+            "uploads_dir": SETTINGS.uploads_dir,
+        }
+    )
+    return build_health_report(runtime_settings, loaded_projects=len(projects))
 
 
 def create_project_from_form(
@@ -349,9 +466,60 @@ def create_project_from_form(
 # Page Routes
 # ============================================================
 
+
+@app.get("/health")
+@app.get("/healthz")
+@app.get("/api/health")
+async def health_check():
+    report = current_health_report()
+    status_code = 200 if report["status"] == "ok" else 503
+    return JSONResponse(content=report, status_code=status_code)
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"current_user": get_current_user(request)},
+    )
+
+
+@app.post("/login")
+async def login_submit(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    user = container.auth.authenticate(username=username, password=password)
+    if user is None:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "current_user": None,
+                "error_message": "Invalid username or password.",
+                "username": username,
+            },
+            status_code=401,
+        )
+    request.session["user"] = user.model_dump(mode="json")
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html", context={"projects": projects})
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"projects": projects, "current_user": get_current_user(request)},
+    )
 
 
 @app.get("/project/new", response_class=HTMLResponse)
@@ -1148,4 +1316,5 @@ async def load_assumption_templates(request: Request, project_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+    uvicorn.run(app, host=SETTINGS.host, port=SETTINGS.port)
