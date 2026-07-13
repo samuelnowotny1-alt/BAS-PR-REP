@@ -1,27 +1,32 @@
 {
-  "corePlugins": {
-    "file-explorer": true,
-    "global-search": true,
-    "switcher": true,
-    "graph": true,
-    "backlink": true,
-    "outgoing-link": true,
-    "tag-pane": true,
-    "page-preview": true,
-    "daily-notes": true,
-    "templates": true,
-    "note-composer": true,
-    "command-palette": true,
-    "file-recovery": true,
-    "publish": false,
-    "sync": false,
-    "workspace": true,
-    "edit-link": true,
-    "canvas": true,
-    "properties": true,
-    "outline": true,
-    "webviewer": false,
-    "pdf-export": true
+  "dataview": {
+    "enabled": true
   },
-  "disabledPlugins": []
+  "editor-syntax-highlight-obsidian": {
+    "enabled": true
+  },
+  "git": {
+    "enabled": true
+  },
+  "graph-analysis": {
+    "enabled": true
+  },
+  "outliner": {
+    "enabled": true
+  },
+  "table-editor-obsidian": {
+    "enabled": true
+  },
+  "templater-obsidian": {
+    "enabled": true
+  },
+  "calendar": {
+    "enabled": true
+  },
+  "kanban": {
+    "enabled": true
+  },
+  "excalidraw": {
+    "enabled": true
+  }
 }

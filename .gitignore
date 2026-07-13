@@ -1,19 +1,29 @@
-# Obsidian Vault Files
-.obsidian/workspace.json
+# Obsidian vault ignores
+.obsidian/workspace*
+.obsidian/cache*
 .obsidian/plugins/*
-.obsidian/themes/*
-*.log
+!.obsidian/plugins/git
+!.obsidian/plugins/dataview
+!.obsidian/plugins/editor-syntax-highlight-obsidian
+!.obsidian/plugins/graph-analysis
+!.obsidian/plugins/outliner
+!.obsidian/plugins/table-editor-obsidian
+!.obsidian/plugins/templater-obsidian
+!.obsidian/plugins/calendar
+!.obsidian/plugins/kanban
+!.obsidian/plugins/excalidraw
+
+# OS
 .DS_Store
 Thumbs.db
 
-# Generated artifacts
-generated/
-output/
-*.pdf
-*.docx
-*.xlsx
+# Temp
+*.tmp
+*.bak
+*~
 
-# Environment
-.env
-.env.local
-*.secret
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
