@@ -186,6 +186,8 @@ class ProjectQueryService:
             "controller_count": int(controller_count),
             "source_document_count": len(documents),
             "equipment": equipment_view,
+            "points": self.points_list(project_id)[:8],
+            "controllers": self.controllers_list(project_id)[:8],
             "documents": [
                 {
                     "name": record.name,
@@ -275,13 +277,20 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
+        payload = dict(record.payload_json or {})
+        related = []
+        if payload.get("equipment_id"):
+            related.append({"entity_type": "equipment", "entity_key": payload["equipment_id"]})
+        if payload.get("controller_id"):
+            related.append({"entity_type": "controller", "entity_key": payload["controller_id"]})
         return {
             "entity_type": "point",
             "project_id": project_id,
             "title": point_name,
             "subtitle": record.point_kind,
-            "payload": dict(record.payload_json or {}),
+            "payload": payload,
             "linked_points": [],
+            "related_entities": related,
         }
 
     def controller_detail(self, project_id: str, controller_id: str) -> dict[str, object] | None:
@@ -298,13 +307,19 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
+        payload = dict(record.payload_json or {})
+        related = [
+            {"entity_type": "equipment", "entity_key": equipment_id}
+            for equipment_id in payload.get("serves_equipment_ids", [])
+        ]
         return {
             "entity_type": "controller",
             "project_id": project_id,
             "title": controller_id,
             "subtitle": record.controller_type or "controller",
-            "payload": dict(record.payload_json or {}),
-            "linked_points": list((record.payload_json or {}).get("owned_point_names", [])),
+            "payload": payload,
+            "linked_points": list(payload.get("owned_point_names", [])),
+            "related_entities": related,
         }
 
     def activity_view(self, project_id: str) -> dict[str, object] | None:
@@ -394,6 +409,8 @@ class ProjectQueryService:
                 "controller": record.payload_json.get("controller_id"),
                 "points": len(record.payload_json.get("point_names", [])),
                 "status": record.status,
+                "parent": record.parent_equipment_key,
+                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
             }
             for record in records
         ]
@@ -418,6 +435,7 @@ class ProjectQueryService:
                 "kind": record.point_kind,
                 "units": record.units,
                 "controller": record.controller_key,
+                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
             }
             for record in records
         ]
@@ -442,6 +460,7 @@ class ProjectQueryService:
                 "protocols": [record.protocol] if record.protocol else [],
                 "equipment": len(record.payload_json.get("serves_equipment_ids", [])),
                 "points": len(record.payload_json.get("owned_point_names", [])),
+                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
             }
             for record in records
         ]
@@ -475,6 +494,7 @@ class ProjectQueryService:
 
     def _task_to_view(self, task: TaskRecord) -> dict[str, object]:
         result_json = dict(task.result_json or {})
+        result = result_json.get("result", {})
         return {
             "id": task.id,
             "task_type": task.task_type,
@@ -482,9 +502,11 @@ class ProjectQueryService:
             "created_at": task.created_at,
             "updated_at": task.updated_at,
             "payload": dict(task.payload_json or {}),
-            "result": result_json.get("result", {}),
+            "result": result,
             "error": result_json.get("error"),
             "status_history": list(result_json.get("status_history", [])),
+            "artifact_diff": dict(result.get("artifact_diff") or {}),
+            "generated_documents": list(result.get("generated_documents") or []),
         }
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:

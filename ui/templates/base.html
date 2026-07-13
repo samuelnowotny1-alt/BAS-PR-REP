@@ -135,6 +135,18 @@
                     <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
                     <span class="sidebar-link-label">Dashboard</span>
                 </a>
+                <a href="/project/{{ project.metadata.project_id }}/equipment" class="sidebar-link {% if '/equipment' in request.url.path and '/graphics' not in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-fan"></i></span>
+                    <span class="sidebar-link-label">Equipment</span>
+                </a>
+                <a href="/project/{{ project.metadata.project_id }}/points" class="sidebar-link {% if '/points' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-gauge-high"></i></span>
+                    <span class="sidebar-link-label">Points</span>
+                </a>
+                <a href="/project/{{ project.metadata.project_id }}/controllers" class="sidebar-link {% if '/controllers' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-microchip"></i></span>
+                    <span class="sidebar-link-label">Controllers</span>
+                </a>
                 <a href="/project/{{ project.metadata.project_id }}/import" class="sidebar-link {% if '/import' in request.url.path %}active{% endif %}">
                     <span class="sidebar-link-icon"><i class="fas fa-file-import"></i></span>
                     <span class="sidebar-link-label">Import Data</span>

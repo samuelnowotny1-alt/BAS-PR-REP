@@ -11,7 +11,7 @@ from sqlalchemy import inspect, select
 from starlette.requests import Request
 
 from bas_assistant.auth import hash_password, verify_password
-from bas_assistant.database import ArtifactObjectLinkRecord, EquipmentRecord, KnowledgeRecord, PointRecord, TaskRecord, UploadRecord, UserAccount
+from bas_assistant.database import ArtifactObjectLinkRecord, DocumentRecord, EquipmentRecord, KnowledgeRecord, PointRecord, TaskRecord, UploadRecord, UserAccount
 from bas_assistant.generators.px_graphics import generate_vav_px
 from bas_assistant.services.knowledge import KnowledgeIngestionService
 from ui.api import main
@@ -698,6 +698,110 @@ def test_niagara_xml_manifest_traverses_slot_hierarchy(tmp_path: Path) -> None:
     assert project.get_controller("MPC-2") is not None
     assert project.get_equipment("AHU-2") is not None
     assert project.get_point("AHU-2_SAT") is not None
+
+
+def test_niagara_station_graph_sets_parent_child_relationships(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'graph_uploads.db'}",
+    )
+
+    project_id = "graph-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Graph Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as archive:
+        archive.writestr(
+            "station_tree.txt",
+            "station:|slot:/Config/Equipment/Plant/AHU-1/VAV-201\n"
+            "station:|slot:/Drivers/BacnetNetwork/MPC-1/Points/VAV-201_ZN-T\n",
+        )
+    zip_buffer.seek(0)
+    upload = UploadFile(filename="station-graph.zip", file=zip_buffer)
+
+    response = asyncio.run(main.import_data(project_id=project_id, supporting_files=[upload]))
+
+    assert response.status_code == 303
+    project = main.get_project(project_id)
+    ahu = project.get_equipment("AHU-1")
+    vav = project.get_equipment("VAV-201")
+    assert ahu is not None
+    assert vav is not None
+    assert vav.parent_equipment_id == "AHU-1"
+    assert "VAV-201" in ahu.child_equipment_ids
+    assert any(rel.type == "contains" and rel.target_equipment_id == "VAV-201" for rel in ahu.relationships)
+    with main.container.db.session() as session:
+        generated_docs = list(session.scalars(select(DocumentRecord).where(DocumentRecord.document_type == "archive")))
+        generated_links = list(session.scalars(select(ArtifactObjectLinkRecord)))
+    assert generated_docs
+    assert any(link.relationship_type == "source" for link in generated_links)
+
+
+def test_generated_graphics_are_registered_as_artifacts(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'generated_artifacts.db'}",
+    )
+    project_id = "generated-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Generated Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+    project = main.get_project(project_id)
+    project.add_equipment(main.Equipment(id="AHU-1", type=main.EquipmentType.AHU))
+    project.add_point(
+        main.Point(
+            name="AHU-1_SAT",
+            equipment_id="AHU-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    response = asyncio.run(main.graphics_page(request(f"/project/{project_id}/graphics"), project_id))
+
+    assert response.status_code == 200
+    with main.container.db.session() as session:
+        docs = list(session.scalars(select(DocumentRecord).where(DocumentRecord.document_type == "generated_graphic_svg")))
+        links = list(
+            session.scalars(
+                select(ArtifactObjectLinkRecord).where(ArtifactObjectLinkRecord.relationship_type == "generated_output")
+            )
+        )
+        task = session.scalar(select(TaskRecord).where(TaskRecord.task_type == "graphics_generation").order_by(TaskRecord.id.desc()))
+    assert docs
+    assert any(link.entity_type == "equipment" and link.entity_key == "AHU-1" for link in links)
+    assert task is not None
+    assert task.result_json["result"]["generated_documents"]
 
 
 def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:

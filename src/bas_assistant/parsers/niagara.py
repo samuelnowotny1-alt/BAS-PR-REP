@@ -11,6 +11,7 @@ from xml.etree import ElementTree as ET
 
 from bas_assistant.generators.px_graphics import PXFile
 from bas_assistant.models import Controller, Equipment, EquipmentType, Point, PointDirection, PointKind, PointSource, Project, Protocol
+from bas_assistant.models.equipment import EquipmentRelationship
 from bas_assistant.services.artifact_links import ArtifactEntityLink
 
 
@@ -26,6 +27,20 @@ class ArtifactParseResult:
     links: list[ArtifactEntityLink] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     details: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class NiagaraStationGraph:
+    """Minimal station graph extracted from Niagara slot paths."""
+
+    controller_points: list[dict[str, str]] = field(default_factory=list)
+    equipment_paths: list[list[str]] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "controller_points": list(self.controller_points),
+            "equipment_paths": [list(path) for path in self.equipment_paths],
+        }
 
 
 class NiagaraArtifactParser:
@@ -360,6 +375,7 @@ class NiagaraArtifactParser:
                 "controllers_added": controllers_added,
                 "source_name": source_name,
                 "station_tree_hits": station_tree_hits,
+                "station_graph": tree_result.details.get("station_graph", {}),
             },
         )
 
@@ -438,6 +454,7 @@ class NiagaraArtifactParser:
         controllers_added = 0
         station_tree_hits = 0
         links: list[ArtifactEntityLink] = []
+        station_graph = NiagaraStationGraph()
 
         for controller_id in sorted(set(re.findall(r"station:\|slot:/Drivers/[^/\s]+/([A-Za-z0-9_-]+)", text))):
             normalized_controller = controller_id.upper()
@@ -550,6 +567,13 @@ class NiagaraArtifactParser:
             equipment.add_point(normalized_point)
             if controller is not None:
                 controller.add_point(normalized_point)
+            station_graph.controller_points.append(
+                {
+                    "controller_id": normalized_controller,
+                    "equipment_id": equipment_id,
+                    "point_name": normalized_point,
+                }
+            )
             station_tree_hits += 1
             links.append(
                 ArtifactEntityLink(
@@ -560,7 +584,9 @@ class NiagaraArtifactParser:
                 )
             )
 
-        for equipment_id in sorted(set(re.findall(r"station:\|slot:/Config/Equipment/(?:[^/\s]+/)*([A-Za-z0-9_-]+)", text))):
+        for equipment_path in self._extract_equipment_paths(text):
+            station_graph.equipment_paths.append(equipment_path)
+        for equipment_id in sorted({path[-1] for path in station_graph.equipment_paths if path}):
             normalized_equipment = equipment_id.upper()
             if project.get_equipment(normalized_equipment) is None:
                 project.add_equipment(
@@ -593,6 +619,7 @@ class NiagaraArtifactParser:
                     metadata={"source_name": source_name},
                 )
             )
+        self._apply_station_graph(project=project, graph=station_graph)
 
         return ArtifactParseResult(
             parsed=station_tree_hits > 0,
@@ -601,7 +628,10 @@ class NiagaraArtifactParser:
             points_added=points_added,
             controllers_added=controllers_added,
             links=links,
-            details={"station_tree_hits": station_tree_hits},
+            details={
+                "station_tree_hits": station_tree_hits,
+                "station_graph": station_graph.as_dict(),
+            },
         )
 
     def _infer_equipment_id_from_point_token(self, point_name: str) -> str | None:
@@ -609,3 +639,38 @@ class NiagaraArtifactParser:
         if match:
             return match.group(1).upper()
         return None
+
+    def _extract_equipment_paths(self, text: str) -> list[list[str]]:
+        equipment_paths: list[list[str]] = []
+        for raw_path in re.findall(r"station:\|slot:/Config/Equipment/([^\s]+)", text):
+            segments = [segment for segment in raw_path.split("/") if segment]
+            equipment_segments = [
+                segment.upper()
+                for segment in segments
+                if re.fullmatch(r"(?:AHU|RTU|VAV|FCU|CHWP|HWP|EF|SF|RF)-?\d+", segment, flags=re.IGNORECASE)
+            ]
+            if equipment_segments:
+                equipment_paths.append(equipment_segments)
+        return equipment_paths
+
+    def _apply_station_graph(self, *, project: Project, graph: NiagaraStationGraph) -> None:
+        for path in graph.equipment_paths:
+            for parent_id, child_id in zip(path, path[1:]):
+                parent = project.get_equipment(parent_id)
+                child = project.get_equipment(child_id)
+                if parent is None or child is None:
+                    continue
+                child.parent_equipment_id = parent_id
+                if child_id not in parent.child_equipment_ids:
+                    parent.child_equipment_ids.append(child_id)
+                if not any(
+                    relationship.type == "contains" and relationship.target_equipment_id == child_id
+                    for relationship in parent.relationships
+                ):
+                    parent.relationships.append(
+                        EquipmentRelationship(
+                            type="contains",
+                            target_equipment_id=child_id,
+                            description="Derived from Niagara station hierarchy",
+                        )
+                    )

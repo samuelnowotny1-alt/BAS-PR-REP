@@ -214,6 +214,278 @@ def persist_artifact_links(
     )
 
 
+def generated_document_links_for_entities(
+    *,
+    entity_type: str,
+    entity_keys: list[str],
+    parser_name: str,
+    metadata: dict[str, object],
+) -> list[ArtifactEntityLink]:
+    """Create generated-output links for a group of BAS objects."""
+    return [
+        ArtifactEntityLink(
+            entity_type=entity_type,
+            entity_key=entity_key,
+            relationship_type="generated_output",
+            parser_name=parser_name,
+            metadata=dict(metadata),
+        )
+        for entity_key in entity_keys
+        if entity_key
+    ]
+
+
+def register_generated_output(
+    *,
+    project: Project,
+    file_path: Path,
+    document_name: str,
+    document_type: str,
+    parser_name: str,
+    links: list[ArtifactEntityLink],
+    metadata: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Register generated output files as documents and attach object links."""
+    document_id = container.artifact_links.register_generated_document(
+        project_id=project.metadata.project_id,
+        file_path=file_path,
+        document_name=document_name,
+        document_type=document_type,
+        metadata=metadata,
+    )
+    container.artifact_links.replace_links_for_document(
+        project_id=project.metadata.project_id,
+        document_id=document_id,
+        upload_id=None,
+        parser_name=parser_name,
+        links=links,
+    )
+    return {
+        "name": document_name,
+        "document_type": document_type,
+        "file_path": str(file_path),
+    }
+
+
+def register_generation_outputs(
+    *,
+    project: Project,
+    generator_name: str,
+    outputs: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Persist generated BAS outputs into the artifact lineage store."""
+    documents: list[dict[str, object]] = []
+    for output in outputs:
+        path = output.get("path")
+        if not isinstance(path, Path):
+            continue
+        documents.append(
+            register_generated_output(
+                project=project,
+                file_path=path,
+                document_name=str(output.get("name") or path.name),
+                document_type=str(output.get("document_type") or "generated_output"),
+                parser_name=generator_name,
+                links=list(output.get("links") or []),
+                metadata=dict(output.get("metadata") or {}),
+            )
+        )
+    return documents
+
+
+def build_checkout_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
+    outputs: list[dict[str, object]] = []
+    markdown_paths = result.get("markdown") or []
+    for path in markdown_paths:
+        if isinstance(path, Path):
+            equipment_id = path.stem.removeprefix("checkout_").upper()
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": "generated_checkout_markdown",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment_id],
+                        parser_name="checkout_generator",
+                        metadata={"equipment_id": equipment_id},
+                    ),
+                    "metadata": {"generator": "checkout", "equipment_id": equipment_id},
+                }
+            )
+    excel_path = result.get("excel")
+    if isinstance(excel_path, Path):
+        outputs.append(
+            {
+                "path": excel_path,
+                "name": excel_path.name,
+                "document_type": "generated_checkout_workbook",
+                "links": generated_document_links_for_entities(
+                    entity_type="equipment",
+                    entity_keys=[equipment.id for equipment in project.equipment],
+                    parser_name="checkout_generator",
+                    metadata={"scope": "project_checkout_bundle"},
+                ),
+                "metadata": {"generator": "checkout"},
+            }
+        )
+    return outputs
+
+
+def build_report_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
+    mapping = {
+        "equipment_schedule": ("generated_equipment_schedule", "equipment", [equipment.id for equipment in project.equipment]),
+        "point_schedule": ("generated_point_schedule", "point", [point.name for point in project.points]),
+        "controller_schedule": ("generated_controller_schedule", "controller", [controller.id for controller in project.controllers]),
+        "summary": ("generated_project_summary", "equipment", [equipment.id for equipment in project.equipment]),
+        "validation": ("generated_validation_report", "point", [point.name for point in project.points]),
+    }
+    outputs: list[dict[str, object]] = []
+    for key, value in result.items():
+        if key not in mapping or not isinstance(value, Path):
+            continue
+        document_type, entity_type, entity_keys = mapping[key]
+        outputs.append(
+            {
+                "path": value,
+                "name": value.name,
+                "document_type": document_type,
+                "links": generated_document_links_for_entities(
+                    entity_type=entity_type,
+                    entity_keys=entity_keys,
+                    parser_name="report_generator",
+                    metadata={"report_key": key},
+                ),
+                "metadata": {"generator": "reports", "report_key": key},
+            }
+        )
+    return outputs
+
+
+def build_graphics_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
+    outputs: list[dict[str, object]] = []
+    for path in result.get("json") or []:
+        if isinstance(path, Path):
+            equipment_id = path.stem.removeprefix("graphic_").replace("_", "-").upper()
+            if project.get_equipment(equipment_id) is None:
+                continue
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": "generated_graphic_json",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment_id],
+                        parser_name="graphics_generator",
+                        metadata={"equipment_id": equipment_id, "format": "json"},
+                    ),
+                    "metadata": {"generator": "graphics", "equipment_id": equipment_id, "format": "json"},
+                }
+            )
+    for path in result.get("svg") or []:
+        if isinstance(path, Path):
+            equipment_id = path.stem.removeprefix("graphic_").replace("_", "-").upper()
+            if project.get_equipment(equipment_id) is None:
+                continue
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": "generated_graphic_svg",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment_id],
+                        parser_name="graphics_generator",
+                        metadata={"equipment_id": equipment_id, "format": "svg"},
+                    ),
+                    "metadata": {"generator": "graphics", "equipment_id": equipment_id, "format": "svg"},
+                }
+            )
+    niagara_path = result.get("niagara")
+    if isinstance(niagara_path, Path):
+        outputs.append(
+            {
+                "path": niagara_path,
+                "name": niagara_path.name,
+                "document_type": "generated_graphics_niagara",
+                "links": generated_document_links_for_entities(
+                    entity_type="equipment",
+                    entity_keys=[equipment.id for equipment in project.equipment],
+                    parser_name="graphics_generator",
+                    metadata={"format": "niagara_json"},
+                ),
+                "metadata": {"generator": "graphics", "format": "niagara_json"},
+            }
+        )
+    return outputs
+
+
+def build_logic_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
+    outputs: list[dict[str, object]] = []
+    for path in result.get("json") or []:
+        if isinstance(path, Path):
+            equipment_id = path.stem.removeprefix("logic_").replace("_", "-").upper()
+            if project.get_equipment(equipment_id) is None:
+                continue
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": "generated_logic_json",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment_id],
+                        parser_name="logic_generator",
+                        metadata={"equipment_id": equipment_id, "format": "json"},
+                    ),
+                    "metadata": {"generator": "logic", "equipment_id": equipment_id, "format": "json"},
+                }
+            )
+    for path in result.get("niagara") or []:
+        if isinstance(path, Path):
+            equipment_id = path.stem.replace("_", "-").upper()
+            if project.get_equipment(equipment_id) is None:
+                continue
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": "generated_logic_niagara",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment_id],
+                        parser_name="logic_generator",
+                        metadata={"equipment_id": equipment_id, "format": "niagara"},
+                    ),
+                    "metadata": {"generator": "logic", "equipment_id": equipment_id, "format": "niagara"},
+                }
+            )
+    return outputs
+
+
+def build_export_output_descriptors(project: Project, results: dict[str, dict[str, object]]) -> list[dict[str, object]]:
+    outputs: list[dict[str, object]] = []
+    for vendor, result in results.items():
+        for file_path in result.get("files") or []:
+            path = Path(file_path)
+            outputs.append(
+                {
+                    "path": path,
+                    "name": path.name,
+                    "document_type": f"generated_export_{vendor}",
+                    "links": generated_document_links_for_entities(
+                        entity_type="equipment",
+                        entity_keys=[equipment.id for equipment in project.equipment],
+                        parser_name=f"{vendor}_exporter",
+                        metadata={"vendor": vendor},
+                    ),
+                    "metadata": {"generator": "export", "vendor": vendor},
+                }
+            )
+    return outputs
+
+
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
     tracker = assumption_trackers.get(project_id)
     if tracker is None:
@@ -746,6 +1018,21 @@ async def equipment_detail_page(request: Request, project_id: str, equipment_id:
     )
 
 
+@app.get("/project/{project_id}/equipment", response_class=HTMLResponse)
+async def equipment_list_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_list.html",
+        context={
+            "project": project,
+            "title": "Equipment",
+            "entity_type": "equipment",
+            "rows": container.project_queries.equipment_list(project_id),
+        },
+    )
+
+
 @app.get("/project/{project_id}/points/{point_name}", response_class=HTMLResponse)
 async def point_detail_page(request: Request, project_id: str, point_name: str):
     project = get_project(project_id)
@@ -760,6 +1047,21 @@ async def point_detail_page(request: Request, project_id: str, point_name: str):
     )
 
 
+@app.get("/project/{project_id}/points", response_class=HTMLResponse)
+async def points_list_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_list.html",
+        context={
+            "project": project,
+            "title": "Points",
+            "entity_type": "point",
+            "rows": container.project_queries.points_list(project_id),
+        },
+    )
+
+
 @app.get("/project/{project_id}/controllers/{controller_id}", response_class=HTMLResponse)
 async def controller_detail_page(request: Request, project_id: str, controller_id: str):
     project = get_project(project_id)
@@ -771,6 +1073,21 @@ async def controller_detail_page(request: Request, project_id: str, controller_i
         request=request,
         name="object_detail.html",
         context={"project": project, "detail": detail, "current_user": get_current_user(request)},
+    )
+
+
+@app.get("/project/{project_id}/controllers", response_class=HTMLResponse)
+async def controllers_list_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="object_list.html",
+        context={
+            "project": project,
+            "title": "Controllers",
+            "entity_type": "controller",
+            "rows": container.project_queries.controllers_list(project_id),
+        },
     )
 
 
@@ -1125,7 +1442,14 @@ async def checkout_page(request: Request, project_id: str):
     project = get_project(project_id)
     output_dir = OUTPUT_DIR / project_id / "checkout"
     output_dir.mkdir(parents=True, exist_ok=True)
+    task_id = container.tasks.create_task(project_id=project_id, task_type="checkout_generation", payload={"path": str(output_dir)})
     result = generate_checkout_sheets(project, output_dir)
+    generated_documents = register_generation_outputs(
+        project=project,
+        generator_name="checkout_generator",
+        outputs=build_checkout_output_descriptors(project, result),
+    )
+    container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     return templates.TemplateResponse(request=request, name="checkout.html", context={
         "project": project,
         "checkout_result": result,
@@ -1138,7 +1462,14 @@ async def reports_page(request: Request, project_id: str):
     project = get_project(project_id)
     output_dir = OUTPUT_DIR / project_id / "reports"
     output_dir.mkdir(parents=True, exist_ok=True)
+    task_id = container.tasks.create_task(project_id=project_id, task_type="report_generation", payload={"path": str(output_dir)})
     paths = generate_reports(project, output_dir)
+    generated_documents = register_generation_outputs(
+        project=project,
+        generator_name="report_generator",
+        outputs=build_report_output_descriptors(project, paths),
+    )
+    container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     return templates.TemplateResponse(request=request, name="reports.html", context={
         "project": project,
         "report_paths": paths,
@@ -1151,7 +1482,14 @@ async def graphics_page(request: Request, project_id: str):
     project = get_project(project_id)
     output_dir = OUTPUT_DIR / project_id / "graphics"
     output_dir.mkdir(parents=True, exist_ok=True)
+    task_id = container.tasks.create_task(project_id=project_id, task_type="graphics_generation", payload={"path": str(output_dir)})
     result = generate_graphics(project, output_dir)
+    generated_documents = register_generation_outputs(
+        project=project,
+        generator_name="graphics_generator",
+        outputs=build_graphics_output_descriptors(project, result),
+    )
+    container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     niagara_preview = graphics_preview_pages(project)
     return templates.TemplateResponse(request=request, name="graphics.html", context={
         "project": project,
@@ -1167,7 +1505,14 @@ async def logic_page(request: Request, project_id: str):
     project = get_project(project_id)
     output_dir = OUTPUT_DIR / project_id / "logic"
     output_dir.mkdir(parents=True, exist_ok=True)
+    task_id = container.tasks.create_task(project_id=project_id, task_type="logic_generation", payload={"path": str(output_dir)})
     result = generate_logic(project, output_dir)
+    generated_documents = register_generation_outputs(
+        project=project,
+        generator_name="logic_generator",
+        outputs=build_logic_output_descriptors(project, result),
+    )
+    container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     return templates.TemplateResponse(request=request, name="logic.html", context={
         "project": project,
         "logic_result": result,
@@ -1202,6 +1547,7 @@ async def export_project(
     }
 
     results = {}
+    task_id = container.tasks.create_task(project_id=project_id, task_type="export_generation", payload={"vendors": vendors})
     for vendor in vendors:
         if vendor in vendor_map:
             exporter = vendor_map[vendor](project)
@@ -1213,6 +1559,12 @@ async def export_project(
                 "errors": result.errors,
                 "warnings": result.warnings,
             }
+    generated_documents = register_generation_outputs(
+        project=project,
+        generator_name="export_generator",
+        outputs=build_export_output_descriptors(project, results),
+    )
+    container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
 
     return templates.TemplateResponse(request=request, name="export_result.html", context={
         "project": project,

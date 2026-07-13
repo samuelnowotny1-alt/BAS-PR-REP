@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import delete, select
@@ -143,3 +145,32 @@ class ArtifactLinkService:
             }
             for _entity_type, _entity_key, relationship_type, parser_name, metadata_json, document_name, document_type, file_path in rows
         ]
+
+    def register_generated_document(
+        self,
+        *,
+        project_id: str,
+        file_path: Path,
+        document_name: str,
+        document_type: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> int | None:
+        """Register a generated output as a project document artifact."""
+        checksum = None
+        if file_path.exists() and file_path.is_file():
+            checksum = hashlib.sha256(file_path.read_bytes()).hexdigest()
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project_db_id = project.id if project is not None else None
+            document = DocumentRecord(
+                project_id=project_db_id,
+                external_id=None,
+                name=document_name,
+                document_type=document_type,
+                file_path=str(file_path),
+                checksum=checksum,
+                metadata_json=dict(metadata or {}),
+            )
+            session.add(document)
+            session.flush()
+            return document.id

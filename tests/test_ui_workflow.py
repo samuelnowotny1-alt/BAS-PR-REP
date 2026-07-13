@@ -175,6 +175,32 @@ def test_object_detail_page_renders_artifact_provenance() -> None:
     assert "station.zip" in text
 
 
+def test_object_list_pages_render() -> None:
+    project_id = create_project("asset-pages")
+    project = main.get_project(project_id)
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.controllers.append(main.Controller(id="MPC-1", type="niagara"))
+    project.points.append(
+        main.Point(
+            name="AHU-1_SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    equipment_response = run_async(main.equipment_list_page(request(f"/project/{project_id}/equipment"), project_id))
+    points_response = run_async(main.points_list_page(request(f"/project/{project_id}/points"), project_id))
+    controllers_response = run_async(main.controllers_list_page(request(f"/project/{project_id}/controllers"), project_id))
+
+    assert "AHU-1" in response_text(equipment_response)
+    assert "AHU-1_SAT" in response_text(points_response)
+    assert "MPC-1" in response_text(controllers_response)
+
+
 def test_non_htmx_create_project_returns_redirect() -> None:
     response = run_async(
         main.create_project(
