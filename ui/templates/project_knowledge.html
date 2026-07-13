@@ -9,6 +9,59 @@
         <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ knowledge_view.project_name }} · {{ knowledge_view.project_id }}</p>
     </div>
 
+    <div class="card p-6">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Search</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Search indexed manuals, sequences, schedules, and imported engineering references.</p>
+            </div>
+            <form method="get" action="/project/{{ project.metadata.project_id }}/knowledge" class="flex w-full max-w-3xl gap-3">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ knowledge_view.query }}"
+                    placeholder="Search sequences, equipment, alarms, control modes..."
+                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                >
+                <button type="submit" class="rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-600">Search</button>
+            </form>
+        </div>
+
+        {% if knowledge_view.query %}
+        <div class="mt-6">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Results</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ knowledge_view.result_count }} matches</p>
+            </div>
+            <div class="mt-4 space-y-3">
+                {% for result in knowledge_view.results %}
+                <article class="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ result.source_name }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ result.source_type }} · chunk {{ result.chunk_index }} · score {{ '%.1f'|format(result.score) }}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span class="rounded-full bg-white px-2.5 py-1 dark:bg-gray-800">{{ result.content_format or 'unknown format' }}</span>
+                            <span class="rounded-full bg-white px-2.5 py-1 dark:bg-gray-800">{{ result.chunk_char_count }} chars</span>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-sm leading-6 text-gray-700 dark:text-gray-300">{{ result.excerpt }}</p>
+                </article>
+                {% else %}
+                <div class="rounded-2xl border border-dashed border-gray-300 p-5 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    No indexed passages matched <span class="font-semibold text-gray-700 dark:text-gray-200">"{{ knowledge_view.query }}"</span>.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="mt-6 rounded-2xl border border-dashed border-gray-300 p-5 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+            Search is deterministic today and scans indexed knowledge chunks stored with each project. This is the retrieval baseline for later vector-search integration.
+        </div>
+        {% endif %}
+    </div>
+
     <div class="card overflow-hidden">
         <div class="overflow-x-auto">
             <table class="w-full">

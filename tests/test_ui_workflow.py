@@ -250,6 +250,50 @@ def test_project_documents_page_and_download_render() -> None:
     assert download_response.headers["content-disposition"].endswith('filename="sequence.txt"')
 
 
+def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
+    project_id = create_project("knowledge-search-project")
+    project = main.get_project(project_id)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(
+                filename="sequence.txt",
+                file=BytesIO(
+                    b"AHU-1 shall start on occupancy, prove supply fan status, and maintain SAT setpoint at 55F."
+                ),
+            ),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    main.save_project(project)
+
+    page_response = run_async(
+        main.project_knowledge_page(
+            request(f"/project/{project_id}/knowledge?q=supply+fan"),
+            project_id,
+            q="supply fan",
+        )
+    )
+    api_response = run_async(main.api_project_knowledge_search(project_id, q="supply fan"))
+
+    page_text = response_text(page_response)
+    assert page_response.status_code == 200
+    assert "Knowledge Search" in page_text
+    assert "sequence.txt" in page_text
+    assert "supply fan status" in page_text
+    assert api_response["result_count"] >= 1
+    assert api_response["results"][0]["source_name"] == "sequence.txt"
+    assert "supply fan status" in api_response["results"][0]["excerpt"]
+
+
 def test_non_htmx_create_project_returns_redirect() -> None:
     response = run_async(
         main.create_project(

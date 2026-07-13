@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+import re
 
 from sqlalchemy import func, select
 
@@ -524,6 +525,83 @@ class ProjectQueryService:
             ],
         }
 
+    def search_knowledge(self, project_id: str, query: str, *, limit: int = 12) -> dict[str, object] | None:
+        """Return deterministic chunk search results for project knowledge."""
+        normalized_query = query.strip()
+        knowledge_view = self.knowledge_view(project_id)
+        if knowledge_view is None:
+            return None
+        if not normalized_query:
+            return {
+                **knowledge_view,
+                "query": "",
+                "results": [],
+                "result_count": 0,
+            }
+
+        query_terms = self._tokenize_search_query(normalized_query)
+        if not query_terms:
+            return {
+                **knowledge_view,
+                "query": normalized_query,
+                "results": [],
+                "result_count": 0,
+            }
+
+        results: list[dict[str, object]] = []
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            records = list(
+                session.scalars(
+                    select(KnowledgeRecord)
+                    .where(KnowledgeRecord.project_id == project.id)
+                    .order_by(KnowledgeRecord.created_at.desc(), KnowledgeRecord.source_name)
+                )
+            )
+
+        for record in records:
+            metadata = dict(record.metadata_json or {})
+            for chunk in metadata.get("chunks", []):
+                chunk_text = str(chunk.get("text") or "").strip()
+                if not chunk_text:
+                    continue
+                score = self._knowledge_match_score(normalized_query, query_terms, chunk_text)
+                if score <= 0:
+                    continue
+                excerpt = self._build_knowledge_excerpt(chunk_text, query_terms)
+                results.append(
+                    {
+                        "knowledge_id": record.id,
+                        "source_name": record.source_name,
+                        "source_type": record.source_type,
+                        "status": record.status,
+                        "created_at": record.created_at,
+                        "chunk_index": chunk.get("index", 0),
+                        "chunk_char_count": chunk.get("char_count", len(chunk_text)),
+                        "score": score,
+                        "excerpt": excerpt,
+                        "content_format": metadata.get("content_format"),
+                        "file_path": metadata.get("file_path"),
+                    }
+                )
+
+        results.sort(
+            key=lambda row: (
+                -float(row["score"]),
+                str(row["source_name"]).lower(),
+                int(row["chunk_index"]),
+            )
+        )
+        limited = results[:limit]
+        return {
+            **knowledge_view,
+            "query": normalized_query,
+            "results": limited,
+            "result_count": len(results),
+        }
+
     def equipment_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured equipment records for a project."""
         with self.db.session() as session:
@@ -656,6 +734,35 @@ class ProjectQueryService:
         if network_number not in (None, ""):
             return f"{protocol} {raw_address} (net {network_number})".strip()
         return f"{protocol} {raw_address}".strip()
+
+    def _tokenize_search_query(self, query: str) -> list[str]:
+        return [term for term in re.findall(r"[A-Za-z0-9_/.-]+", query.lower()) if len(term) >= 2]
+
+    def _knowledge_match_score(self, query: str, query_terms: list[str], chunk_text: str) -> float:
+        lowered_chunk = chunk_text.lower()
+        score = 0.0
+        for term in query_terms:
+            occurrences = lowered_chunk.count(term)
+            if occurrences:
+                score += 2.0 + min(occurrences, 5) * 0.5
+        if query.lower() in lowered_chunk:
+            score += 4.0
+        return score
+
+    def _build_knowledge_excerpt(self, chunk_text: str, query_terms: list[str], *, width: int = 220) -> str:
+        lowered_chunk = chunk_text.lower()
+        start = 0
+        for term in query_terms:
+            index = lowered_chunk.find(term)
+            if index >= 0:
+                start = max(0, index - 60)
+                break
+        excerpt = chunk_text[start:start + width].strip()
+        if start > 0:
+            excerpt = f"...{excerpt}"
+        if start + width < len(chunk_text):
+            excerpt = f"{excerpt}..."
+        return excerpt
 
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""

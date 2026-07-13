@@ -21,6 +21,7 @@ This roadmap is directional. It should guide sequencing but does not replace iss
 - [Vision](VISION.md)
 - [Architecture](ARCHITECTURE.md)
 - [Decision Log](DECISIONS.md)
+- [Execution Plan](EXECUTION_PLAN.md)
 
 ## Design Reasoning
 The project should build trust before breadth. Foundational schemas, validation, and deterministic generation come before advanced AI workflows.
@@ -42,4 +43,3 @@ The project should build trust before breadth. Foundational schemas, validation,
 ## Examples
 - Do not build Niagara export before the internal logic model is stable.
 - Do not add AI troubleshooting before trend and alarm data models exist.
-

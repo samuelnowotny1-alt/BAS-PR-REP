@@ -23,6 +23,7 @@ The wiki governs planning, implementation, testing, documentation, and generated
 - [Design Principles](DESIGN_PRINCIPLES.md)
 - [Decision Log](DECISIONS.md)
 - [Roadmap](ROADMAP.md)
+- [Execution Plan](EXECUTION_PLAN.md)
 
 ## Design Reasoning
 The wiki exists before application logic so the project has stable engineering boundaries from day one. Future code should conform to documented behavior. If code and documentation conflict, the discrepancy must be recorded and reviewed instead of silently changing behavior.
@@ -37,4 +38,3 @@ The wiki exists before application logic so the project has stable engineering b
 - Use [Point Naming](conventions/naming.md) before generating points.
 - Use [AI Reasoning](reasoning/ai_reasoning.md) before asking an AI agent to draft logic.
 - Use [Decision Log](DECISIONS.md) when making architectural tradeoffs.
-

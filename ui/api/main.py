@@ -1157,9 +1157,9 @@ async def project_document_download(project_id: str, document_id: int):
 
 
 @app.get("/project/{project_id}/knowledge", response_class=HTMLResponse)
-async def project_knowledge_page(request: Request, project_id: str):
+async def project_knowledge_page(request: Request, project_id: str, q: str = ""):
     project = get_project(project_id)
-    knowledge_view = container.project_queries.knowledge_view(project_id)
+    knowledge_view = container.project_queries.search_knowledge(project_id, q)
     if knowledge_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return templates.TemplateResponse(
@@ -2001,6 +2001,20 @@ async def api_points_list(project_id: str):
 @app.get("/api/project/{project_id}/controllers")
 async def api_controllers_list(project_id: str):
     return container.project_queries.controllers_list(project_id)
+
+
+@app.get("/api/project/{project_id}/knowledge/search")
+async def api_project_knowledge_search(project_id: str, q: str = ""):
+    result = container.project_queries.search_knowledge(project_id, q)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {
+        "project_id": result["project_id"],
+        "project_name": result["project_name"],
+        "query": result["query"],
+        "result_count": result["result_count"],
+        "results": result["results"],
+    }
 
 
 @app.get("/admin/users", response_class=HTMLResponse)
