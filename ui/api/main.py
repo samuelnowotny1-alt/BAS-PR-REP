@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-from bas_assistant.auth import get_current_user
+from bas_assistant.auth import get_current_user, require_route_permission
 from bas_assistant.core import build_container
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
@@ -404,6 +404,21 @@ async def authentication_middleware(request: Request, call_next):
     if not is_protected_path(request.url.path):
         return await call_next(request)
     if get_current_user(request) is not None:
+        try:
+            require_route_permission(request)
+        except HTTPException as exc:
+            if request.url.path.startswith("/api/"):
+                return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+            return templates.TemplateResponse(
+                request=request,
+                name="error.html",
+                context={
+                    "project": project_for_request(request),
+                    "error_title": f"HTTP {exc.status_code}",
+                    "error_message": str(exc.detail),
+                },
+                status_code=exc.status_code,
+            )
         return await call_next(request)
     if request.url.path.startswith("/api/"):
         return JSONResponse(status_code=401, content={"detail": "Authentication required"})
@@ -684,40 +699,78 @@ async def import_data(
     equipment_file: UploadFile | None = File(None),
     points_file: UploadFile | None = File(None),
     controllers_file: UploadFile | None = File(None),
+    supporting_files: list[UploadFile] | None = File(None),
 ):
     project = get_project(project_id)
     importer = CSVImporter(project)
     results = {}
 
     if equipment_file and getattr(equipment_file, "filename", None):
-        upload_path = await container.uploads.save_project_upload(
+        stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=equipment_file,
             category="equipment",
             document_type="equipment_schedule",
         )
-        result = importer.import_equipment_schedule(upload_path, "equip_upload")
+        result = importer.import_equipment_schedule(stored_upload.path, "equip_upload")
         results["equipment"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.equipment_count}
+        container.knowledge.ingest_document(
+            project=project,
+            file_path=stored_upload.path,
+            source_name=stored_upload.source_document.name,
+            source_type=stored_upload.document_type,
+            metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
 
     if points_file and getattr(points_file, "filename", None):
-        upload_path = await container.uploads.save_project_upload(
+        stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=points_file,
             category="points",
             document_type="point_list",
         )
-        result = importer.import_point_list(upload_path, "points_upload")
+        result = importer.import_point_list(stored_upload.path, "points_upload")
         results["points"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.points_count}
+        container.knowledge.ingest_document(
+            project=project,
+            file_path=stored_upload.path,
+            source_name=stored_upload.source_document.name,
+            source_type=stored_upload.document_type,
+            metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
 
     if controllers_file and getattr(controllers_file, "filename", None):
-        upload_path = await container.uploads.save_project_upload(
+        stored_upload = await container.uploads.save_project_upload(
             project=project,
             upload=controllers_file,
             category="controllers",
             document_type="controller_schedule",
         )
-        result = importer.import_controller_schedule(upload_path, "ctrl_upload")
+        result = importer.import_controller_schedule(stored_upload.path, "ctrl_upload")
         results["controllers"] = {"success": result.success, "message": result.message, "errors": result.errors, "warnings": result.warnings, "count": result.controllers_count}
+        container.knowledge.ingest_document(
+            project=project,
+            file_path=stored_upload.path,
+            source_name=stored_upload.source_document.name,
+            source_type=stored_upload.document_type,
+            metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
+
+    normalized_supporting_files = supporting_files if isinstance(supporting_files, list) else []
+    for supporting_file in normalized_supporting_files:
+        if not getattr(supporting_file, "filename", None):
+            continue
+        stored_upload = await container.uploads.save_project_upload(
+            project=project,
+            upload=supporting_file,
+        )
+        container.knowledge.ingest_document(
+            project=project,
+            file_path=stored_upload.path,
+            source_name=stored_upload.source_document.name,
+            source_type=stored_upload.document_type,
+            metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
 
     save_project(project)
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)

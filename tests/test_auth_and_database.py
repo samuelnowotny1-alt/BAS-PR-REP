@@ -8,7 +8,7 @@ from sqlalchemy import inspect, select
 from starlette.requests import Request
 
 from bas_assistant.auth import hash_password, verify_password
-from bas_assistant.database import UploadRecord, UserAccount
+from bas_assistant.database import EquipmentRecord, KnowledgeRecord, UploadRecord, UserAccount
 from ui.api import main
 
 
@@ -107,6 +107,42 @@ def test_protected_pages_require_authentication(tmp_path: Path) -> None:
     assert api_response.status_code == 401
 
 
+def test_role_permissions_block_viewer_writes_and_allow_engineer(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'roles.db'}",
+    )
+
+    async def ok_response(_request: Request) -> PlainTextResponse:
+        return PlainTextResponse("ok")
+
+    viewer_request = request("/api/load-demo", method="POST")
+    viewer_request.scope["session"]["user"] = {
+        "id": 10,
+        "username": "viewer",
+        "email": "viewer@example.com",
+        "role": "viewer",
+    }
+    viewer_response = asyncio.run(
+        main.authentication_middleware(viewer_request, ok_response)
+    )
+    assert viewer_response.status_code == 403
+
+    engineer_request = request("/api/load-demo", method="POST")
+    engineer_request.scope["session"]["user"] = {
+        "id": 11,
+        "username": "engineer",
+        "email": "engineer@example.com",
+        "role": "engineer",
+    }
+    engineer_response = asyncio.run(
+        main.authentication_middleware(engineer_request, ok_response)
+    )
+    assert engineer_response.status_code == 200
+
+
 def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     main.configure_runtime_paths(
         data_dir=tmp_path / "data",
@@ -132,6 +168,7 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
     )
 
     equipment_upload = UploadFile(filename="equipment.csv", file=BytesIO(b"Equipment ID,Equipment Type\nAHU-1,AHU\n"))
+    text_upload = UploadFile(filename="sequence.txt", file=BytesIO(b"Supply fan shall enable on occupied command."))
 
     response = asyncio.run(
         main.import_data(
@@ -139,6 +176,7 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
             equipment_file=equipment_upload,
             points_file=None,
             controllers_file=None,
+            supporting_files=[text_upload],
         )
     )
 
@@ -150,6 +188,12 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
 
     with main.container.db.session() as session:
         uploads = list(session.scalars(select(UploadRecord)))
+        equipment = list(session.scalars(select(EquipmentRecord)))
+        knowledge = list(session.scalars(select(KnowledgeRecord)))
 
-    assert len(uploads) == 1
-    assert uploads[0].filename == "equipment.csv"
+    assert len(uploads) == 2
+    assert any(record.filename == "equipment.csv" for record in uploads)
+    assert any(record.filename == "sequence.txt" for record in uploads)
+    assert len(equipment) == 1
+    assert knowledge
+    assert any(record.source_name == "sequence.txt" and record.status == "indexed" for record in knowledge)

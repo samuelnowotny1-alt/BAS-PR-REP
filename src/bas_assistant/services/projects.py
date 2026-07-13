@@ -5,14 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sqlalchemy import desc, select
+from sqlalchemy import delete, desc, select
 
-from bas_assistant.database import DatabaseManager, ProjectRecord
+from bas_assistant.database import ControllerRecord, DatabaseManager, EquipmentRecord, PointRecord, ProjectRecord
 from bas_assistant.models import Project
 
 
 class JsonProjectRepository:
-    """Project persistence repository backed by JSON files with DB indexing."""
+    """Project persistence repository backed by JSON files with relational indexing."""
 
     def __init__(self, data_dir: Path, db: DatabaseManager | None = None) -> None:
         self.data_dir = data_dir
@@ -32,6 +32,11 @@ class JsonProjectRepository:
         if project_id in self._cache:
             return self._cache[project_id]
         project_file = self.project_dir / project_id / "project.json"
+        if self.db is not None and not project_file.exists():
+            with self.db.session() as session:
+                record = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+                if record is not None and record.source_path:
+                    project_file = Path(record.source_path)
         if not project_file.exists():
             return None
         project = self._load_project_file(project_file)
@@ -91,10 +96,59 @@ class JsonProjectRepository:
                         metadata_json=metadata_json,
                     )
                 )
+                session.flush()
+                project_record = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project.metadata.project_id))
+            else:
+                record.name = project.metadata.name
+                record.client = project.metadata.client
+                record.location = project.metadata.location
+                record.status = project.validation_status
+                record.source_path = str(project_file)
+                record.metadata_json = metadata_json
+                project_record = record
+
+            if project_record is None:
                 return
-            record.name = project.metadata.name
-            record.client = project.metadata.client
-            record.location = project.metadata.location
-            record.status = project.validation_status
-            record.source_path = str(project_file)
-            record.metadata_json = metadata_json
+
+            session.execute(delete(EquipmentRecord).where(EquipmentRecord.project_id == project_record.id))
+            session.execute(delete(PointRecord).where(PointRecord.project_id == project_record.id))
+            session.execute(delete(ControllerRecord).where(ControllerRecord.project_id == project_record.id))
+
+            for equipment in project.equipment:
+                session.add(
+                    EquipmentRecord(
+                        project_id=project_record.id,
+                        equipment_key=equipment.id,
+                        equipment_type=equipment.type.value,
+                        display_name=equipment.subtype or equipment.id,
+                        parent_equipment_key=equipment.parent_equipment_id,
+                        status=equipment.status,
+                        payload_json=equipment.model_dump(mode="json"),
+                    )
+                )
+
+            for point in project.points:
+                session.add(
+                    PointRecord(
+                        project_id=project_record.id,
+                        equipment_key=point.equipment_id,
+                        controller_key=point.controller_id,
+                        point_name=point.name,
+                        point_kind=point.kind.value,
+                        direction=point.direction.value,
+                        units=point.units,
+                        payload_json=point.model_dump(mode="json"),
+                    )
+                )
+
+            for controller in project.controllers:
+                primary_protocol = controller.protocols[0].value if controller.protocols else None
+                session.add(
+                    ControllerRecord(
+                        project_id=project_record.id,
+                        controller_key=controller.id,
+                        controller_type=controller.type,
+                        protocol=primary_protocol,
+                        payload_json=controller.model_dump(mode="json"),
+                    )
+                )

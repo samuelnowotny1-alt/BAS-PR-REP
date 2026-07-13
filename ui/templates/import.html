@@ -6,7 +6,7 @@
 <div class="max-w-4xl mx-auto">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Import Data</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Upload CSV files to populate project data</p>
+        <p class="text-gray-500 dark:text-gray-400 mt-1">Upload schedules and supporting engineering artifacts into the persisted ingestion pipeline</p>
     </div>
 
     <form action="/project/{{ project.metadata.project_id }}/import" hx-post="/project/{{ project.metadata.project_id }}/import" hx-target="#import-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
@@ -18,7 +18,7 @@
                     Equipment Schedule
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Equipment ID, Equipment Type. Optional: Subtype, Building, Floor, Room, Served Area, Controller ID, Parent/Child Equipment, Points, Design CFM/Tonnage/GPM/kW, Voltage, Phase, Status, Graphic Sections, Tags, Notes</p>
-                <input type="file" name="equipment_file" accept=".csv" class="input-field w-full">
+                <input type="file" name="equipment_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
             </div>
 
             <!-- Point List -->
@@ -28,7 +28,7 @@
                     Point List
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Point Name, Equipment ID, Point Kind, Direction. Optional: Units, Range Min/Max, Controller ID, BACnet/Modbus config, Source, Description, Tags</p>
-                <input type="file" name="points_file" accept=".csv" class="input-field w-full">
+                <input type="file" name="points_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
             </div>
 
             <!-- Controller Schedule -->
@@ -38,7 +38,16 @@
                     Controller Schedule
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Controller ID. Optional: Name, Vendor, Model, Firmware, Type, Protocols, IP Address, Panel Location, Serves Equipment, Owned Points, I/O Capacity, Status, Notes</p>
-                <input type="file" name="controllers_file" accept=".csv" class="input-field w-full">
+                <input type="file" name="controllers_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
+            </div>
+
+            <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center">
+                    <i class="fas fa-folder-open text-orange-500 mr-2"></i>
+                    Supporting Documents
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Upload project references such as TXT, Markdown, JSON, XML, CSV, Excel, PDF, PX, ZIP, and image files. Text-bearing documents are ingested into the knowledge index immediately; unsupported formats are still persisted and tracked for later parser expansion.</p>
+                <input type="file" name="supporting_files" accept=".txt,.md,.markdown,.json,.xml,.yaml,.yml,.csv,.xlsx,.xls,.pdf,.px,.zip,.png,.jpg,.jpeg,.gif" multiple class="input-field w-full">
             </div>
         </div>
 

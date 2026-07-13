@@ -49,11 +49,11 @@ class CSVImporter:
         count = 0
 
         try:
-            df = pd.read_csv(csv_path)
+            df = self._read_tabular_file(csv_path)
         except Exception as e:
             return ImportResult(
                 success=False,
-                message=f"Failed to read CSV: {e}",
+                message=f"Failed to read schedule: {e}",
                 errors=[str(e)],
             )
 
@@ -65,15 +65,6 @@ class CSVImporter:
                 message=f"Missing required columns: {missing}",
                 errors=[f"Missing columns: {missing}"],
             )
-
-        source_doc = SourceDocument(
-            id=source_doc_id,
-            name=csv_path.name,
-            type="equipment_schedule",
-            path=str(csv_path),
-            imported_at=datetime.now(),
-        )
-        self.project.source_documents.append(source_doc)
 
         for _, row in df.iterrows():
             try:
@@ -157,11 +148,11 @@ class CSVImporter:
         count = 0
 
         try:
-            df = pd.read_csv(csv_path)
+            df = self._read_tabular_file(csv_path)
         except Exception as e:
             return ImportResult(
                 success=False,
-                message=f"Failed to read CSV: {e}",
+                message=f"Failed to read point list: {e}",
                 errors=[str(e)],
             )
 
@@ -173,15 +164,6 @@ class CSVImporter:
                 message=f"Missing required columns: {missing}",
                 errors=[f"Missing columns: {missing}"],
             )
-
-        source_doc = SourceDocument(
-            id=source_doc_id,
-            name=csv_path.name,
-            type="point_list",
-            path=str(csv_path),
-            imported_at=datetime.now(),
-        )
-        self.project.source_documents.append(source_doc)
 
         for _, row in df.iterrows():
             try:
@@ -274,11 +256,11 @@ class CSVImporter:
         count = 0
 
         try:
-            df = pd.read_csv(csv_path)
+            df = self._read_tabular_file(csv_path)
         except Exception as e:
             return ImportResult(
                 success=False,
-                message=f"Failed to read CSV: {e}",
+                message=f"Failed to read controller schedule: {e}",
                 errors=[str(e)],
             )
 
@@ -378,6 +360,14 @@ class CSVImporter:
             errors=errors,
             warnings=warnings,
         )
+
+    def _read_tabular_file(self, file_path: Path) -> pd.DataFrame:
+        suffix = file_path.suffix.lower()
+        if suffix == ".csv":
+            return pd.read_csv(file_path)
+        if suffix in {".xlsx", ".xls", ".xlsm"}:
+            return pd.read_excel(file_path)
+        raise ValueError(f"Unsupported tabular format: {suffix or 'unknown'}")
 
     def _parse_float(self, value) -> float | None:
         if value is None or (isinstance(value, float) and pd.isna(value)):
