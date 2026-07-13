@@ -699,6 +699,41 @@ def test_import_data_without_uploaded_files_redirects() -> None:
     assert response.headers["location"] == f"/project/{project_id}?imported=1"
 
 
+def test_import_page_renders_recent_ingestion_outcomes_and_parser_support() -> None:
+    project_id = create_project("import-page-project")
+    project = main.get_project(project_id)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="notes.txt", file=BytesIO(b"sequence notes")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    task_id = main.container.tasks.create_task(
+        project_id=project_id,
+        task_type="artifact_ingestion",
+        payload={"filename": "notes.txt"},
+    )
+    main.container.tasks.complete_task(
+        task_id,
+        result={
+            "knowledge_status": "indexed",
+            "chunk_count": 1,
+        },
+    )
+    main.save_project(project)
+
+    response = run_async(main.import_page(request(f"/project/{project_id}/import"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Latest Ingestion Outcomes" in text
+    assert "Knowledge status: indexed" in text
+    assert "Recent Project Uploads" in text
+    assert "stored only" in text
+
+
 def test_load_demo_returns_htmx_redirect_header() -> None:
     response = run_async(
         main.api_load_demo(

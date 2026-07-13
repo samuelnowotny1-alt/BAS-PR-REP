@@ -1235,9 +1235,21 @@ async def apply_equipment_graphics_preset(
 @app.get("/project/{project_id}/import", response_class=HTMLResponse)
 async def import_page(request: Request, project_id: str):
     project = get_project(project_id)
+    recent_uploads = container.uploads.list_recent_uploads(project_id=project_id, limit=8)
     return templates.TemplateResponse(request=request, name="import.html", context={
         "project": project,
-        "recent_uploads": container.uploads.list_recent_uploads(project_id=project_id, limit=8),
+        "recent_uploads": recent_uploads,
+        "recent_upload_views": [
+            {
+                "filename": upload.filename,
+                "category": upload.category,
+                "status": upload.status,
+                "created_at": upload.created_at,
+                "parser_supported": container.parsers.can_parse(Path(upload.stored_path)),
+            }
+            for upload in recent_uploads
+        ],
+        "import_status_view": container.project_queries.import_status_view(project_id),
     })
 
 

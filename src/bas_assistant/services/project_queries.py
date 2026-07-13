@@ -387,6 +387,32 @@ class ProjectQueryService:
             ],
         }
 
+    def import_status_view(self, project_id: str) -> dict[str, object] | None:
+        """Return recent import and artifact-ingestion status for the import workspace."""
+        with self.db.session() as session:
+            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            if project is None:
+                return None
+            tasks = list(
+                session.scalars(
+                    select(TaskRecord)
+                    .where(
+                        TaskRecord.project_id == project.id,
+                        TaskRecord.task_type.in_(("equipment_import", "points_import", "controllers_import", "artifact_ingestion")),
+                    )
+                    .order_by(TaskRecord.updated_at.desc(), TaskRecord.created_at.desc())
+                    .limit(12)
+                )
+            )
+        task_views = [self._task_to_view(task) for task in tasks]
+        return {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "tasks": task_views,
+            "warning_count": sum(len(task["warning_messages"]) for task in task_views),
+            "error_count": sum(len(task["error_messages"]) for task in task_views),
+        }
+
     def memberships_view(self, project_id: str) -> dict[str, object] | None:
         """Return project membership management data."""
         with self.db.session() as session:
