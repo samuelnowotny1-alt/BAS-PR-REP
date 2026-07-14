@@ -247,6 +247,7 @@ class ProjectQueryService:
                     .order_by(PointRecord.point_name)
                 )
             )
+            artifact_links = self._artifact_links_for_entity(session, project.id, "equipment", equipment_id)
         payload = dict(record.payload_json or {})
         review = self._build_equipment_review(payload, linked_points_count=len(point_records))
         return {
@@ -256,6 +257,7 @@ class ProjectQueryService:
             "subtitle": record.equipment_type,
             "payload": payload,
             "linked_points": [point.point_name for point in point_records],
+            "artifact_links": artifact_links,
             "review": review,
         }
 
@@ -273,6 +275,7 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
+            artifact_links = self._artifact_links_for_entity(session, project.id, "point", point_name)
         payload = dict(record.payload_json or {})
         related = []
         if payload.get("equipment_id"):
@@ -287,6 +290,7 @@ class ProjectQueryService:
             "subtitle": record.point_kind,
             "payload": payload,
             "linked_points": [],
+            "artifact_links": artifact_links,
             "related_entities": related,
             "review": review,
         }
@@ -305,6 +309,7 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
+            artifact_links = self._artifact_links_for_entity(session, project.id, "controller", controller_id)
         payload = dict(record.payload_json or {})
         related = [
             {"entity_type": "equipment", "entity_key": equipment_id}
@@ -318,6 +323,7 @@ class ProjectQueryService:
             "subtitle": record.controller_type or "controller",
             "payload": payload,
             "linked_points": list(payload.get("owned_point_names", [])),
+            "artifact_links": artifact_links,
             "related_entities": related,
             "review": review,
         }
@@ -1029,24 +1035,33 @@ class ProjectQueryService:
             project = self._project_record(session, project_id)
             if project is None:
                 return []
-            rows = list(
-                session.execute(
-                    select(
-                        ArtifactObjectLinkRecord.parser_name,
-                        ArtifactObjectLinkRecord.relationship_type,
-                        ArtifactObjectLinkRecord.metadata_json,
-                        DocumentRecord.name,
-                        DocumentRecord.document_type,
-                    )
-                    .join(DocumentRecord, ArtifactObjectLinkRecord.document_id == DocumentRecord.id)
-                    .where(
-                        ArtifactObjectLinkRecord.project_id == project.id,
-                        ArtifactObjectLinkRecord.entity_type == entity_type,
-                        ArtifactObjectLinkRecord.entity_key == entity_key,
-                    )
-                    .order_by(ArtifactObjectLinkRecord.created_at.desc())
+            return self._artifact_links_for_entity(session, project.id, entity_type, entity_key)
+
+    def _artifact_links_for_entity(
+        self,
+        session,
+        project_db_id: int,
+        entity_type: str,
+        entity_key: str,
+    ) -> list[dict[str, object]]:
+        rows = list(
+            session.execute(
+                select(
+                    ArtifactObjectLinkRecord.parser_name,
+                    ArtifactObjectLinkRecord.relationship_type,
+                    ArtifactObjectLinkRecord.metadata_json,
+                    DocumentRecord.name,
+                    DocumentRecord.document_type,
                 )
+                .join(DocumentRecord, ArtifactObjectLinkRecord.document_id == DocumentRecord.id)
+                .where(
+                    ArtifactObjectLinkRecord.project_id == project_db_id,
+                    ArtifactObjectLinkRecord.entity_type == entity_type,
+                    ArtifactObjectLinkRecord.entity_key == entity_key,
+                )
+                .order_by(ArtifactObjectLinkRecord.created_at.desc())
             )
+        )
         return [
             {
                 "parser_name": parser_name,

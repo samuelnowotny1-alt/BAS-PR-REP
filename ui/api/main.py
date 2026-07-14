@@ -1032,7 +1032,6 @@ async def equipment_detail_page(request: Request, project_id: str, equipment_id:
     detail = container.project_queries.equipment_detail(project_id, equipment_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Equipment not found")
-    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "equipment", equipment_id)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
@@ -1061,7 +1060,6 @@ async def point_detail_page(request: Request, project_id: str, point_name: str):
     detail = container.project_queries.point_detail(project_id, point_name)
     if detail is None:
         raise HTTPException(status_code=404, detail="Point not found")
-    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "point", point_name)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
@@ -1090,7 +1088,6 @@ async def controller_detail_page(request: Request, project_id: str, controller_i
     detail = container.project_queries.controller_detail(project_id, controller_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Controller not found")
-    detail["artifact_links"] = container.project_queries.artifact_links_for_entity(project_id, "controller", controller_id)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
