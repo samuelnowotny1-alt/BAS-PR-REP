@@ -192,6 +192,7 @@
                             data-message="{{ finding.message }}"
                             data-remediation="{{ finding.remediation }}"
                             data-fix-group="{{ finding.fix_group }}"
+                            data-object-url="{{ finding.object_url }}"
                             data-title="{{ finding.title }}"
                             data-search="{{ search_text }}"
                         >
@@ -210,7 +211,12 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200">
                                 <p class="font-medium text-gray-800 dark:text-white">{{ finding.object_id }}</p>
-                                <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ finding.object_type }}</p>
+                                <div class="mt-1 flex flex-wrap items-center gap-2">
+                                    <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ finding.object_type }}</p>
+                                    {% if finding.sequence_related == 'true' %}
+                                    <span class="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-purple-700 dark:bg-purple-900/30 dark:text-purple-200">Sequence</span>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">{{ finding.rule_id }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ finding.category.replace('_', ' ')|title }}</td>
@@ -278,6 +284,9 @@
                         <div class="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-200">
                             <p id="validation-detail-remediation"></p>
                         </div>
+                    </div>
+                    <div>
+                        <a id="validation-detail-object-link" href="#" class="text-sm font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200">Open object detail</a>
                     </div>
                 </div>
             </div>
@@ -348,6 +357,7 @@
         const detailField = document.getElementById("validation-detail-field");
         const detailMessage = document.getElementById("validation-detail-message");
         const detailRemediation = document.getElementById("validation-detail-remediation");
+        const detailObjectLink = document.getElementById("validation-detail-object-link");
 
         const state = {
             groupValue: "all",
@@ -379,7 +389,7 @@
         };
 
         const setSelectedRow = (row) => {
-            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage || !detailRemediation) {
+            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage || !detailRemediation || !detailObjectLink) {
                 return;
             }
 
@@ -405,6 +415,8 @@
             detailField.textContent = row.dataset.field || "—";
             detailMessage.textContent = row.dataset.message || "";
             detailRemediation.textContent = row.dataset.remediation || "Review this finding and correct the source data before generation.";
+            detailObjectLink.href = row.dataset.objectUrl || "#";
+            detailObjectLink.classList.toggle("hidden", !(row.dataset.objectUrl));
 
             detailEmpty.classList.add("hidden");
             detailPanel.classList.remove("hidden");

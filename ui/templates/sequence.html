@@ -9,6 +9,122 @@
         <p class="text-gray-500 dark:text-gray-400 mt-1">Parse natural language sequences into structured logic requirements</p>
     </div>
 
+    {% if sequence_workspace and sequence_workspace.summary.equipment_count %}
+    <div class="mb-8 space-y-6">
+        <div class="rounded-[1.75rem] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.12),_transparent_45%),linear-gradient(135deg,_#f8fafc,_#eef6ff)] p-6 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_40%),linear-gradient(135deg,_rgba(15,23,42,0.95),_rgba(17,24,39,0.98))]">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-2xl">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Sequence Coverage Board</p>
+                    <h2 class="mt-2 text-2xl font-bold text-slate-900 dark:text-white">Review imported sequence intent against structured points before logic generation.</h2>
+                    <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">This board shows which sequence-referenced points exist, which are missing, and whether control intent still lacks command, proof, setpoint, or alarm coverage.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a href="/project/{{ project.metadata.project_id }}/validate" class="btn-secondary">Open Validation Report</a>
+                    <a href="/project/{{ project.metadata.project_id }}/equipment" class="btn-secondary">Open Equipment</a>
+                </div>
+            </div>
+            <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <div class="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Tracked Equipment</p>
+                    <p class="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{{ sequence_workspace.summary.equipment_count }}</p>
+                </div>
+                <div class="rounded-2xl border border-yellow-200 bg-yellow-50/90 p-4 dark:border-yellow-900 dark:bg-yellow-900/20">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-yellow-700 dark:text-yellow-300">Needs Attention</p>
+                    <p class="mt-2 text-3xl font-bold text-yellow-800 dark:text-yellow-200">{{ sequence_workspace.summary.attention }}</p>
+                </div>
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50/90 p-4 dark:border-emerald-900 dark:bg-emerald-900/20">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Covered</p>
+                    <p class="mt-2 text-3xl font-bold text-emerald-800 dark:text-emerald-200">{{ sequence_workspace.summary.covered }}</p>
+                </div>
+                <div class="rounded-2xl border border-orange-200 bg-orange-50/90 p-4 dark:border-orange-900 dark:bg-orange-900/20">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700 dark:text-orange-300">Missing Refs</p>
+                    <p class="mt-2 text-3xl font-bold text-orange-800 dark:text-orange-200">{{ sequence_workspace.summary.missing_refs }}</p>
+                </div>
+                <div class="rounded-2xl border border-rose-200 bg-rose-50/90 p-4 dark:border-rose-900 dark:bg-rose-900/20">
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-rose-700 dark:text-rose-300">Missing Checks</p>
+                    <p class="mt-2 text-3xl font-bold text-rose-800 dark:text-rose-200">{{ sequence_workspace.summary.missing_checks }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid gap-4">
+            {% for review in sequence_reviews %}
+            <div class="rounded-[1.5rem] border px-5 py-5 shadow-sm {% if review.status == 'covered' %}border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-900/20{% elif review.status == 'attention' %}border-yellow-200 bg-yellow-50/80 dark:border-yellow-900 dark:bg-yellow-900/20{% else %}border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40{% endif %}">
+                <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ review.equipment_id }}</h3>
+                            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if review.status == 'covered' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% elif review.status == 'attention' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300{% else %}bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300{% endif %}">{{ review.status.replace('_', ' ') }}</span>
+                            <span class="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{{ review.sequence_ref }}</span>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{{ review.summary }}</p>
+                        {% if review.documents %}
+                        <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Indexed from {{ review.documents|join(', ') }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{{ review.equipment_url }}" class="btn-secondary">Open Equipment</a>
+                        <a href="{{ review.validation_url }}" class="btn-secondary">Validation</a>
+                    </div>
+                </div>
+
+                <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-950/40">
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Missing Referenced Points</p>
+                            {% if review.missing_refs %}
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for ref in review.missing_refs %}
+                                <span class="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-medium text-yellow-700 dark:border-yellow-900 dark:bg-yellow-900/20 dark:text-yellow-300">{{ ref }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">No sequence-referenced points are missing.</p>
+                            {% endif %}
+                        </div>
+                        <div class="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-950/40">
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Matched Structured Points</p>
+                            {% if review.matched_refs %}
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for ref in review.matched_refs %}
+                                <span class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-300">{{ ref }}</span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="mt-3 text-sm text-slate-600 dark:text-slate-300">No structured point references are matched yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-950/40">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Control Intent Checks</p>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">{{ review.required_check_count - review.missing_check_count }}/{{ review.required_check_count }} covered</span>
+                        </div>
+                        <div class="mt-3 space-y-2">
+                            {% for check in review.coverage_checks %}
+                            {% if check.required %}
+                            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-900">
+                                <div class="flex items-start justify-between gap-3">
+                                    <p class="text-sm font-medium text-slate-900 dark:text-white">{{ check.label }}</p>
+                                    <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] {% if check.passed %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300{% endif %}">{{ "covered" if check.passed else "missing" }}</span>
+                                </div>
+                                <p class="mt-2 text-xs {% if check.passed %}text-emerald-700 dark:text-emerald-300{% else %}text-slate-600 dark:text-slate-300{% endif %}">{{ "Structured points already cover this control intent." if check.passed else check.missing }}</p>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if review.required_check_count == 0 %}
+                            <p class="text-sm text-slate-600 dark:text-slate-300">No control-intent checks were extracted from the indexed sequence context.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Parser Form -->
     <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
         <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-6">Parse Sequence</h2>

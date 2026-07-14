@@ -2,6 +2,7 @@
 
 from datetime import datetime
 import re
+from pathlib import Path
 
 from pydantic import BaseModel, Field
 
@@ -10,7 +11,9 @@ from ..models import (
     Equipment,
     Point,
     PointKind,
+    PointSource,
     Project,
+    SourceDocument,
     ValidationCategory,
     ValidationSeverity,
 )
@@ -168,6 +171,22 @@ BUILTIN_RULES: list[ValidationRule] = [
         applies_to=["controller"],
     ),
     ValidationRule(
+        rule_id="COMP-007",
+        name="Sequence references are represented by points",
+        category=ValidationCategory.COMPLETENESS,
+        severity=ValidationSeverity.WARNING,
+        description="Equipment sequence references should map to structured points in the project",
+        applies_to=["equipment"],
+    ),
+    ValidationRule(
+        rule_id="COMP-008",
+        name="Sequence-derived points have source traceability",
+        category=ValidationCategory.COMPLETENESS,
+        severity=ValidationSeverity.WARNING,
+        description="Points imported from sequences should retain source reference metadata",
+        applies_to=["point"],
+    ),
+    ValidationRule(
         rule_id="COMP-005",
         name="Equipment has points",
         category=ValidationCategory.COMPLETENESS,
@@ -192,6 +211,14 @@ BUILTIN_RULES: list[ValidationRule] = [
         severity=ValidationSeverity.ERROR,
         description="Controller's served equipment must exist",
         applies_to=["controller"],
+    ),
+    ValidationRule(
+        rule_id="CONS-006",
+        name="Sequence control intent has matching point coverage",
+        category=ValidationCategory.CONSISTENCY,
+        severity=ValidationSeverity.WARNING,
+        description="Sequence-driven control intent should have command, status, setpoint, and alarm point coverage where referenced",
+        applies_to=["equipment"],
     ),
     ValidationRule(
         rule_id="CONS-003",
@@ -326,11 +353,13 @@ class ValidationEngine:
     def __init__(self, rules: list[ValidationRule] | None = None):
         self.rules = rules or BUILTIN_RULES
         self.enabled_rules = [r for r in self.rules if r.enabled]
+        self._sequence_index: dict[str, dict[str, object]] = {}
 
     def validate(self, project: Project) -> ValidationReport:
         """Run all validation rules on a project."""
         report = ValidationReport(project_id=project.metadata.project_id)
         report.total_rules_run = len(self.enabled_rules)
+        self._sequence_index = self._build_sequence_index(project)
 
         # Run project-level rules
         for rule in self.enabled_rules:
@@ -376,6 +405,202 @@ class ValidationEngine:
 
     def _looks_like_flow_point(self, point: Point) -> bool:
         return bool(self._name_tokens(point.name) & FLOW_TOKENS)
+
+    def _normalize_point_ref(self, value: str) -> str:
+        return re.sub(r"\s+", " ", value.replace("_", " ").strip().upper())
+
+    def _equipment_point_refs(self, project: Project, equipment_id: str) -> set[str]:
+        refs: set[str] = set()
+        for point in project.get_points_for_equipment(equipment_id):
+            normalized = self._normalize_point_ref(point.name)
+            refs.add(normalized)
+            if normalized.startswith(f"{equipment_id} "):
+                refs.add(normalized[len(equipment_id) + 1:])
+        return refs
+
+    def _point_suffixes(self, project: Project, equipment_id: str) -> set[str]:
+        return {
+            self._normalize_point_ref(point.name).split(" ", 1)[-1]
+            for point in project.get_points_for_equipment(equipment_id)
+        }
+
+    def _is_sequence_document(self, document: SourceDocument) -> bool:
+        doc_type = str(document.type or "").lower()
+        doc_name = str(document.name or "").lower()
+        return "sequence" in doc_type or "sequence" in doc_name
+
+    def _sequence_equipment_candidates(
+        self,
+        project: Project,
+        document: SourceDocument,
+        text: str,
+    ) -> set[str]:
+        doc_name = str(document.name or "").upper()
+        doc_path = str(document.path or "").upper()
+        text_upper = text.upper()
+        candidates = {
+            equipment.id
+            for equipment in project.equipment
+            if equipment.id.upper() in doc_name or equipment.id.upper() in doc_path or equipment.id.upper() in text_upper
+        }
+        for equipment in project.equipment:
+            sequence_ref = str(equipment.sequence_ref or "").upper()
+            if sequence_ref and (sequence_ref in doc_name or sequence_ref in doc_path):
+                candidates.add(equipment.id)
+        if not candidates and len(project.equipment) == 1:
+            candidates.add(project.equipment[0].id)
+        return candidates
+
+    def _build_sequence_index(self, project: Project) -> dict[str, dict[str, object]]:
+        from ..reasoning.sequence_parser import SequenceParser
+
+        sequence_parser = SequenceParser()
+        index: dict[str, dict[str, object]] = {}
+        for document in project.source_documents:
+            if not self._is_sequence_document(document) or not document.path:
+                continue
+            file_path = Path(document.path)
+            if not file_path.exists():
+                continue
+            try:
+                text = file_path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                text = file_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            parsed = sequence_parser.parse(text)
+            point_refs = {
+                self._normalize_point_ref(reference)
+                for requirement in parsed.requirements
+                for reference in requirement.points_referenced
+                if reference
+            }
+            requirement_types = {
+                requirement.requirement_type
+                for requirement in parsed.requirements
+            }
+            for equipment_id in self._sequence_equipment_candidates(project, document, text):
+                entry = index.setdefault(
+                    equipment_id,
+                    {
+                        "documents": [],
+                        "point_refs": set(),
+                        "requirement_types": set(),
+                    },
+                )
+                entry["documents"].append(document.name)
+                entry["point_refs"].update(point_refs)
+                entry["requirement_types"].update(requirement_types)
+        return index
+
+    def sequence_coverage_for_equipment(
+        self,
+        project: Project,
+        equipment_id: str,
+        *,
+        point_refs: set[str] | None = None,
+        requirement_type_values: set[str] | None = None,
+        documents: list[str] | None = None,
+    ) -> dict[str, object]:
+        if point_refs is None or requirement_type_values is None:
+            if not self._sequence_index:
+                self._sequence_index = self._build_sequence_index(project)
+            sequence_data = self._sequence_index.get(equipment_id)
+            if not sequence_data:
+                return {
+                    "equipment_id": equipment_id,
+                    "status": "not_indexed",
+                    "documents": [],
+                    "point_refs": [],
+                    "matched_refs": [],
+                    "missing_refs": [],
+                    "requirement_types": [],
+                    "coverage_checks": [],
+                    "summary": "No indexed sequence context found for this equipment.",
+                }
+            point_refs = set(sequence_data["point_refs"])
+            requirement_type_values = {
+                str(requirement_type.value)
+                for requirement_type in sequence_data["requirement_types"]
+            }
+            documents = [str(document) for document in sequence_data["documents"]]
+        else:
+            point_refs = {self._normalize_point_ref(reference) for reference in point_refs if reference}
+            requirement_type_values = {str(value) for value in requirement_type_values if value}
+            documents = [str(document) for document in (documents or [])]
+
+        equipment_refs = self._equipment_point_refs(project, equipment_id)
+        matched_refs = sorted(reference for reference in point_refs if reference in equipment_refs)
+        missing_refs = sorted(reference for reference in point_refs if reference not in equipment_refs)
+        point_suffixes = self._point_suffixes(project, equipment_id)
+
+        coverage_checks = []
+
+        def add_check(label: str, required: bool, passed: bool, missing: str) -> None:
+            coverage_checks.append(
+                {
+                    "label": label,
+                    "required": required,
+                    "passed": passed if required else True,
+                    "missing": missing if required and not passed else "",
+                }
+            )
+
+        requires_start_stop = "start_stop" in requirement_type_values
+        requires_pid = "pid" in requirement_type_values
+        requires_alarm = "alarm" in requirement_type_values
+
+        add_check(
+            "Command point",
+            requires_start_stop,
+            any(token in point_suffixes for token in {"SF-CMD", "CMD", "START-CMD"}),
+            "Add a command point such as `SF-CMD` for sequence-driven enable/disable control.",
+        )
+        add_check(
+            "Status/proof point",
+            requires_start_stop,
+            any(token in point_suffixes for token in {"SF-STS", "STATUS", "STS", "PRF"}),
+            "Add a status or proof point such as `SF-STS` or `PRF` for run verification.",
+        )
+        add_check(
+            "Setpoint point",
+            requires_pid,
+            any(token.endswith("SP") or token.endswith("SETPOINT") for token in point_suffixes),
+            "Add a setpoint point so PID intent from the sequence is represented in structured data.",
+        )
+        add_check(
+            "Alarm/fault point",
+            requires_alarm,
+            any("ALM" in token or "FLT" in token for token in point_suffixes),
+            "Add an alarm or fault point so alarm intent from the sequence is represented in structured data.",
+        )
+
+        actionable_checks = [check for check in coverage_checks if check["required"]]
+        missing_check_count = sum(1 for check in actionable_checks if not check["passed"])
+
+        if not point_refs and not actionable_checks:
+            status = "not_indexed"
+            summary = "No explicit point references or control intent were extracted from the available sequence context."
+        elif missing_refs or missing_check_count:
+            status = "attention"
+            summary = (
+                f"{len(missing_refs)} referenced points and {missing_check_count} control coverage checks still need work."
+            )
+        else:
+            status = "covered"
+            summary = "Structured points cover the indexed sequence references and control intent."
+
+        return {
+            "equipment_id": equipment_id,
+            "status": status,
+            "documents": documents,
+            "point_refs": sorted(point_refs),
+            "matched_refs": matched_refs,
+            "missing_refs": missing_refs,
+            "requirement_types": sorted(requirement_type_values),
+            "coverage_checks": coverage_checks,
+            "summary": summary,
+        }
 
     def _run_project_rule(self, project: Project, rule: ValidationRule, report: ValidationReport) -> None:
         if rule.rule_id == "CONS-003":
@@ -469,6 +694,86 @@ class ValidationEngine:
                 message=f"Equipment '{equipment.id}' has no points" if not passed else f"Equipment has {len(points)} points",
                 passed=passed,
             ))
+        elif rule.rule_id == "COMP-007":
+            sequence_data = self._sequence_index.get(equipment.id)
+            if not sequence_data or not sequence_data["point_refs"]:
+                report.add_result(ValidationResult(
+                    object_type="equipment",
+                    object_id=equipment.id,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="sequence_ref",
+                    message="No explicit sequence point references were indexed for this equipment",
+                    passed=True,
+                ))
+            else:
+                equipment_refs = self._equipment_point_refs(project, equipment.id)
+                missing_refs = sorted(
+                    reference
+                    for reference in sequence_data["point_refs"]
+                    if reference not in equipment_refs
+                )
+                passed = len(missing_refs) == 0
+                report.add_result(ValidationResult(
+                    object_type="equipment",
+                    object_id=equipment.id,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="point_names",
+                    message=(
+                        f"Sequence references for '{equipment.id}' are missing structured points: {', '.join(missing_refs)}"
+                        if not passed
+                        else "Structured points cover the indexed sequence references"
+                    ),
+                    passed=passed,
+                ))
+        elif rule.rule_id == "CONS-006":
+            sequence_data = self._sequence_index.get(equipment.id)
+            if not sequence_data:
+                report.add_result(ValidationResult(
+                    object_type="equipment",
+                    object_id=equipment.id,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="sequence_ref",
+                    message="No sequence control intent was indexed for this equipment",
+                    passed=True,
+                ))
+            else:
+                points = project.get_points_for_equipment(equipment.id)
+                point_suffixes = {
+                    self._normalize_point_ref(point.name).split(" ", 1)[-1]
+                    for point in points
+                }
+                missing_coverage: list[str] = []
+                requirement_types = set(sequence_data["requirement_types"])
+                requirement_type_values = {str(requirement_type.value) for requirement_type in requirement_types}
+                if "start_stop" in requirement_type_values and not any(token in point_suffixes for token in {"SF-CMD", "CMD", "START-CMD"}):
+                    missing_coverage.append("command point")
+                if "start_stop" in requirement_type_values and not any(token in point_suffixes for token in {"SF-STS", "STATUS", "STS", "PRF"}):
+                    missing_coverage.append("status/proof point")
+                if "pid" in requirement_type_values and not any(token.endswith("SP") or token.endswith("SETPOINT") for token in point_suffixes):
+                    missing_coverage.append("setpoint point")
+                if "alarm" in requirement_type_values and not any("ALM" in token or "FLT" in token for token in point_suffixes):
+                    missing_coverage.append("alarm/fault point")
+                passed = len(missing_coverage) == 0
+                report.add_result(ValidationResult(
+                    object_type="equipment",
+                    object_id=equipment.id,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="point_names",
+                    message=(
+                        f"Sequence control intent for '{equipment.id}' is missing {', '.join(missing_coverage)} coverage"
+                        if not passed
+                        else "Structured points cover indexed sequence control intent"
+                    ),
+                    passed=passed,
+                ))
 
     def _run_point_rule(self, project: Project, point: Point, rule: ValidationRule, report: ValidationReport) -> None:
         if rule.rule_id == "NAMING-002":
@@ -532,6 +837,34 @@ class ValidationEngine:
                 ),
                 passed=passed,
             ))
+        elif rule.rule_id == "COMP-008":
+            if point.source != PointSource.SEQUENCE:
+                report.add_result(ValidationResult(
+                    object_type="point",
+                    object_id=point.name,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="source_reference",
+                    message="Point is not sequence-derived",
+                    passed=True,
+                ))
+            else:
+                passed = bool(point.source_reference)
+                report.add_result(ValidationResult(
+                    object_type="point",
+                    object_id=point.name,
+                    rule_id=rule.rule_id,
+                    severity=rule.severity,
+                    category=rule.category,
+                    field="source_reference",
+                    message=(
+                        f"Sequence-derived point '{point.name}' is missing source reference traceability"
+                        if not passed
+                        else "Sequence-derived point retains source reference traceability"
+                    ),
+                    passed=passed,
+                ))
         elif rule.rule_id == "CONS-001":
             resolved_equipment_id = project.effective_point_equipment_id(point)
             resolved_controller_id = project.effective_point_controller_id(point)

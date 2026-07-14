@@ -1057,11 +1057,14 @@ def validation_remediation_for_rule(rule_id: str, field: str) -> tuple[str, str]
         "COMP-004": ("Review whether the controller should own points yet; otherwise add the missing point ownership.", "controller_completeness"),
         "COMP-005": ("Add at least one relevant point to the equipment or confirm the equipment record is incomplete.", "equipment_completeness"),
         "COMP-006": ("Add the controller network address that matches its declared network protocol.", "networking"),
+        "COMP-007": ("Map every sequence-referenced point into the structured point list for the equipment before generation.", "sequence_coverage"),
+        "COMP-008": ("Keep source reference metadata on sequence-derived points so reviewers can trace them back to the sequence text.", "sequence_traceability"),
         "CONS-001": ("Align the point controller with the resolved equipment controller or update the mapping decision.", "controller_assignment"),
         "CONS-002": ("Remove stale served-equipment references or add the missing equipment objects.", "equipment_linkage"),
         "CONS-003": ("Deduplicate point names so each point is unique within the project.", "deduplication"),
         "CONS-004": ("Deduplicate equipment IDs so each equipment object is unique within the project.", "deduplication"),
         "CONS-005": ("Deduplicate controller IDs so each controller object is unique within the project.", "deduplication"),
+        "CONS-006": ("Add the missing command, status, setpoint, or alarm points needed to cover the indexed sequence control intent.", "sequence_coverage"),
         "ENG-001": ("Set a valid engineering range where the minimum is less than the maximum.", "engineering_ranges"),
         "ENG-002": ("Use temperature units like `degF` or `degC` for temperature-related points.", "units"),
         "ENG-003": ("Use pressure units like `inWC`, `psi`, or `Pa` for pressure-related points.", "units"),
@@ -1079,10 +1082,22 @@ def validation_remediation_for_rule(rule_id: str, field: str) -> tuple[str, str]
     return remediation_map.get(rule_id, ("Review the referenced object and correct the source data or mapping before generation.", default_group))
 
 
-def serialize_validation_findings(report) -> list[dict[str, str]]:
+def validation_object_url(project_id: str, finding) -> str:
+    object_type = str(finding.object_type)
+    if object_type == "equipment":
+        return f"/project/{project_id}/equipment/{finding.object_id}"
+    if object_type == "point":
+        return f"/project/{project_id}/points/{finding.object_id}"
+    if object_type == "controller":
+        return f"/project/{project_id}/controllers/{finding.object_id}"
+    return f"/project/{project_id}/validate"
+
+
+def serialize_validation_findings(report, project_id: str | None = None) -> list[dict[str, str]]:
     findings = []
     for finding in report.errors + report.warnings + report.infos:
         remediation, fix_group = validation_remediation_for_rule(finding.rule_id, finding.field or "")
+        rule_family = finding.rule_id.split("-", 1)[0].lower()
         findings.append(
             {
                 "severity": finding.severity.value,
@@ -1095,6 +1110,9 @@ def serialize_validation_findings(report) -> list[dict[str, str]]:
                 "title": f"{finding.rule_id} · {finding.object_id}",
                 "remediation": remediation,
                 "fix_group": fix_group,
+                "rule_family": rule_family,
+                "sequence_related": "true" if fix_group.startswith("sequence") else "false",
+                "object_url": validation_object_url(project_id, finding) if project_id else "",
             }
         )
     return findings
@@ -1103,7 +1121,7 @@ def serialize_validation_findings(report) -> list[dict[str, str]]:
 def build_generation_readiness(project: Project) -> dict[str, object]:
     engine = ValidationEngine()
     report = engine.validate(project)
-    findings = serialize_validation_findings(report)
+    findings = serialize_validation_findings(report, project.metadata.project_id)
     release = review_release_state(project)
     blockers: list[str] = []
     cautions: list[str] = []
@@ -1135,7 +1153,7 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
 def object_validation_context(project: Project, detail: dict[str, object]) -> dict[str, object]:
     engine = ValidationEngine()
     report = engine.validate(project)
-    findings = serialize_validation_findings(report)
+    findings = serialize_validation_findings(report, project.metadata.project_id)
     entity_type = str(detail["entity_type"])
     title = str(detail["title"])
     related_ids = {title}
@@ -1164,6 +1182,12 @@ def object_validation_context(project: Project, detail: dict[str, object]) -> di
         for finding in relevant
         if finding["object_type"] == entity_type and finding["object_id"] == title
     ]
+    fix_groups = sorted({finding["fix_group"] for finding in relevant})
+    sequence_review = (
+        engine.sequence_coverage_for_equipment(project, title)
+        if entity_type == "equipment"
+        else None
+    )
     errors = sum(1 for finding in relevant if finding["severity"] == "error")
     warnings = sum(1 for finding in relevant if finding["severity"] == "warning")
     status = "blocked" if errors else ("attention" if warnings else "ready")
@@ -1175,7 +1199,75 @@ def object_validation_context(project: Project, detail: dict[str, object]) -> di
         "direct_result_count": len(direct),
         "findings": relevant[:12],
         "direct_findings": direct[:8],
+        "fix_groups": fix_groups,
+        "sequence_review": sequence_review,
         "detail_url": f"/project/{project.metadata.project_id}/validate",
+    }
+
+
+def build_sequence_review(project: Project, equipment_id: str, parsed_sequence=None) -> dict[str, object]:
+    engine = ValidationEngine()
+    if parsed_sequence is None:
+        engine.validate(project)
+        return engine.sequence_coverage_for_equipment(project, equipment_id)
+
+    point_refs = {
+        str(reference)
+        for requirement in parsed_sequence.requirements
+        for reference in requirement.points_referenced
+        if reference
+    }
+    requirement_type_values = {
+        str(requirement.requirement_type.value)
+        for requirement in parsed_sequence.requirements
+    }
+    return engine.sequence_coverage_for_equipment(
+        project,
+        equipment_id,
+        point_refs=point_refs,
+        requirement_type_values=requirement_type_values,
+        documents=["Ad hoc sequence parse"],
+    )
+
+
+def build_sequence_workspace(project: Project) -> dict[str, object]:
+    engine = ValidationEngine()
+    engine.validate(project)
+    reviews = []
+    for equipment in project.equipment:
+        if not equipment.sequence_ref:
+            continue
+        review = engine.sequence_coverage_for_equipment(project, equipment.id)
+        review["equipment_url"] = f"/project/{project.metadata.project_id}/equipment/{equipment.id}"
+        review["validation_url"] = f"/project/{project.metadata.project_id}/validate"
+        review["sequence_ref"] = equipment.sequence_ref or ""
+        review["required_check_count"] = sum(1 for check in review["coverage_checks"] if check["required"])
+        review["missing_check_count"] = sum(
+            1 for check in review["coverage_checks"] if check["required"] and not check["passed"]
+        )
+        review["matched_ref_count"] = len(review["matched_refs"])
+        review["missing_ref_count"] = len(review["missing_refs"])
+        reviews.append(review)
+
+    status_order = {"attention": 0, "not_indexed": 1, "covered": 2}
+    reviews.sort(
+        key=lambda review: (
+            status_order.get(str(review["status"]), 3),
+            -int(review["missing_ref_count"]),
+            str(review["equipment_id"]),
+        )
+    )
+    summary = {
+        "equipment_count": len(reviews),
+        "covered": sum(1 for review in reviews if review["status"] == "covered"),
+        "attention": sum(1 for review in reviews if review["status"] == "attention"),
+        "not_indexed": sum(1 for review in reviews if review["status"] == "not_indexed"),
+        "missing_refs": sum(int(review["missing_ref_count"]) for review in reviews),
+        "missing_checks": sum(int(review["missing_check_count"]) for review in reviews),
+    }
+    return {
+        "summary": summary,
+        "reviews": reviews,
     }
 
 
@@ -1963,7 +2055,7 @@ async def validate_page(request: Request, project_id: str):
         "project": project,
         "validation_report": report,
         "validation_summary": report.summary,
-        "validation_findings": serialize_validation_findings(report),
+        "validation_findings": serialize_validation_findings(report, project_id),
     })
 
 
@@ -1985,7 +2077,7 @@ async def validation_report_csv_export(project_id: str):
     project = get_project(project_id)
     engine = ValidationEngine()
     report = engine.validate(project)
-    findings = serialize_validation_findings(report)
+    findings = serialize_validation_findings(report, project_id)
 
     buffer = StringIO()
     writer = csv.DictWriter(
@@ -2400,8 +2492,11 @@ async def probe_station_sync(
 @app.get("/project/{project_id}/sequence", response_class=HTMLResponse)
 async def sequence_page(request: Request, project_id: str):
     project = get_project(project_id)
+    sequence_workspace = build_sequence_workspace(project)
     return templates.TemplateResponse(request=request, name="sequence.html", context={
         "project": project,
+        "sequence_workspace": sequence_workspace,
+        "sequence_reviews": sequence_workspace["reviews"],
     })
 
 
@@ -2414,9 +2509,11 @@ async def parse_sequence(
 ):
     project = get_project(project_id)
     parsed = parse_sequence_text(sequence_text, equipment_id)
+    sequence_review = build_sequence_review(project, equipment_id, parsed)
     return templates.TemplateResponse(request=request, name="sequence_result.html", context={
         "project": project,
         "parsed_sequence": parsed,
+        "sequence_review": sequence_review,
     })
 
 

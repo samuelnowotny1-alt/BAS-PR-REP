@@ -13,6 +13,7 @@ from bas_assistant.generators import generate_reports
 from bas_assistant.exporters import BACnetExporter, NiagaraExporter
 from bas_assistant.importers import CSVImporter
 from bas_assistant.models import Controller, ControllerNetworkAddress, Equipment, EquipmentType, Project, ProjectMetadata, Protocol, UnitSystem
+from bas_assistant.models import SourceDocument
 from bas_assistant.models.station_sync import StationProbeResult
 from bas_assistant.models.types import ValidationCategory, ValidationSeverity
 from bas_assistant.validation import ValidationReport, ValidationResult
@@ -299,6 +300,59 @@ def test_controller_detail_page_renders_network_review_context() -> None:
     assert "controller_schedule.csv" in text
 
 
+def test_equipment_detail_page_shows_sequence_coverage_summary(tmp_path: Path) -> None:
+    project_id = create_project("equipment-sequence-detail-project")
+    project = main.get_project(project_id)
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status. AHU-1 SAT-SP shall maintain 55F.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+            owned_point_names=["AHU-1 SF-CMD"],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(main.equipment_detail_page(request(f"/project/{project_id}/equipment/AHU-1"), project_id, "AHU-1"))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Sequence Coverage" in text
+    assert "AHU-1 SF-STS" in text
+    assert "Open object" in text
+
+
 def test_generation_pages_show_readiness_and_do_not_generate_on_get() -> None:
     project_id = create_project("generation-readiness-project")
 
@@ -523,6 +577,29 @@ def test_project_knowledge_search_ranks_exact_phrase_and_full_coverage_first() -
     assert api_response["results"][0]["matched_terms"] == ["supply", "fan", "status"]
 
 
+def test_validation_findings_include_object_links_and_sequence_fix_groups() -> None:
+    project = Project(metadata=ProjectMetadata(project_id="validation-meta", name="Validation Meta"))
+    report = ValidationReport(project_id="validation-meta")
+    report.results.append(
+        ValidationResult(
+            object_type="equipment",
+            object_id="AHU-1",
+            rule_id="COMP-007",
+            severity=ValidationSeverity.WARNING,
+            category=ValidationCategory.COMPLETENESS,
+            field="point_names",
+            message="Missing sequence point coverage",
+            passed=False,
+        )
+    )
+
+    findings = main.serialize_validation_findings(report, "validation-meta")
+
+    assert findings[0]["fix_group"] == "sequence_coverage"
+    assert findings[0]["sequence_related"] == "true"
+    assert findings[0]["object_url"] == "/project/validation-meta/equipment/AHU-1"
+
+
 def test_non_htmx_create_project_returns_redirect() -> None:
     response = run_async(
         main.create_project(
@@ -570,6 +647,122 @@ def test_main_project_pages_render_for_empty_project() -> None:
         response = run_async(handler(request(path), project_id))
         assert response.status_code == 200, path
         assert response_text(response), path
+
+
+def test_sequence_page_and_parse_show_structured_coverage_review(tmp_path: Path) -> None:
+    project_id = create_project("sequence-page-project")
+    project = main.get_project(project_id)
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    page_response = run_async(main.sequence_page(request(f"/project/{project_id}/sequence"), project_id))
+    parse_response = run_async(
+        main.parse_sequence(
+            request(f"/project/{project_id}/sequence/parse", method="POST"),
+            project_id,
+            equipment_id="AHU-1",
+            sequence_text="AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        )
+    )
+
+    page_text = response_text(page_response)
+    parse_text = response_text(parse_response)
+    assert page_response.status_code == 200
+    assert "Sequence Coverage Board" in page_text
+    assert "Tracked Equipment" in page_text
+    assert "Control Intent Checks" in page_text
+    assert "AHU-1 SF-STS" in page_text
+    assert parse_response.status_code == 200
+    assert "Structured Coverage Review" in parse_text
+    assert "Missing References" in parse_text
+
+
+def test_sequence_workspace_summarizes_equipment_attention_counts(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="sequence-workspace", name="Sequence Workspace"))
+    sequence_path = tmp_path / "seq.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    workspace = main.build_sequence_workspace(project)
+
+    assert workspace["summary"]["equipment_count"] == 1
+    assert workspace["summary"]["attention"] == 1
+    assert workspace["summary"]["missing_refs"] >= 1
+    assert workspace["summary"]["missing_checks"] >= 1
+    assert "AHU-1 SF-STS" in workspace["reviews"][0]["missing_refs"]
+    assert workspace["reviews"][0]["equipment_url"] == "/project/sequence-workspace/equipment/AHU-1"
 
 
 def test_generation_post_handlers_render() -> None:
