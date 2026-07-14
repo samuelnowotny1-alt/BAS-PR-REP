@@ -51,28 +51,7 @@ class ProjectQueryService:
             project_statement = select(ProjectRecord).order_by(ProjectRecord.updated_at.desc(), ProjectRecord.name)
             project_statement = self._apply_scope(project_statement, scope)
             projects = list(session.scalars(project_statement))
-            if not projects:
-                return {}
-            project_db_ids = [project.id for project in projects]
-            equipment_counts = self._count_by_project(session, EquipmentRecord.project_id, EquipmentRecord, project_db_ids)
-            point_counts = self._count_by_project(session, PointRecord.project_id, PointRecord, project_db_ids)
-            controller_counts = self._count_by_project(session, ControllerRecord.project_id, ControllerRecord, project_db_ids)
-
-        cards: dict[str, dict[str, object]] = {}
-        for project in projects:
-            metadata = project.metadata_json or {}
-            cards[project.project_id] = {
-                "project_id": project.project_id,
-                "name": project.name,
-                "client": project.client,
-                "location": project.location,
-                "status": project.status,
-                "metadata": metadata,
-                "equipment_count": equipment_counts.get(project.id, 0),
-                "point_count": point_counts.get(project.id, 0),
-                "controller_count": controller_counts.get(project.id, 0),
-            }
-        return cards
+            return self.project_cards_for_records(session, projects)
 
     def summary(self, project_id: str) -> dict[str, object] | None:
         """Return a summary view for a single project."""
@@ -697,6 +676,30 @@ class ProjectQueryService:
         if scope.allowed_project_ids is None:
             return statement
         return statement.where(ProjectRecord.project_id.in_(scope.allowed_project_ids))
+
+    def project_cards_for_records(self, session, projects: list[ProjectRecord]) -> dict[str, dict[str, object]]:
+        if not projects:
+            return {}
+        project_db_ids = [project.id for project in projects]
+        equipment_counts = self._count_by_project(session, EquipmentRecord.project_id, EquipmentRecord, project_db_ids)
+        point_counts = self._count_by_project(session, PointRecord.project_id, PointRecord, project_db_ids)
+        controller_counts = self._count_by_project(session, ControllerRecord.project_id, ControllerRecord, project_db_ids)
+
+        cards: dict[str, dict[str, object]] = {}
+        for project in projects:
+            metadata = project.metadata_json or {}
+            cards[project.project_id] = {
+                "project_id": project.project_id,
+                "name": project.name,
+                "client": project.client,
+                "location": project.location,
+                "status": project.status,
+                "metadata": metadata,
+                "equipment_count": equipment_counts.get(project.id, 0),
+                "point_count": point_counts.get(project.id, 0),
+                "controller_count": controller_counts.get(project.id, 0),
+            }
+        return cards
 
     def _count_by_project(self, session, column, model, project_db_ids: list[int]) -> dict[int, int]:
         rows = session.execute(

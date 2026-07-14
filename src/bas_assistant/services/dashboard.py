@@ -69,11 +69,12 @@ class DashboardService:
                 if scope.allowed_project_ids is not None
                 else None
             )
-            project_ids_statement = select(ProjectRecord.id)
+            project_statement = select(ProjectRecord).order_by(ProjectRecord.updated_at.desc(), ProjectRecord.name)
             if project_filter is not None:
-                project_ids_statement = project_ids_statement.where(project_filter)
-            project_db_ids = list(session.scalars(project_ids_statement))
-            project_count = len(project_db_ids)
+                project_statement = project_statement.where(project_filter)
+            project_records = list(session.scalars(project_statement))
+            project_db_ids = [project.id for project in project_records]
+            project_count = len(project_records)
             equipment_count = self._count_related(session, EquipmentRecord, project_db_ids)
             point_count = self._count_related(session, PointRecord, project_db_ids)
             controller_count = self._count_related(session, ControllerRecord, project_db_ids)
@@ -83,8 +84,7 @@ class DashboardService:
             open_task_count = session.scalar(
                 select(func.count()).select_from(TaskRecord).where(TaskRecord.status != "completed")
             ) or 0
-
-        projects = self.project_queries.list_project_cards(user)
+            projects = self.project_queries.project_cards_for_records(session, project_records)
         recent_uploads = [
             {
                 "filename": upload.filename,
