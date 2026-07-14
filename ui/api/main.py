@@ -23,6 +23,7 @@ from bas_assistant.core import build_container
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
+    ApprovalReviewDecision, GapReviewDecision, ReviewAssumptionRecord,
     ControllerNetworkAddress, ControllerIOCapacity, StationConnectionConfig,
     StationSyncProtocol
 )
@@ -487,11 +488,119 @@ def build_export_output_descriptors(project: Project, results: dict[str, dict[st
 
 
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
+    project = get_project(project_id)
     tracker = assumption_trackers.get(project_id)
     if tracker is None:
-        tracker = create_bas_assumptions(project_id)
+        tracker = AssumptionTracker(project_id)
+        tracker.create_set("design_basis", "Design Basis Assumptions")
+        _load_tracker_from_project_review_state(project, tracker)
         assumption_trackers[project_id] = tracker
     return tracker
+
+
+def _load_tracker_from_project_review_state(project: Project, tracker: AssumptionTracker) -> None:
+    tracker.assumption_sets.clear()
+    tracker.create_set("design_basis", "Design Basis Assumptions")
+    tracker._counter = 0
+    assumption_set = tracker.assumption_sets["design_basis"]
+    highest_counter = 0
+    for record in project.review_state.assumptions:
+        assumption = tracker.add_assumption(
+            category=AssumptionCategory(record.category),
+            title=record.title,
+            description=record.description,
+            rationale=record.rationale,
+            source=record.source,
+            related_objects=list(record.related_objects),
+            dependencies=list(record.dependencies),
+            impacts=list(record.impacts),
+            verification_method=record.verification_method,
+            set_name="design_basis",
+        )
+        assumption.assumption_id = record.assumption_id
+        assumption.status = AssumptionStatus(record.status)
+        assumption.created_at = record.created_at
+        assumption.verified_at = record.verified_at
+        assumption.verified_by = record.verified_by
+        assumption.verification_evidence = record.verification_evidence
+        assumption.notes = record.notes
+        if assumption_set.assumptions:
+            assumption_set.assumptions[-1] = assumption
+        suffix = record.assumption_id.rsplit("-", 1)[-1]
+        if suffix.isdigit():
+            highest_counter = max(highest_counter, int(suffix))
+    tracker._counter = highest_counter
+
+
+def sync_assumptions_to_project(project: Project, tracker: AssumptionTracker) -> None:
+    assumption_set = tracker.assumption_sets.get("design_basis")
+    assumptions = [] if assumption_set is None else assumption_set.assumptions
+    project.review_state.assumptions = [
+        ReviewAssumptionRecord(
+            assumption_id=assumption.assumption_id,
+            category=assumption.category.value,
+            title=assumption.title,
+            description=assumption.description,
+            rationale=assumption.rationale,
+            status=assumption.status.value,
+            source=assumption.source,
+            created_at=assumption.created_at,
+            verified_at=assumption.verified_at,
+            verified_by=assumption.verified_by,
+            related_objects=list(assumption.related_objects),
+            dependencies=list(assumption.dependencies),
+            impacts=list(assumption.impacts),
+            verification_method=assumption.verification_method,
+            verification_evidence=assumption.verification_evidence,
+            notes=assumption.notes,
+        )
+        for assumption in assumptions
+    ]
+    save_project(project)
+
+
+def record_gap_resolution(
+    project: Project,
+    *,
+    gap_id: str,
+    status: str = "resolved",
+    resolution_notes: str = "",
+    decided_by: str | None = None,
+) -> None:
+    decisions = [decision for decision in project.review_state.gap_decisions if decision.gap_id != gap_id]
+    decisions.append(
+        GapReviewDecision(
+            gap_id=gap_id,
+            status=status,
+            resolution_notes=resolution_notes,
+            decided_by=decided_by,
+        )
+    )
+    project.review_state.gap_decisions = decisions
+    save_project(project)
+
+
+def record_output_approval(
+    project: Project,
+    *,
+    notes: str = "",
+    approved_by: str | None = None,
+) -> None:
+    approvals = [
+        approval
+        for approval in project.review_state.approvals
+        if approval.approval_key != "outputs-ready"
+    ]
+    approvals.append(
+        ApprovalReviewDecision(
+            approval_key="outputs-ready",
+            status="approved",
+            notes=notes,
+            approved_by=approved_by,
+        )
+    )
+    project.review_state.approvals = approvals
+    save_project(project)
 
 
 def get_station_connection(project: Project) -> StationConnectionConfig:
@@ -673,6 +782,10 @@ def timed_page_context(label: str, builder):
     duration_ms = (time.perf_counter() - start_time) * 1000
     logger.info("page_context[%s] built in %.2fms", label, duration_ms)
     return context
+
+
+def _form_text(value: object) -> str:
+    return value if isinstance(value, str) else ""
 
 
 def assumption_set_for_project(project_id: str):
@@ -1571,6 +1684,25 @@ async def gaps_page(request: Request, project_id: str):
     })
 
 
+@app.post("/project/{project_id}/gaps/{gap_id}/resolve")
+async def resolve_gap(
+    request: Request,
+    project_id: str,
+    gap_id: str,
+    resolution_notes: str = Form(""),
+):
+    project = get_project(project_id)
+    record_gap_resolution(project, gap_id=gap_id, resolution_notes=resolution_notes, decided_by="UI")
+    if request.headers.get("HX-Request") == "true":
+        report = analyze_gaps(project)
+        return templates.TemplateResponse(
+            request=request,
+            name="gaps.html",
+            context={"project": project, "gap_report": report},
+        )
+    return RedirectResponse(url=f"/project/{project_id}/gaps", status_code=303)
+
+
 @app.get("/project/{project_id}/checkout", response_class=HTMLResponse)
 @app.post("/project/{project_id}/checkout/generate", response_class=HTMLResponse)
 async def checkout_page(request: Request, project_id: str):
@@ -2214,9 +2346,9 @@ async def add_assumption(
         category=AssumptionCategory(category),
         title=title,
         description=description,
-        rationale=rationale,
-        verification_method=verification_method,
-        impacts=[i.strip() for i in impacts.split(",") if i.strip()],
+        rationale=_form_text(rationale),
+        verification_method=_form_text(verification_method),
+        impacts=[i.strip() for i in _form_text(impacts).split(",") if i.strip()],
         set_name="design_basis",
     )
     status_enum = AssumptionStatus(status)
@@ -2228,6 +2360,7 @@ async def add_assumption(
         assumption.defer("Deferred from assumptions page")
     elif status_enum == AssumptionStatus.ACCEPTED:
         assumption.accept()
+    sync_assumptions_to_project(project, tracker)
 
     if request.headers.get("HX-Request") == "true":
         return render_assumptions_list(request, project)
@@ -2239,6 +2372,7 @@ async def verify_assumption(request: Request, project_id: str, assumption_id: st
     project = get_project(project_id)
     tracker, _assumption_set = assumption_set_for_project(project_id)
     tracker.verify_assumption(assumption_id, "UI", "Verified from assumptions page")
+    sync_assumptions_to_project(project, tracker)
     return render_assumptions_list(request, project)
 
 
@@ -2247,6 +2381,7 @@ async def invalidate_assumption(request: Request, project_id: str, assumption_id
     project = get_project(project_id)
     tracker, _assumption_set = assumption_set_for_project(project_id)
     tracker.invalidate_assumption(assumption_id, "Invalidated from assumptions page")
+    sync_assumptions_to_project(project, tracker)
     return render_assumptions_list(request, project)
 
 
@@ -2254,7 +2389,18 @@ async def invalidate_assumption(request: Request, project_id: str, assumption_id
 async def load_assumption_templates(request: Request, project_id: str):
     project = get_project(project_id)
     assumption_trackers[project_id] = create_bas_assumptions(project_id)
+    sync_assumptions_to_project(project, assumption_trackers[project_id])
     return render_assumptions_list(request, project)
+
+
+@app.post("/project/{project_id}/review/approve")
+async def approve_review_outputs(
+    project_id: str,
+    notes: str = Form(""),
+):
+    project = get_project(project_id)
+    record_output_approval(project, notes=notes, approved_by="UI")
+    return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
 
 if __name__ == "__main__":

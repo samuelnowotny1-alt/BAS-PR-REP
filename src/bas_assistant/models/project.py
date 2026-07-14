@@ -1,6 +1,7 @@
 """Project model - top-level BAS project structure."""
 
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, Field
 
@@ -49,6 +50,89 @@ class SourceDocument(BaseModel):
     hash: str | None = None  # For change detection
 
 
+class ReviewDecisionType(str, Enum):
+    """Kinds of durable review decisions."""
+
+    GAP = "gap"
+    ASSUMPTION = "assumption"
+    MAPPING = "mapping"
+    APPROVAL = "approval"
+
+
+class ReviewDecisionStatus(str, Enum):
+    """Decision state attached to a review subject."""
+
+    PENDING = "pending"
+    RESOLVED = "resolved"
+    ACCEPTED = "accepted"
+    VERIFIED = "verified"
+    INVALIDATED = "invalidated"
+    DEFERRED = "deferred"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class ReviewAssumptionRecord(BaseModel):
+    """Serializable assumption record that survives project reloads."""
+
+    assumption_id: NonEmptyStr
+    category: str
+    title: str
+    description: str
+    rationale: str = ""
+    status: str = ReviewDecisionStatus.PENDING.value
+    source: str = ""
+    created_at: datetime = Field(default_factory=datetime.now)
+    verified_at: datetime | None = None
+    verified_by: str | None = None
+    related_objects: list[str] = Field(default_factory=list)
+    dependencies: list[str] = Field(default_factory=list)
+    impacts: list[str] = Field(default_factory=list)
+    verification_method: str = ""
+    verification_evidence: str = ""
+    notes: str = ""
+
+
+class GapReviewDecision(BaseModel):
+    """Resolution record for a discovered gap."""
+
+    gap_id: NonEmptyStr
+    status: str = ReviewDecisionStatus.PENDING.value
+    resolution_notes: str = ""
+    decided_by: str | None = None
+    decided_at: datetime = Field(default_factory=datetime.now)
+
+
+class MappingReviewDecision(BaseModel):
+    """Canonical slot for explicit mapping decisions."""
+
+    mapping_key: NonEmptyStr
+    mapped_to: str
+    status: str = ReviewDecisionStatus.ACCEPTED.value
+    notes: str = ""
+    decided_by: str | None = None
+    decided_at: datetime = Field(default_factory=datetime.now)
+
+
+class ApprovalReviewDecision(BaseModel):
+    """Project-level approvals that downstream generation can rely on."""
+
+    approval_key: NonEmptyStr
+    status: str = ReviewDecisionStatus.APPROVED.value
+    notes: str = ""
+    approved_by: str | None = None
+    approved_at: datetime = Field(default_factory=datetime.now)
+
+
+class ProjectReviewState(BaseModel):
+    """Durable review decisions for a project."""
+
+    assumptions: list[ReviewAssumptionRecord] = Field(default_factory=list)
+    gap_decisions: list[GapReviewDecision] = Field(default_factory=list)
+    mapping_decisions: list[MappingReviewDecision] = Field(default_factory=list)
+    approvals: list[ApprovalReviewDecision] = Field(default_factory=list)
+
+
 class Project(BaseModel):
     """Top-level BAS project container."""
 
@@ -62,6 +146,9 @@ class Project(BaseModel):
 
     # Source documents
     source_documents: list[SourceDocument] = Field(default_factory=list)
+
+    # Durable review decisions
+    review_state: ProjectReviewState = Field(default_factory=ProjectReviewState)
 
     # Station sync
     station_connection: StationConnectionConfig | None = None
@@ -113,5 +200,15 @@ class Project(BaseModel):
     def update_timestamp(self) -> None:
         self.metadata.updated_at = datetime.now()
 
-
-__all__ = ["Project", "ProjectMetadata", "SourceDocument"]
+__all__ = [
+    "ApprovalReviewDecision",
+    "GapReviewDecision",
+    "MappingReviewDecision",
+    "Project",
+    "ProjectMetadata",
+    "ProjectReviewState",
+    "ReviewAssumptionRecord",
+    "ReviewDecisionStatus",
+    "ReviewDecisionType",
+    "SourceDocument",
+]

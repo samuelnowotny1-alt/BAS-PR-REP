@@ -878,6 +878,68 @@ def test_add_assumption_redirects_with_valid_category() -> None:
     assert response.headers["location"] == f"/project/{project_id}/assumptions"
 
 
+def test_review_decisions_persist_reload_and_drive_report_summary() -> None:
+    project_id = create_project("review-persistence-project")
+    project = main.get_project(project_id)
+
+    add_response = run_async(
+        main.add_assumption(
+            request=request(f"/project/{project_id}/assumptions", method="POST"),
+            project_id=project_id,
+            category="design",
+            title="Design Weather",
+            description="Use summer design conditions for sizing.",
+            status="verified",
+            impacts="coil sizing",
+        )
+    )
+    assert add_response.status_code == 303
+
+    gap_report = main.analyze_gaps(project)
+    assert gap_report.gaps
+    gap_id = gap_report.gaps[0].gap_id
+    resolve_response = run_async(
+        main.resolve_gap(
+            request=request(f"/project/{project_id}/gaps/{gap_id}/resolve", method="POST"),
+            project_id=project_id,
+            gap_id=gap_id,
+            resolution_notes="Accepted for current intake slice.",
+        )
+    )
+    assert resolve_response.status_code == 303
+
+    approval_response = run_async(
+        main.approve_review_outputs(
+            project_id=project_id,
+            notes="Ready for downstream report generation.",
+        )
+    )
+    assert approval_response.status_code == 303
+
+    persisted = main.container.projects.get(project_id)
+    assert persisted is not None
+    assert len(persisted.review_state.assumptions) == 1
+    assert persisted.review_state.assumptions[0].status == "verified"
+    assert persisted.review_state.gap_decisions[0].gap_id == gap_id
+    assert persisted.review_state.approvals[0].approval_key == "outputs-ready"
+
+    main.projects.clear()
+    main.container.projects.clear_cache()
+
+    reloaded = main.get_project(project_id)
+    assert len(reloaded.review_state.assumptions) == 1
+    assert reloaded.review_state.gap_decisions[0].resolution_notes == "Accepted for current intake slice."
+    assert reloaded.review_state.approvals[0].notes == "Ready for downstream report generation."
+
+    report_paths = generate_reports(reloaded, main.OUTPUT_DIR / project_id / "reports")
+    summary_text = report_paths["summary"].read_text(encoding="utf-8")
+    assert "## Review Decisions" in summary_text
+    assert "- Assumptions captured: **1**" in summary_text
+    assert "- Gap resolutions recorded: **1**" in summary_text
+    assert "- Output approval: **approved**" in summary_text
+    assert "Ready for downstream report generation." in summary_text
+
+
 def test_read_only_project_api_endpoints() -> None:
     project_id = create_project()
 
