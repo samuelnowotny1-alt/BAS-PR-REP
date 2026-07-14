@@ -639,6 +639,28 @@ def graphics_symbol_library() -> list[dict[str, object]]:
     return library
 
 
+def _recent_upload_views(project_id: str) -> list[dict[str, object]]:
+    recent_uploads = container.uploads.list_recent_uploads(project_id=project_id, limit=8)
+    return [
+        {
+            "filename": upload.filename,
+            "category": upload.category,
+            "status": upload.status,
+            "created_at": upload.created_at,
+            "parser_supported": container.parsers.can_parse(Path(upload.stored_path)),
+        }
+        for upload in recent_uploads
+    ]
+
+
+def _import_page_context(project: Project, project_id: str) -> dict[str, object]:
+    return {
+        "project": project,
+        "recent_upload_views": _recent_upload_views(project_id),
+        "import_status_view": container.project_queries.import_status_view(project_id),
+    }
+
+
 def assumption_set_for_project(project_id: str):
     tracker = get_assumption_tracker(project_id)
     assumption_set = tracker.assumption_sets.get("design_basis")
@@ -1235,26 +1257,16 @@ async def apply_equipment_graphics_preset(
 @app.get("/project/{project_id}/import", response_class=HTMLResponse)
 async def import_page(request: Request, project_id: str):
     project = get_project(project_id)
-    recent_uploads = container.uploads.list_recent_uploads(project_id=project_id, limit=8)
-    return templates.TemplateResponse(request=request, name="import.html", context={
-        "project": project,
-        "recent_uploads": recent_uploads,
-        "recent_upload_views": [
-            {
-                "filename": upload.filename,
-                "category": upload.category,
-                "status": upload.status,
-                "created_at": upload.created_at,
-                "parser_supported": container.parsers.can_parse(Path(upload.stored_path)),
-            }
-            for upload in recent_uploads
-        ],
-        "import_status_view": container.project_queries.import_status_view(project_id),
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="import.html",
+        context=_import_page_context(project, project_id),
+    )
 
 
 @app.post("/project/{project_id}/import")
 async def import_data(
+    request: Request,
     project_id: str,
     equipment_file: UploadFile | None = File(None),
     points_file: UploadFile | None = File(None),
@@ -1449,6 +1461,18 @@ async def import_data(
         container.tasks.complete_task(task_id, result=task_result)
 
     save_project(project)
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/import_result.html",
+            context={
+                "project": project,
+                "project_id": project_id,
+                "results": results,
+                "import_status_view": container.project_queries.import_status_view(project_id),
+                "recent_upload_views": _recent_upload_views(project_id),
+            },
+        )
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)
 
 

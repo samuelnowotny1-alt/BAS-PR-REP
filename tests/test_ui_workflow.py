@@ -693,10 +693,33 @@ def test_validation_report_export_returns_csv() -> None:
 def test_import_data_without_uploaded_files_redirects() -> None:
     project_id = create_project()
 
-    response = run_async(main.import_data(project_id))
+    response = run_async(main.import_data(request(f"/project/{project_id}/import", method="POST"), project_id))
 
     assert response.status_code == 303
     assert response.headers["location"] == f"/project/{project_id}?imported=1"
+
+
+def test_htmx_import_returns_inline_result_summary() -> None:
+    project_id = create_project("htmx-import-project")
+    upload = UploadFile(filename="sequence.txt", file=BytesIO(b"AHU sequence notes"))
+
+    response = run_async(
+        main.import_data(
+            request(
+                f"/project/{project_id}/import",
+                method="POST",
+                headers=[(b"hx-request", b"true")],
+            ),
+            project_id,
+            supporting_files=[upload],
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Import Complete" in text
+    assert "Latest Task Outcomes" in text
+    assert "Knowledge status: indexed" in text
 
 
 def test_import_page_renders_recent_ingestion_outcomes_and_parser_support() -> None:

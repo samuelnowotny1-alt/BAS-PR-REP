@@ -432,6 +432,7 @@ def test_import_uploads_are_persisted_to_upload_service(tmp_path: Path) -> None:
 
     response = asyncio.run(
         main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
             project_id=project_id,
             equipment_file=equipment_upload,
             points_file=None,
@@ -492,6 +493,7 @@ def test_px_upload_parses_into_structured_equipment_and_points(tmp_path: Path) -
 
     response = asyncio.run(
         main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
             project_id=project_id,
             equipment_file=None,
             points_file=None,
@@ -545,6 +547,7 @@ def test_niagara_station_zip_parses_manifest_content(tmp_path: Path) -> None:
 
     response = asyncio.run(
         main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
             project_id=project_id,
             equipment_file=None,
             points_file=None,
@@ -597,6 +600,7 @@ def test_niagara_station_tree_zip_parses_slot_paths(tmp_path: Path) -> None:
 
     response = asyncio.run(
         main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
             project_id=project_id,
             equipment_file=None,
             points_file=None,
@@ -644,8 +648,8 @@ def test_reimport_records_artifact_diff_against_previous_document(tmp_path: Path
     first_upload = UploadFile(filename="equipment.csv", file=BytesIO(b"Equipment ID,Equipment Type\nAHU-1,AHU\n"))
     second_upload = UploadFile(filename="equipment.csv", file=BytesIO(b"Equipment ID,Equipment Type\nAHU-1,AHU\nAHU-2,AHU\n"))
 
-    asyncio.run(main.import_data(project_id=project_id, equipment_file=first_upload))
-    asyncio.run(main.import_data(project_id=project_id, equipment_file=second_upload))
+    asyncio.run(main.import_data(request(f"/project/{project_id}/import", method="POST"), project_id=project_id, equipment_file=first_upload))
+    asyncio.run(main.import_data(request(f"/project/{project_id}/import", method="POST"), project_id=project_id, equipment_file=second_upload))
 
     with main.container.db.session() as session:
         latest_task = session.scalar(
@@ -708,7 +712,7 @@ def test_niagara_xml_manifest_traverses_slot_hierarchy(tmp_path: Path) -> None:
     zip_buffer.seek(0)
     upload = UploadFile(filename="station-xml.zip", file=zip_buffer)
 
-    response = asyncio.run(main.import_data(project_id=project_id, supporting_files=[upload]))
+    response = asyncio.run(main.import_data(request(f"/project/{project_id}/import", method="POST"), project_id=project_id, supporting_files=[upload]))
 
     assert response.status_code == 303
     project = main.get_project(project_id)
@@ -751,7 +755,7 @@ def test_niagara_station_graph_sets_parent_child_relationships(tmp_path: Path) -
     zip_buffer.seek(0)
     upload = UploadFile(filename="station-graph.zip", file=zip_buffer)
 
-    response = asyncio.run(main.import_data(project_id=project_id, supporting_files=[upload]))
+    response = asyncio.run(main.import_data(request(f"/project/{project_id}/import", method="POST"), project_id=project_id, supporting_files=[upload]))
 
     assert response.status_code == 303
     project = main.get_project(project_id)
