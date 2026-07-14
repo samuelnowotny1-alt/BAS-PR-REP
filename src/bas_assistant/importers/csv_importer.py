@@ -104,6 +104,12 @@ class CSVImporter:
                     status=str(row.get("Status", "design")).strip(),
                     notes=str(row.get("Notes", "")).strip() or None,
                     tags=[t.strip() for t in (self._parse_str(row.get("Tags")) or "").split(",") if t.strip()],
+                    sequence_ref=self._parse_str(row.get("Sequence Reference") or row.get("Sequence Ref")),
+                    provenance={
+                        "importer": "csv_equipment_schedule",
+                        "source_doc_id": source_doc_id,
+                        "source_name": csv_path.name,
+                    },
                 )
 
                 parent_id = str(row.get("Parent Equipment", "")).strip()
@@ -241,9 +247,14 @@ class CSVImporter:
                     modbus_register=self._parse_int(row.get("Modbus Register")),
                     modbus_type=self._parse_str(row.get("Modbus Type")),
                     source=source,
-                    source_reference=self._parse_str(row.get("Source Reference")),
+                    source_reference=self._parse_str(row.get("Source Reference")) or f"{source_doc_id}:row-{count + 1}",
                     description=self._parse_str(row.get("Description")),
                     tags=[t.strip() for t in (self._parse_str(row.get("Tags")) or "").split(",") if t.strip()],
+                    provenance={
+                        "importer": "csv_point_list",
+                        "source_doc_id": source_doc_id,
+                        "source_name": csv_path.name,
+                    },
                 )
 
                 existing = self.project.get_point(point_name)
@@ -329,6 +340,11 @@ class CSVImporter:
                     circuit=str(row.get("Circuit", "")).strip() or None,
                     status=str(row.get("Status", "design")).strip(),
                     notes=str(row.get("Notes", "")).strip() or None,
+                    provenance={
+                        "importer": "csv_controller_schedule",
+                        "source_doc_id": source_doc_id,
+                        "source_name": csv_path.name,
+                    },
                 )
 
                 ip = str(row.get("IP Address", "")).strip()

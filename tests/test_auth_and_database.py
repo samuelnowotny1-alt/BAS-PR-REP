@@ -814,11 +814,21 @@ def test_generated_graphics_are_registered_as_artifacts(tmp_path: Path) -> None:
         )
     )
     project = main.get_project(project_id)
-    project.add_equipment(main.Equipment(id="AHU-1", type=main.EquipmentType.AHU))
+    project.add_controller(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[main.Protocol.BACNET_IP],
+            network_addresses=[main.ControllerNetworkAddress(protocol=main.Protocol.BACNET_IP, address="192.168.10.10")],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.add_equipment(main.Equipment(id="AHU-1", type=main.EquipmentType.AHU, controller_id="MPC-1"))
     project.add_point(
         main.Point(
-            name="AHU-1_SAT",
+            name="AHU-1 SAT",
             equipment_id="AHU-1",
+            controller_id="MPC-1",
             kind=main.PointKind.SENSOR,
             direction=main.PointDirection.INPUT,
             units="degF",
@@ -826,7 +836,7 @@ def test_generated_graphics_are_registered_as_artifacts(tmp_path: Path) -> None:
     )
     main.save_project(project)
 
-    response = asyncio.run(main.graphics_page(request(f"/project/{project_id}/graphics"), project_id))
+    response = asyncio.run(main.graphics_page(request(f"/project/{project_id}/graphics/generate", method="POST"), project_id))
 
     assert response.status_code == 200
     with main.container.db.session() as session:

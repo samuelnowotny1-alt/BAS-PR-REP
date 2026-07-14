@@ -272,18 +272,16 @@ class SequenceParser:
 
     def _extract_point_refs(self, text: str) -> list[str]:
         """Extract potential point references from text."""
-        # Common BAS point patterns
+        normalized_text = text.replace("_", " ")
         patterns = [
-            r'\b[A-Z]{2,4}-\d+\s+[A-Z]{2,4}\b',  # AHU-1 SAT
-            r'\b[A-Z]{2,4}-\d+\s+[A-Z]{2,4}\s+[A-Z]{2,4}\b',  # AHU-1 SAT SP
-            r'\b(SAT|MAT|RAT|OAT|ZAT|DAT|SAP|RAP|ZSP|CSP|HSP)\b',
-            r'\b(SP|SPT|SPC|SPH|SPL|SPV|SPD|SPE)\b',
-            r'\b(CMD|STATUS|ALM|FLT|PRF|SPD|SPD)\b',
+            r'\b[A-Z]{2,8}-\d+\s+[A-Z0-9]{2,8}(?:-[A-Z0-9]{2,8})*\b',
+            r'\b(SAT|MAT|RAT|OAT|ZAT|DAT|SAP|RAP|ZSP|CSP|HSP|SP|STS|STATUS|CMD|ALM|FLT|PRF)\b',
         ]
-        refs = []
+        refs: set[str] = set()
         for pattern in patterns:
-            refs.extend(re.findall(pattern, text, re.IGNORECASE))
-        return list(set(refs))
+            for match in re.finditer(pattern, normalized_text, re.IGNORECASE):
+                refs.add(match.group(0).strip().upper())
+        return sorted(refs)
 
     def _extract_setpoints(self, text: str) -> list[str]:
         """Extract setpoint references."""

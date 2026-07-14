@@ -35,6 +35,36 @@
     </div>
     {% endif %}
 
+    {% if detail.validation %}
+    <div class="rounded-2xl border px-5 py-5 {% if detail.validation.status == 'blocked' %}border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20{% elif detail.validation.status == 'attention' %}border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-900/20{% else %}border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-900/20{% endif %}">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] {% if detail.validation.status == 'blocked' %}text-red-700 dark:text-red-300{% elif detail.validation.status == 'attention' %}text-yellow-700 dark:text-yellow-300{% else %}text-emerald-700 dark:text-emerald-300{% endif %}">Validation Context</p>
+                <h2 class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ detail.validation.errors }} errors · {{ detail.validation.warnings }} warnings</h2>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ detail.validation.direct_result_count }} direct findings, {{ detail.validation.result_count }} findings in this object's review scope.</p>
+            </div>
+            <a href="{{ detail.validation.detail_url }}" class="btn-secondary">Open Validation Report</a>
+        </div>
+        {% if detail.validation.findings %}
+        <div class="mt-4 space-y-3">
+            {% for finding in detail.validation.findings %}
+            <div class="rounded-xl border border-white/60 bg-white/70 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/40">
+                <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }} · {{ finding.object_id }}</p>
+                        <p class="mt-1 text-xs uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">{{ finding.object_type }} · {{ finding.category }}</p>
+                    </div>
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if finding.severity == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% elif finding.severity == 'warning' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300{% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300{% endif %}">{{ finding.severity }}</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{ finding.message }}</p>
+                <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{ finding.remediation }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
         <div class="card p-6">
             {% if detail.review and detail.review.checks %}

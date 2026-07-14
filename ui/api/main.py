@@ -1100,6 +1100,85 @@ def serialize_validation_findings(report) -> list[dict[str, str]]:
     return findings
 
 
+def build_generation_readiness(project: Project) -> dict[str, object]:
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report)
+    release = review_release_state(project)
+    blockers: list[str] = []
+    cautions: list[str] = []
+
+    if report.has_errors:
+        blockers.append(f"{len(report.errors)} validation errors must be resolved before generation.")
+    if release["unresolved_mappings"]:
+        blockers.append(f"{len(release['unresolved_mappings'])} relationship mappings still need review.")
+    if release["blocking_gaps"]:
+        cautions.append(f"{len(release['blocking_gaps'])} blocking gaps are still unresolved.")
+    if report.has_warnings:
+        cautions.append(f"{len(report.warnings)} validation warnings remain.")
+    if release["pending_assumptions"]:
+        cautions.append(f"{len(release['pending_assumptions'])} assumptions are still pending or deferred.")
+
+    can_generate = not blockers
+    status = "blocked" if blockers else ("caution" if cautions else "ready")
+    return {
+        "status": status,
+        "can_generate": can_generate,
+        "blockers": blockers,
+        "cautions": cautions,
+        "validation_summary": report.summary,
+        "release_review": release,
+        "validation_findings": findings,
+    }
+
+
+def object_validation_context(project: Project, detail: dict[str, object]) -> dict[str, object]:
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report)
+    entity_type = str(detail["entity_type"])
+    title = str(detail["title"])
+    related_ids = {title}
+    linked_points = set(detail.get("linked_points") or [])
+    related_entities = list(detail.get("related_entities") or [])
+
+    if entity_type == "equipment":
+        related_ids.update(linked_points)
+    elif entity_type == "controller":
+        related_ids.update(linked_points)
+        related_ids.update(
+            str(related["entity_key"])
+            for related in related_entities
+            if related.get("entity_type") == "equipment"
+        )
+    elif entity_type == "point":
+        related_ids.update(str(related["entity_key"]) for related in related_entities)
+
+    relevant = [
+        finding
+        for finding in findings
+        if finding["object_id"] in related_ids
+    ]
+    direct = [
+        finding
+        for finding in relevant
+        if finding["object_type"] == entity_type and finding["object_id"] == title
+    ]
+    errors = sum(1 for finding in relevant if finding["severity"] == "error")
+    warnings = sum(1 for finding in relevant if finding["severity"] == "warning")
+    status = "blocked" if errors else ("attention" if warnings else "ready")
+    return {
+        "status": status,
+        "errors": errors,
+        "warnings": warnings,
+        "result_count": len(relevant),
+        "direct_result_count": len(direct),
+        "findings": relevant[:12],
+        "direct_findings": direct[:8],
+        "detail_url": f"/project/{project.metadata.project_id}/validate",
+    }
+
+
 def request_expects_json(request: Request) -> bool:
     accept_header = request.headers.get("accept", "")
     return request.url.path.startswith("/api/") or "application/json" in accept_header
@@ -1416,6 +1495,7 @@ async def equipment_detail_page(request: Request, project_id: str, equipment_id:
     detail = container.project_queries.equipment_detail(project_id, equipment_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Equipment not found")
+    detail["validation"] = object_validation_context(project, detail)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
@@ -1444,6 +1524,7 @@ async def point_detail_page(request: Request, project_id: str, point_name: str):
     detail = container.project_queries.point_detail(project_id, point_name)
     if detail is None:
         raise HTTPException(status_code=404, detail="Point not found")
+    detail["validation"] = object_validation_context(project, detail)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
@@ -1472,6 +1553,7 @@ async def controller_detail_page(request: Request, project_id: str, controller_i
     detail = container.project_queries.controller_detail(project_id, controller_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Controller not found")
+    detail["validation"] = object_validation_context(project, detail)
     return templates.TemplateResponse(
         request=request,
         name="object_detail.html",
@@ -2012,6 +2094,19 @@ async def resolve_gap(
 @app.post("/project/{project_id}/checkout/generate", response_class=HTMLResponse)
 async def checkout_page(request: Request, project_id: str):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
+    if request.method == "GET":
+        return templates.TemplateResponse(request=request, name="checkout.html", context={
+            "project": project,
+            "checkout_result": None,
+            "readiness": readiness,
+        })
+    if request.method == "POST" and not readiness["can_generate"]:
+        return templates.TemplateResponse(request=request, name="checkout.html", context={
+            "project": project,
+            "checkout_result": None,
+            "readiness": readiness,
+        })
     output_dir = OUTPUT_DIR / project_id / "checkout"
     output_dir.mkdir(parents=True, exist_ok=True)
     task_id = container.tasks.create_task(project_id=project_id, task_type="checkout_generation", payload={"path": str(output_dir)})
@@ -2025,6 +2120,7 @@ async def checkout_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="checkout.html", context={
         "project": project,
         "checkout_result": result,
+        "readiness": readiness,
     })
 
 
@@ -2032,6 +2128,19 @@ async def checkout_page(request: Request, project_id: str):
 @app.post("/project/{project_id}/reports/generate", response_class=HTMLResponse)
 async def reports_page(request: Request, project_id: str):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
+    if request.method == "GET":
+        return templates.TemplateResponse(request=request, name="reports.html", context={
+            "project": project,
+            "report_paths": None,
+            "readiness": readiness,
+        })
+    if request.method == "POST" and not readiness["can_generate"]:
+        return templates.TemplateResponse(request=request, name="reports.html", context={
+            "project": project,
+            "report_paths": None,
+            "readiness": readiness,
+        })
     output_dir = OUTPUT_DIR / project_id / "reports"
     output_dir.mkdir(parents=True, exist_ok=True)
     task_id = container.tasks.create_task(project_id=project_id, task_type="report_generation", payload={"path": str(output_dir)})
@@ -2045,6 +2154,7 @@ async def reports_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="reports.html", context={
         "project": project,
         "report_paths": paths,
+        "readiness": readiness,
     })
 
 
@@ -2052,6 +2162,23 @@ async def reports_page(request: Request, project_id: str):
 @app.post("/project/{project_id}/graphics/generate", response_class=HTMLResponse)
 async def graphics_page(request: Request, project_id: str):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
+    if request.method == "GET":
+        return templates.TemplateResponse(request=request, name="graphics.html", context={
+            "project": project,
+            "graphics_result": None,
+            "niagara_preview_pages": [],
+            "graphics_symbol_library": graphics_symbol_library(),
+            "readiness": readiness,
+        })
+    if request.method == "POST" and not readiness["can_generate"]:
+        return templates.TemplateResponse(request=request, name="graphics.html", context={
+            "project": project,
+            "graphics_result": None,
+            "niagara_preview_pages": [],
+            "graphics_symbol_library": graphics_symbol_library(),
+            "readiness": readiness,
+        })
     output_dir = OUTPUT_DIR / project_id / "graphics"
     output_dir.mkdir(parents=True, exist_ok=True)
     task_id = container.tasks.create_task(project_id=project_id, task_type="graphics_generation", payload={"path": str(output_dir)})
@@ -2068,6 +2195,7 @@ async def graphics_page(request: Request, project_id: str):
         "graphics_result": result,
         "niagara_preview_pages": niagara_preview,
         "graphics_symbol_library": graphics_symbol_library(),
+        "readiness": readiness,
     })
 
 
@@ -2075,6 +2203,19 @@ async def graphics_page(request: Request, project_id: str):
 @app.post("/project/{project_id}/logic/generate", response_class=HTMLResponse)
 async def logic_page(request: Request, project_id: str):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
+    if request.method == "GET":
+        return templates.TemplateResponse(request=request, name="logic.html", context={
+            "project": project,
+            "logic_result": None,
+            "readiness": readiness,
+        })
+    if request.method == "POST" and not readiness["can_generate"]:
+        return templates.TemplateResponse(request=request, name="logic.html", context={
+            "project": project,
+            "logic_result": None,
+            "readiness": readiness,
+        })
     output_dir = OUTPUT_DIR / project_id / "logic"
     output_dir.mkdir(parents=True, exist_ok=True)
     task_id = container.tasks.create_task(project_id=project_id, task_type="logic_generation", payload={"path": str(output_dir)})
@@ -2088,14 +2229,17 @@ async def logic_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="logic.html", context={
         "project": project,
         "logic_result": result,
+        "readiness": readiness,
     })
 
 
 @app.get("/project/{project_id}/export", response_class=HTMLResponse)
 async def export_page(request: Request, project_id: str):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
     return templates.TemplateResponse(request=request, name="export.html", context={
         "project": project,
+        "readiness": readiness,
     })
 
 
@@ -2106,6 +2250,12 @@ async def export_project(
     vendors: List[str] = Form(...),
 ):
     project = get_project(project_id)
+    readiness = build_generation_readiness(project)
+    if not readiness["can_generate"]:
+        return templates.TemplateResponse(request=request, name="export.html", context={
+            "project": project,
+            "readiness": readiness,
+        })
     output_dir = OUTPUT_DIR / project_id / "exports"
     output_dir.mkdir(parents=True, exist_ok=True)
 

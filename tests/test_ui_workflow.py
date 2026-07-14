@@ -263,6 +263,7 @@ def test_object_detail_page_renders_artifact_provenance() -> None:
     assert response.status_code == 200
     assert "Engineering Review" in text
     assert "Review Score" in text
+    assert "Validation Context" in text
     assert "Artifact Provenance" in text
     assert "station.zip" in text
 
@@ -292,9 +293,72 @@ def test_controller_detail_page_renders_network_review_context() -> None:
     text = response_text(response)
     assert response.status_code == 200
     assert "Engineering Review" in text
+    assert "Validation Context" in text
     assert "BACnet/IP" in text
     assert "BACnet/MSTP 11 (net 2001)" in text
     assert "controller_schedule.csv" in text
+
+
+def test_generation_pages_show_readiness_and_do_not_generate_on_get() -> None:
+    project_id = create_project("generation-readiness-project")
+
+    checkout_response = run_async(main.checkout_page(request(f"/project/{project_id}/checkout"), project_id))
+    reports_response = run_async(main.reports_page(request(f"/project/{project_id}/reports"), project_id))
+    logic_response = run_async(main.logic_page(request(f"/project/{project_id}/logic"), project_id))
+
+    checkout_text = response_text(checkout_response)
+    reports_text = response_text(reports_response)
+    logic_text = response_text(logic_response)
+
+    assert checkout_response.status_code == 200
+    assert "Generation Readiness" in checkout_text
+    assert "No Checkout Sheets Generated" in checkout_text
+    assert reports_response.status_code == 200
+    assert "Generation Readiness" in reports_text
+    assert "No Reports Generated" in reports_text
+    assert logic_response.status_code == 200
+    assert "Generation Readiness" in logic_text
+    assert "No Logic Diagrams Generated" in logic_text
+
+
+def test_generation_post_is_blocked_when_validation_errors_exist() -> None:
+    project_id = create_project("blocked-generation-project")
+    project = main.get_project(project_id)
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id=None))
+    main.save_project(project)
+
+    response = run_async(main.checkout_page(request(f"/project/{project_id}/checkout/generate", method="POST"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Generation Readiness" in text
+    assert "validation errors must be resolved before generation" in text
+    assert "No Checkout Sheets Generated" in text
+
+
+def test_export_page_blocks_submission_when_project_not_ready() -> None:
+    project_id = create_project("blocked-export-project")
+    project = main.get_project(project_id)
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id=None))
+    main.save_project(project)
+
+    get_response = run_async(main.export_page(request(f"/project/{project_id}/export"), project_id))
+    post_response = run_async(
+        main.export_project(
+            request(f"/project/{project_id}/export", method="POST"),
+            project_id,
+            vendors=["niagara"],
+        )
+    )
+
+    get_text = response_text(get_response)
+    post_text = response_text(post_response)
+    assert get_response.status_code == 200
+    assert "Export Readiness" in get_text
+    assert "validation errors must be resolved before generation" in get_text
+    assert post_response.status_code == 200
+    assert "Export Readiness" in post_text
+    assert "validation errors must be resolved before generation" in post_text
 
 
 def test_object_list_pages_render() -> None:
@@ -855,6 +919,28 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
 
 def test_export_project_renders_partial_and_writes_vendor_output() -> None:
     project_id = create_project()
+    project = main.get_project(project_id)
+    project.controllers.append(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.points.append(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
 
     response = run_async(
         main.export_project(

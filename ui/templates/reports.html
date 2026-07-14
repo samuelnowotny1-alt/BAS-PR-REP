@@ -9,6 +9,18 @@
         <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
     </div>
 
+    {% if readiness %}
+    <div class="mb-8 rounded-xl border px-6 py-5 {% if readiness.status == 'blocked' %}border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20{% elif readiness.status == 'caution' %}border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-900/20{% else %}border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-900/20{% endif %}">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Generation Readiness</h2>
+        {% for blocker in readiness.blockers %}
+        <p class="mt-3 text-sm text-red-700 dark:text-red-300">{{ blocker }}</p>
+        {% endfor %}
+        {% for caution in readiness.cautions %}
+        <p class="mt-3 text-sm text-yellow-700 dark:text-yellow-300">{{ caution }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {% if report_paths %}
     <!-- Summary -->
     <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-8">
@@ -83,7 +95,7 @@
         <i class="fas fa-file-alt text-4xl text-gray-300 dark:text-gray-600 mb-4"></i>
         <h2 class="text-2xl font-semibold text-gray-800 dark:text-white mb-2">No Reports Generated</h2>
         <p class="text-gray-500 dark:text-gray-400 mb-6">Generate a complete submittal package with equipment schedules, point schedules, controller schedules, and validation reports.</p>
-        <button hx-post="/project/{{ project.metadata.project_id }}/reports/generate" hx-target="body" class="btn-primary">
+        <button hx-post="/project/{{ project.metadata.project_id }}/reports/generate" hx-target="body" class="btn-primary" {% if readiness and not readiness.can_generate %}disabled{% endif %}>
             <i class="fas fa-magic mr-2"></i>
             Generate Report Package
         </button>
