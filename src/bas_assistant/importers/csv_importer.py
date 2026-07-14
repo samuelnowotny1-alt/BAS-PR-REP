@@ -42,6 +42,11 @@ class CSVImporter:
     def __init__(self, project: Project):
         self.project = project
 
+    def _changed_fields(self, previous: BaseModel, current: BaseModel) -> list[str]:
+        before = previous.model_dump(mode="json")
+        after = current.model_dump(mode="json")
+        return sorted(key for key in after.keys() if before.get(key) != after.get(key))
+
     def import_equipment_schedule(self, csv_path: Path, source_doc_id: str) -> ImportResult:
         """Import equipment from equipment schedule CSV."""
         errors = []
@@ -127,7 +132,13 @@ class CSVImporter:
                         parameters={"graphic_sections": graphic_sections},
                     )
 
-                self.project.add_equipment(equipment)
+                existing = self.project.get_equipment(equip_id)
+                action = self.project.upsert_equipment(equipment)
+                if action == "updated" and existing is not None:
+                    changed_fields = self._changed_fields(existing, equipment)
+                    warnings.append(
+                        f"Equipment '{equip_id}': replaced existing definition during re-import ({', '.join(changed_fields) or 'no field delta'})."
+                    )
                 count += 1
 
             except Exception as e:
@@ -235,7 +246,13 @@ class CSVImporter:
                     tags=[t.strip() for t in (self._parse_str(row.get("Tags")) or "").split(",") if t.strip()],
                 )
 
-                self.project.add_point(point)
+                existing = self.project.get_point(point_name)
+                action = self.project.upsert_point(point)
+                if action == "updated" and existing is not None:
+                    changed_fields = self._changed_fields(existing, point)
+                    warnings.append(
+                        f"Point '{point_name}': replaced existing definition during re-import ({', '.join(changed_fields) or 'no field delta'})."
+                    )
                 count += 1
 
             except Exception as e:
@@ -361,7 +378,13 @@ class CSVImporter:
                         total_points=total or (ui or 0) + (di or 0) + (ao or 0) + (do or 0),
                     )
 
-                self.project.add_controller(controller)
+                existing = self.project.get_controller(ctrl_id)
+                action = self.project.upsert_controller(controller)
+                if action == "updated" and existing is not None:
+                    changed_fields = self._changed_fields(existing, controller)
+                    warnings.append(
+                        f"Controller '{ctrl_id}': replaced existing definition during re-import ({', '.join(changed_fields) or 'no field delta'})."
+                    )
                 count += 1
 
             except Exception as e:

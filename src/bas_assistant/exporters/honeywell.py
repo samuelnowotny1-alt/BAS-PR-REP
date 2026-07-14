@@ -83,8 +83,10 @@ class HoneywellExporter(BaseExporter):
             writer.writerow(headers)
 
             for point in self.project.points:
-                ctrl = self.project.get_controller(point.controller_id) if point.controller_id else None
-                equip = self.project.get_equipment(point.equipment_id)
+                effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+                effective_controller_id = self.project.effective_point_controller_id(point)
+                ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
+                equip = self.project.get_equipment(effective_equipment_id)
 
                 # Honeywell object types
                 obj_type_map = {
@@ -111,7 +113,7 @@ class HoneywellExporter(BaseExporter):
                     obj_type,
                     instance,
                     point.units or "",
-                    equip.id if equip else point.equipment_id,
+                    equip.id if equip else effective_equipment_id,
                     ctrl.id if ctrl else "",
                     address,
                     point.range_min or "",
@@ -149,7 +151,8 @@ class HoneywellExporter(BaseExporter):
             writer.writerow(headers)
 
             for equip in self.project.equipment:
-                ctrl = self.project.get_controller(equip.controller_id) if equip.controller_id else None
+                effective_controller_id = self.project.effective_equipment_controller_id(equip)
+                ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
                 row = [
                     equip.id,
                     equip.type.value,

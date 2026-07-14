@@ -749,6 +749,71 @@ def mapping_candidates_for_project(project: Project) -> list[dict[str, object]]:
     return sorted(candidates, key=lambda item: (str(item["subject_type"]), str(item["subject_label"])))
 
 
+def review_release_state(project: Project) -> dict[str, object]:
+    gap_report = analyze_gaps(project)
+    mapping_candidates = mapping_candidates_for_project(project)
+    assumption_records = list(project.review_state.assumptions)
+    unresolved_mappings = [candidate for candidate in mapping_candidates if not candidate.get("resolved_value")]
+    blocking_gaps = [
+        gap
+        for gap in gap_report.gaps
+        if gap.severity.value in {"critical", "high"}
+        and not any(
+            decision.gap_id == gap.gap_id and decision.status == "resolved"
+            for decision in project.review_state.gap_decisions
+        )
+    ]
+    pending_assumptions = [
+        assumption
+        for assumption in assumption_records
+        if assumption.status in {"pending", "deferred"}
+    ]
+    output_approval = next(
+        (
+            approval
+            for approval in project.review_state.approvals
+            if approval.approval_key == "outputs-ready" and approval.status == "approved"
+        ),
+        None,
+    )
+    release_ready = not blocking_gaps and not unresolved_mappings and not pending_assumptions
+    checks = [
+        {
+            "label": "Blocking gaps resolved",
+            "status": "ready" if not blocking_gaps else "attention",
+            "detail": "No critical/high gaps remain unresolved." if not blocking_gaps else f"{len(blocking_gaps)} blocking gaps still unresolved.",
+        },
+        {
+            "label": "Mappings resolved",
+            "status": "ready" if not unresolved_mappings else "attention",
+            "detail": "No unresolved relationship mappings remain." if not unresolved_mappings else f"{len(unresolved_mappings)} mapping decisions still need review.",
+        },
+        {
+            "label": "Assumptions closed",
+            "status": "ready" if not pending_assumptions else "attention",
+            "detail": "All assumptions are verified, accepted, or invalidated." if not pending_assumptions else f"{len(pending_assumptions)} assumptions are still pending or deferred.",
+        },
+        {
+            "label": "Output approval",
+            "status": "ready" if output_approval else "attention",
+            "detail": output_approval.notes if output_approval and output_approval.notes else ("Outputs explicitly approved." if output_approval else "Outputs have not been approved yet."),
+        },
+    ]
+    ready_count = sum(1 for check in checks if check["status"] == "ready")
+    score_pct = int(round((ready_count / len(checks)) * 100)) if checks else 0
+    return {
+        "release_ready": release_ready,
+        "score_pct": score_pct,
+        "checks": checks,
+        "blocking_gaps": blocking_gaps,
+        "mapping_candidates": mapping_candidates,
+        "unresolved_mappings": unresolved_mappings,
+        "assumptions": assumption_records,
+        "pending_assumptions": pending_assumptions,
+        "output_approval": output_approval,
+    }
+
+
 def get_station_connection(project: Project) -> StationConnectionConfig:
     if project.station_connection is None:
         project.station_connection = StationConnectionConfig()
@@ -1841,6 +1906,32 @@ async def mappings_page(request: Request, project_id: str):
             "mapping_candidates": mapping_candidates_for_project(project),
         },
     )
+
+
+@app.get("/project/{project_id}/review", response_class=HTMLResponse)
+async def review_release_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="review_release.html",
+        context={
+            "project": project,
+            "review_state": review_release_state(project),
+        },
+    )
+
+
+@app.post("/project/{project_id}/review/release")
+async def approve_release_readiness(
+    project_id: str,
+    notes: str = Form(""),
+):
+    project = get_project(project_id)
+    state = review_release_state(project)
+    if not state["release_ready"]:
+        return RedirectResponse(url=f"/project/{project_id}/review?ready=0", status_code=303)
+    record_output_approval(project, notes=notes or "Release review approved.", approved_by="UI")
+    return RedirectResponse(url=f"/project/{project_id}/review?ready=1", status_code=303)
 
 
 @app.post("/project/{project_id}/mappings")

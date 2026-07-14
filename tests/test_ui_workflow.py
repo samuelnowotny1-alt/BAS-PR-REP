@@ -1,4 +1,5 @@
 import asyncio
+import json
 from io import BytesIO
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ from fastapi import UploadFile
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
+from bas_assistant.exporters import BACnetExporter, NiagaraExporter
 from bas_assistant.importers import CSVImporter
 from bas_assistant.models import Controller, ControllerNetworkAddress, Equipment, EquipmentType, Project, ProjectMetadata, Protocol, UnitSystem
 from bas_assistant.models.station_sync import StationProbeResult
@@ -1002,6 +1004,169 @@ def test_mapping_decision_persists_and_changes_generated_relationships() -> None
     assert point_schedule.loc[0, "Controller"] == "MPC-2"
     mpc2_row = controller_schedule.loc[controller_schedule["Controller ID"] == "MPC-2"].iloc[0]
     assert mpc2_row["Owned Points"] == 1
+
+
+def test_review_release_page_blocks_then_allows_approval() -> None:
+    project_id = create_project("review-release-project")
+
+    page = run_async(main.review_release_page(request(f"/project/{project_id}/review"), project_id))
+    assert page.status_code == 200
+    assert "Needs review" in response_text(page)
+
+    blocked = run_async(
+        main.approve_release_readiness(
+            project_id=project_id,
+            notes="Should not pass yet.",
+        )
+    )
+    assert blocked.status_code == 303
+    assert blocked.headers["location"] == f"/project/{project_id}/review?ready=0"
+
+    project = main.get_project(project_id)
+    project.metadata.client = "Client"
+    project.metadata.location = "Site"
+    project.metadata.engineer_of_record = "Engineer"
+    project.metadata.programmer = "Programmer"
+    project.metadata.commissioning_agent = "CxA"
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=2001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            point_names=["AHU-1 SAT"],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+            bacnet_object_type="AI",
+            bacnet_instance=101,
+        )
+    )
+    main.save_project(project)
+
+    run_async(
+        main.add_assumption(
+            request=request(f"/project/{project_id}/assumptions", method="POST"),
+            project_id=project_id,
+            category="design",
+            title="Basis",
+            description="Accepted design basis.",
+            status="accepted",
+        )
+    )
+
+    allowed = run_async(
+        main.approve_release_readiness(
+            project_id=project_id,
+            notes="Ready for generated outputs.",
+        )
+    )
+    assert allowed.status_code == 303
+    assert allowed.headers["location"] == f"/project/{project_id}/review?ready=1"
+    reloaded = main.get_project(project_id)
+    assert reloaded.review_state.approvals[0].approval_key == "outputs-ready"
+
+
+def test_reimport_replaces_conflicting_rows_with_warning(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="REIMPORT-1", name="Reimport Project"))
+    importer = CSVImporter(project)
+    equipment_csv = tmp_path / "equipment_schedule.csv"
+    equipment_csv.write_text(
+        "Equipment ID,Equipment Type,Controller ID,Served Area\n"
+        "AHU-1,AHU,MPC-1,North Wing\n"
+    )
+    points_csv = tmp_path / "point_list.csv"
+    points_csv.write_text(
+        "Point Name,Equipment ID,Point Kind,Direction,Controller ID,Units\n"
+        "AHU-1 SAT,AHU-1,sensor,input,MPC-1,degF\n"
+    )
+
+    first_equipment = importer.import_equipment_schedule(equipment_csv, "equip_csv")
+    first_points = importer.import_point_list(points_csv, "points_csv")
+    assert first_equipment.success
+    assert first_points.success
+
+    equipment_csv.write_text(
+        "Equipment ID,Equipment Type,Controller ID,Served Area\n"
+        "AHU-1,AHU,MPC-2,South Wing\n"
+    )
+    points_csv.write_text(
+        "Point Name,Equipment ID,Point Kind,Direction,Controller ID,Units\n"
+        "AHU-1 SAT,AHU-1,sensor,input,MPC-2,degC\n"
+    )
+
+    second_equipment = importer.import_equipment_schedule(equipment_csv, "equip_csv_2")
+    second_points = importer.import_point_list(points_csv, "points_csv_2")
+    assert second_equipment.success
+    assert second_points.success
+    assert second_equipment.warnings
+    assert second_points.warnings
+    assert project.get_equipment("AHU-1").controller_id == "MPC-2"
+    assert project.get_equipment("AHU-1").served_area == "South Wing"
+    assert project.get_point("AHU-1 SAT").controller_id == "MPC-2"
+    assert project.get_point("AHU-1 SAT").units == "degC"
+
+
+def test_mapping_decision_flows_into_niagara_and_bacnet_exports(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="EXPORT-MAP", name="Export Mapping"))
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.1", network_number=1001)],
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-2",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.2", network_number=1002)],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    project.review_state.mapping_decisions.append(
+        main.MappingReviewDecision(
+            mapping_key="point-controller:AHU-1 SAT",
+            mapped_to="MPC-2",
+            status="accepted",
+            notes="Override controller from field review.",
+        )
+    )
+
+    niagara_result = NiagaraExporter(project).export(tmp_path / "niagara")
+    bacnet_result = BACnetExporter(project).export(tmp_path / "bacnet")
+
+    assert niagara_result.success
+    assert bacnet_result.success
+
+    niagara_points = json.loads((tmp_path / "niagara" / "EXPORT-MAP_wxf" / "points.json").read_text())
+    assert niagara_points["points"][0]["ord"] == "station:|slot:/Drivers/BacnetNetwork/MPC-2/Points/AHU-1_SAT"
+
+    bacnet_points = pd.read_csv(tmp_path / "bacnet" / "csv" / "points.csv")
+    assert bacnet_points.loc[0, "Controller"] == "MPC-2"
 
 
 def test_read_only_project_api_endpoints() -> None:

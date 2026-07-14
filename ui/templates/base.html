@@ -171,6 +171,10 @@
                     <span class="sidebar-link-icon"><i class="fas fa-link"></i></span>
                     <span class="sidebar-link-label">Mappings</span>
                 </a>
+                <a href="/project/{{ project.metadata.project_id }}/review" class="sidebar-link {% if '/review' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-clipboard-list"></i></span>
+                    <span class="sidebar-link-label">Review Release</span>
+                </a>
                 <a href="/project/{{ project.metadata.project_id }}/checkout" class="sidebar-link {% if '/checkout' in request.url.path %}active{% endif %}">
                     <span class="sidebar-link-icon"><i class="fas fa-clipboard-check"></i></span>
                     <span class="sidebar-link-label">Checkout Sheets</span>

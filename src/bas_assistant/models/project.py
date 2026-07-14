@@ -179,6 +179,33 @@ class Project(BaseModel):
             raise ValueError(f"Controller with ID '{controller.id}' already exists")
         self.controllers.append(controller)
 
+    def upsert_equipment(self, equipment: Equipment) -> str:
+        """Insert or replace equipment deterministically by ID."""
+        existing_index = next((index for index, item in enumerate(self.equipment) if item.id == equipment.id), None)
+        if existing_index is None:
+            self.equipment.append(equipment)
+            return "created"
+        self.equipment[existing_index] = equipment
+        return "updated"
+
+    def upsert_point(self, point: Point) -> str:
+        """Insert or replace a point deterministically by name."""
+        existing_index = next((index for index, item in enumerate(self.points) if item.name == point.name), None)
+        if existing_index is None:
+            self.points.append(point)
+            return "created"
+        self.points[existing_index] = point
+        return "updated"
+
+    def upsert_controller(self, controller: Controller) -> str:
+        """Insert or replace a controller deterministically by ID."""
+        existing_index = next((index for index, item in enumerate(self.controllers) if item.id == controller.id), None)
+        if existing_index is None:
+            self.controllers.append(controller)
+            return "created"
+        self.controllers[existing_index] = controller
+        return "updated"
+
     def get_equipment(self, equipment_id: str) -> Equipment | None:
         return next((e for e in self.equipment if e.id == equipment_id), None)
 

@@ -105,8 +105,10 @@ class JCIExporter(BaseExporter):
         xml.append('<PointsDatabase xmlns="urn:jci:metasys:points:1.0">')
 
         for point in self.project.points:
-            ctrl = self.project.get_controller(point.controller_id) if point.controller_id else None
-            equip = self.project.get_equipment(point.equipment_id)
+            effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+            effective_controller_id = self.project.effective_point_controller_id(point)
+            ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
+            equip = self.project.get_equipment(effective_equipment_id)
 
             # JCI object types
             jci_type_map = {
@@ -127,7 +129,7 @@ class JCIExporter(BaseExporter):
 
             xml.append(f'  <Point name="{point.name}" type="{jci_type}" instance="{instance}">')
             xml.append(f'    <Description>{point.description or ""}</Description>')
-            xml.append(f'    <Equipment>{equip.id if equip else point.equipment_id}</Equipment>')
+            xml.append(f'    <Equipment>{equip.id if equip else effective_equipment_id}</Equipment>')
             xml.append(f'    <Controller>{ctrl.id if ctrl else ""}</Controller>')
             xml.append(f'    <Units>{point.units or ""}</Units>')
             xml.append(f'    <Range min="{point.range_min or ""}" max="{point.range_max or ""}"/>')
@@ -156,7 +158,8 @@ class JCIExporter(BaseExporter):
         xml.append('<EquipmentDatabase xmlns="urn:jci:metasys:equipment:1.0">')
 
         for equip in self.project.equipment:
-            ctrl = self.project.get_controller(equip.controller_id) if equip.controller_id else None
+            effective_controller_id = self.project.effective_equipment_controller_id(equip)
+            ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
             xml.append(f'  <Equipment id="{equip.id}" type="{equip.type.value}">')
             xml.append(f'    <Description>{equip.served_area or ""}</Description>')
             xml.append(f'    <Location building="{equip.building or ""}" floor="{equip.floor or ""}" room="{equip.room or ""}"/>')

@@ -129,7 +129,8 @@ class BACnetExporter(BaseExporter):
             ])
 
             for point in self.project.points:
-                ctrl = self.project.get_controller(point.controller_id) if point.controller_id else None
+                effective_controller_id = self.project.effective_point_controller_id(point)
+                ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
                 device_instance = 0
                 if ctrl:
                     for addr in ctrl.network_addresses:
@@ -274,10 +275,12 @@ class BACnetExporter(BaseExporter):
                 "BACnet Object Type", "BACnet Instance", "Modbus Register", "Modbus Type"
             ])
             for point in self.project.points:
-                ctrl = self.project.get_controller(point.controller_id) if point.controller_id else None
+                effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+                effective_controller_id = self.project.effective_point_controller_id(point)
+                ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
                 writer.writerow([
                     point.name,
-                    point.equipment_id,
+                    effective_equipment_id,
                     ctrl.id if ctrl else "",
                     point.kind.value,
                     "",
@@ -300,6 +303,7 @@ class BACnetExporter(BaseExporter):
                 "Controller", "Design CFM", "Design Tonnage", "Design GPM", "Status"
             ])
             for equip in self.project.equipment:
+                effective_controller_id = self.project.effective_equipment_controller_id(equip)
                 writer.writerow([
                     equip.id,
                     equip.type.value,
@@ -307,7 +311,7 @@ class BACnetExporter(BaseExporter):
                     equip.floor or "",
                     equip.room or "",
                     equip.served_area or "",
-                    equip.controller_id or "",
+                    effective_controller_id or "",
                     equip.design_cfm or "",
                     equip.design_tonnage or "",
                     equip.design_gpm or "",

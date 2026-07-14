@@ -151,11 +151,11 @@ class NiagaraExporter(BaseExporter):
         return node
 
     def _point_ord(self, point: Point) -> str:
-        controller_name = point.controller_id or "Unassigned"
+        controller_name = self.project.effective_point_controller_id(point) or "Unassigned"
         return self._ord("Drivers", "BacnetNetwork", controller_name, "Points", point.name)
 
     def _point_slot_path(self, point: Point) -> str:
-        controller_name = point.controller_id or "Unassigned"
+        controller_name = self.project.effective_point_controller_id(point) or "Unassigned"
         return self._slot_path("Drivers", "BacnetNetwork", controller_name, "Points", point.name)
 
     def _equipment_slot_path(self, equip: Equipment) -> str:
@@ -395,15 +395,17 @@ class NiagaraExporter(BaseExporter):
         payload: dict[str, list[dict[str, object]]] = {"points": []}
 
         for point in self.project.points:
-            equip = self.project.get_equipment(point.equipment_id)
-            controller = self.project.get_controller(point.controller_id) if point.controller_id else None
+            effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+            effective_controller_id = self.project.effective_point_controller_id(point)
+            equip = self.project.get_equipment(effective_equipment_id)
+            controller = self.project.get_controller(effective_controller_id) if effective_controller_id else None
             slot_path = self._point_slot_path(point)
             point_data = self._component_node(
                 name=point.name,
                 slot_type=self.POINT_KIND_TO_SLOT.get(point.kind, "control:NumericPoint"),
                 slot_path=slot_path,
                 display_name=point.name,
-                parent_path=self._slot_path("Drivers", "BacnetNetwork", point.controller_id or "Unassigned", "Points"),
+                parent_path=self._slot_path("Drivers", "BacnetNetwork", effective_controller_id or "Unassigned", "Points"),
                 facets=self._facet_block(
                     units=point.units,
                     precision=self._display_precision(point),
