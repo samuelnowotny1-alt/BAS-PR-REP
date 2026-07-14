@@ -118,15 +118,33 @@ def test_protected_pages_require_authentication(tmp_path: Path) -> None:
         uploads_dir=tmp_path / "uploads",
         database_url=f"sqlite:///{tmp_path / 'protected.db'}",
     )
+    main.container.settings = main.container.settings.model_copy(update={"auth_required": False})
+
+    async def ok_response(_request: Request) -> PlainTextResponse:
+        return PlainTextResponse("ok")
 
     home_request = request("/")
-    home_response = asyncio.run(main.authentication_middleware(home_request, lambda _request: PlainTextResponse("ok")))
-    assert home_response.status_code == 303
-    assert home_response.headers["location"] == "/login"
+    home_response = asyncio.run(main.authentication_middleware(home_request, ok_response))
+    assert home_response.status_code == 200
 
     api_request = request("/api/load-demo", method="POST")
-    api_response = asyncio.run(main.authentication_middleware(api_request, lambda _request: PlainTextResponse("ok")))
-    assert api_response.status_code == 401
+    api_response = asyncio.run(main.authentication_middleware(api_request, ok_response))
+    assert api_response.status_code == 200
+
+
+def test_login_page_redirects_when_auth_disabled(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'auth_disabled.db'}",
+    )
+    main.container.settings = main.container.settings.model_copy(update={"auth_required": False})
+
+    response = asyncio.run(main.login_page(request("/login")))
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
 
 
 def test_role_permissions_block_viewer_writes_and_allow_engineer(tmp_path: Path) -> None:

@@ -786,6 +786,8 @@ async def log_request_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def authentication_middleware(request: Request, call_next):
+    if not container.settings.auth_required:
+        return await call_next(request)
     if not is_protected_path(request.url.path):
         return await call_next(request)
     if get_current_user(request) is not None:
@@ -912,6 +914,8 @@ async def health_check():
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
+    if not container.settings.auth_required:
+        return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
         request=request,
         name="login.html",
@@ -925,6 +929,8 @@ async def login_submit(
     username: str = Form(...),
     password: str = Form(...),
 ):
+    if not container.settings.auth_required:
+        return RedirectResponse(url="/", status_code=303)
     user = container.auth.authenticate(username=username, password=password)
     if user is None:
         return templates.TemplateResponse(
@@ -944,7 +950,7 @@ async def login_submit(
 @app.post("/logout")
 async def logout(request: Request):
     request.session.clear()
-    return RedirectResponse(url="/login", status_code=303)
+    return RedirectResponse(url="/" if not container.settings.auth_required else "/login", status_code=303)
 
 
 @app.get("/", response_class=HTMLResponse)

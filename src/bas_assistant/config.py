@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/bas_assistant.db"
     session_secret: str = "change-me-in-production"
     session_cookie_name: str = "bas_assistant_session"
+    auth_required: bool = True
     bootstrap_admin_username: str = "admin"
     bootstrap_admin_password: str = "admin123!"
     bootstrap_admin_email: str = "admin@example.com"

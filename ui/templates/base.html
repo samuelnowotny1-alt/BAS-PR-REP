@@ -243,13 +243,14 @@
                     </div>
                     <div class="flex items-center gap-3">
                         {% set session_user = request.scope.get('session', {}).get('user') if request is defined else none %}
+                        {% set auth_required = request.app.state.container.settings.auth_required if request is defined else true %}
                         {% if not project %}
                         <a href="/project/new" class="new-project-link">
                             <i class="fas fa-plus-circle"></i>
                             <span>New Project</span>
                         </a>
                         {% endif %}
-                        {% if session_user %}
+                        {% if auth_required and session_user %}
                         {% if session_user.role == 'admin' %}
                         <a href="/admin/users" class="new-project-link">
                             <i class="fas fa-user-shield"></i>
@@ -264,7 +265,7 @@
                                 <i class="fas fa-right-from-bracket"></i>
                             </button>
                         </form>
-                        {% else %}
+                        {% elif auth_required %}
                         <a href="/login" class="topbar-button" title="Log in">
                             <i class="fas fa-user"></i>
                         </a>
