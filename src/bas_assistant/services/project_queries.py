@@ -368,6 +368,13 @@ class ProjectQueryService:
 
     def import_status_view(self, project_id: str) -> dict[str, object] | None:
         """Return recent import and artifact-ingestion status for the import workspace."""
+        workspace = self.import_workspace_view(project_id)
+        if workspace is None:
+            return None
+        return workspace["import_status_view"]
+
+    def import_workspace_view(self, project_id: str) -> dict[str, object] | None:
+        """Return recent uploads and import status for the import workspace."""
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
@@ -383,13 +390,35 @@ class ProjectQueryService:
                     .limit(12)
                 )
             )
+            uploads = list(
+                session.scalars(
+                    select(UploadRecord)
+                    .where(UploadRecord.project_id == project.id)
+                    .order_by(UploadRecord.created_at.desc())
+                    .limit(8)
+                )
+            )
         task_views = [self._task_to_view(task) for task in tasks]
         return {
             "project_id": project.project_id,
             "project_name": project.name,
-            "tasks": task_views,
-            "warning_count": sum(len(task["warning_messages"]) for task in task_views),
-            "error_count": sum(len(task["error_messages"]) for task in task_views),
+            "recent_uploads": [
+                {
+                    "filename": upload.filename,
+                    "category": upload.category,
+                    "status": upload.status,
+                    "created_at": upload.created_at,
+                    "stored_path": upload.stored_path,
+                }
+                for upload in uploads
+            ],
+            "import_status_view": {
+                "project_id": project.project_id,
+                "project_name": project.name,
+                "tasks": task_views,
+                "warning_count": sum(len(task["warning_messages"]) for task in task_views),
+                "error_count": sum(len(task["error_messages"]) for task in task_views),
+            },
         }
 
     def memberships_view(self, project_id: str) -> dict[str, object] | None:

@@ -62,3 +62,18 @@ def test_health_endpoint_reports_loaded_projects(
     assert response.status_code == 200
     assert '"status":"ok"' in payload
     assert '"projects_loaded":1' in payload
+
+
+def test_timed_page_context_logs_duration(monkeypatch: pytest.MonkeyPatch) -> None:
+    messages: list[str] = []
+
+    def fake_info(message: str, *args) -> None:
+        messages.append(message % args)
+
+    monkeypatch.setattr(main.logger, "info", fake_info)
+
+    result = main.timed_page_context("dashboard", lambda: {"ok": True})
+
+    assert result == {"ok": True}
+    assert messages
+    assert messages[0].startswith("page_context[dashboard] built in ")

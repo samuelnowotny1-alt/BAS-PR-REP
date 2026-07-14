@@ -722,6 +722,37 @@ def test_htmx_import_returns_inline_result_summary() -> None:
     assert "Knowledge status: indexed" in text
 
 
+def test_import_workspace_view_returns_recent_uploads_and_task_summary() -> None:
+    project_id = create_project("import-workspace-project")
+    project = main.get_project(project_id)
+    run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="notes.txt", file=BytesIO(b"sequence notes")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    task_id = main.container.tasks.create_task(
+        project_id=project_id,
+        task_type="artifact_ingestion",
+        payload={"filename": "notes.txt"},
+    )
+    main.container.tasks.complete_task(
+        task_id,
+        result={"knowledge_status": "indexed", "chunk_count": 1},
+    )
+
+    workspace_view = main.container.project_queries.import_workspace_view(project_id)
+
+    assert workspace_view is not None
+    assert workspace_view["project_id"] == project_id
+    assert len(workspace_view["recent_uploads"]) == 1
+    assert workspace_view["recent_uploads"][0]["filename"] == "notes.txt"
+    assert workspace_view["import_status_view"]["tasks"][0]["task_type"] == "artifact_ingestion"
+    assert workspace_view["import_status_view"]["tasks"][0]["outcome_summary"]["summary_text"] == "Knowledge status: indexed"
+
+
 def test_import_page_renders_recent_ingestion_outcomes_and_parser_support() -> None:
     project_id = create_project("import-page-project")
     project = main.get_project(project_id)

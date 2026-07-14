@@ -639,26 +639,40 @@ def graphics_symbol_library() -> list[dict[str, object]]:
     return library
 
 
-def _recent_upload_views(project_id: str) -> list[dict[str, object]]:
-    recent_uploads = container.uploads.list_recent_uploads(project_id=project_id, limit=8)
+def _enrich_recent_upload_views(recent_uploads: list[dict[str, object]]) -> list[dict[str, object]]:
     return [
         {
-            "filename": upload.filename,
-            "category": upload.category,
-            "status": upload.status,
-            "created_at": upload.created_at,
-            "parser_supported": container.parsers.can_parse(Path(upload.stored_path)),
+            "filename": str(upload["filename"]),
+            "category": str(upload["category"]),
+            "status": str(upload["status"]),
+            "created_at": upload["created_at"],
+            "parser_supported": container.parsers.can_parse(Path(str(upload["stored_path"]))),
         }
         for upload in recent_uploads
     ]
 
 
 def _import_page_context(project: Project, project_id: str) -> dict[str, object]:
+    workspace_view = container.project_queries.import_workspace_view(project_id)
+    if workspace_view is None:
+        return {
+            "project": project,
+            "recent_upload_views": [],
+            "import_status_view": None,
+        }
     return {
         "project": project,
-        "recent_upload_views": _recent_upload_views(project_id),
-        "import_status_view": container.project_queries.import_status_view(project_id),
+        "recent_upload_views": _enrich_recent_upload_views(workspace_view["recent_uploads"]),
+        "import_status_view": workspace_view["import_status_view"],
     }
+
+
+def timed_page_context(label: str, builder):
+    start_time = time.perf_counter()
+    context = builder()
+    duration_ms = (time.perf_counter() - start_time) * 1000
+    logger.info("page_context[%s] built in %.2fms", label, duration_ms)
+    return context
 
 
 def assumption_set_for_project(project_id: str):
@@ -936,7 +950,7 @@ async def logout(request: Request):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     current_user = get_current_user(request)
-    dashboard = container.dashboard.snapshot(current_user)
+    dashboard = timed_page_context("dashboard", lambda: container.dashboard.snapshot(current_user))
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -1015,7 +1029,10 @@ async def api_create_project(
 @app.get("/project/{project_id}", response_class=HTMLResponse)
 async def project_detail(request: Request, project_id: str):
     project = get_project(project_id)
-    project_view = container.project_queries.detail_view(project_id)
+    project_view = timed_page_context(
+        f"project_detail:{project_id}",
+        lambda: container.project_queries.detail_view(project_id),
+    )
     if project_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
@@ -1130,7 +1147,10 @@ async def project_activity_page(request: Request, project_id: str):
 @app.get("/project/{project_id}/documents", response_class=HTMLResponse)
 async def project_documents_page(request: Request, project_id: str):
     project = get_project(project_id)
-    documents_view = container.project_queries.documents_view(project_id)
+    documents_view = timed_page_context(
+        f"project_documents:{project_id}",
+        lambda: container.project_queries.documents_view(project_id),
+    )
     if documents_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return templates.TemplateResponse(
@@ -1179,7 +1199,10 @@ async def project_document_download(project_id: str, document_id: int):
 @app.get("/project/{project_id}/knowledge", response_class=HTMLResponse)
 async def project_knowledge_page(request: Request, project_id: str, q: str = ""):
     project = get_project(project_id)
-    knowledge_view = container.project_queries.search_knowledge(project_id, q)
+    knowledge_view = timed_page_context(
+        f"project_knowledge:{project_id}",
+        lambda: container.project_queries.search_knowledge(project_id, q),
+    )
     if knowledge_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return templates.TemplateResponse(
@@ -1258,7 +1281,10 @@ async def import_page(request: Request, project_id: str):
     return templates.TemplateResponse(
         request=request,
         name="import.html",
-        context=_import_page_context(project, project_id),
+        context=timed_page_context(
+            f"import_page:{project_id}",
+            lambda: _import_page_context(project, project_id),
+        ),
     )
 
 
@@ -1460,6 +1486,10 @@ async def import_data(
 
     save_project(project)
     if request.headers.get("HX-Request") == "true":
+        workspace_view = timed_page_context(
+            f"import_result:{project_id}",
+            lambda: container.project_queries.import_workspace_view(project_id),
+        )
         return templates.TemplateResponse(
             request=request,
             name="partials/import_result.html",
@@ -1467,8 +1497,8 @@ async def import_data(
                 "project": project,
                 "project_id": project_id,
                 "results": results,
-                "import_status_view": container.project_queries.import_status_view(project_id),
-                "recent_upload_views": _recent_upload_views(project_id),
+                "import_status_view": None if workspace_view is None else workspace_view["import_status_view"],
+                "recent_upload_views": [] if workspace_view is None else _enrich_recent_upload_views(workspace_view["recent_uploads"]),
             },
         )
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)
