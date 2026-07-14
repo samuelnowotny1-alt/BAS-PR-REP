@@ -1046,9 +1046,43 @@ def load_projects_from_disk() -> None:
         logger.exception("Failed to load projects from repository")
 
 
+def validation_remediation_for_rule(rule_id: str, field: str) -> tuple[str, str]:
+    remediation_map = {
+        "NAMING-001": ("Normalize equipment IDs to BAS tag format such as `AHU-1` or `VAV-203`.", "naming"),
+        "NAMING-002": ("Rename the point so it starts with the resolved equipment ID and ends with a standard point code.", "naming"),
+        "NAMING-003": ("Normalize controller IDs to a stable BAS controller tag such as `MPC-1` or `VAV-201`.", "naming"),
+        "COMP-001": ("Assign or map the equipment to a real controller before generation.", "controller_assignment"),
+        "COMP-002": ("Attach the point to an existing equipment record or resolve the point-equipment mapping.", "equipment_linkage"),
+        "COMP-003": ("Assign or map the point to an owning controller so exports and review pages can trace it.", "controller_assignment"),
+        "COMP-004": ("Review whether the controller should own points yet; otherwise add the missing point ownership.", "controller_completeness"),
+        "COMP-005": ("Add at least one relevant point to the equipment or confirm the equipment record is incomplete.", "equipment_completeness"),
+        "COMP-006": ("Add the controller network address that matches its declared network protocol.", "networking"),
+        "CONS-001": ("Align the point controller with the resolved equipment controller or update the mapping decision.", "controller_assignment"),
+        "CONS-002": ("Remove stale served-equipment references or add the missing equipment objects.", "equipment_linkage"),
+        "CONS-003": ("Deduplicate point names so each point is unique within the project.", "deduplication"),
+        "CONS-004": ("Deduplicate equipment IDs so each equipment object is unique within the project.", "deduplication"),
+        "CONS-005": ("Deduplicate controller IDs so each controller object is unique within the project.", "deduplication"),
+        "ENG-001": ("Set a valid engineering range where the minimum is less than the maximum.", "engineering_ranges"),
+        "ENG-002": ("Use temperature units like `degF` or `degC` for temperature-related points.", "units"),
+        "ENG-003": ("Use pressure units like `inWC`, `psi`, or `Pa` for pressure-related points.", "units"),
+        "ENG-004": ("Use flow units like `CFM`, `GPM`, or `LPS` for flow-related points.", "units"),
+        "PROTO-001": ("Add the BACnet object type for points that live on BACnet controllers.", "protocol_mapping"),
+        "PROTO-002": ("Assign a unique BACnet instance within the controller scope.", "protocol_mapping"),
+        "PROTO-003": ("Assign a unique Modbus register within the controller scope.", "protocol_mapping"),
+        "PROTO-004": ("Define BACnet object type and BACnet instance together for the same point.", "protocol_mapping"),
+        "PROTO-005": ("Define Modbus register and Modbus register type together for the same point.", "protocol_mapping"),
+        "PROTO-006": ("Make each controller network address use one of the controller's declared protocols.", "networking"),
+        "CAP-001": ("Reduce owned points or increase configured controller capacity before export.", "capacity"),
+        "CAP-002": ("Correct the configured I/O totals so used points do not exceed total capacity.", "capacity"),
+    }
+    default_group = "general" if not field else field.replace(".", "_")
+    return remediation_map.get(rule_id, ("Review the referenced object and correct the source data or mapping before generation.", default_group))
+
+
 def serialize_validation_findings(report) -> list[dict[str, str]]:
     findings = []
     for finding in report.errors + report.warnings + report.infos:
+        remediation, fix_group = validation_remediation_for_rule(finding.rule_id, finding.field or "")
         findings.append(
             {
                 "severity": finding.severity.value,
@@ -1058,6 +1092,9 @@ def serialize_validation_findings(report) -> list[dict[str, str]]:
                 "category": finding.category.value,
                 "field": finding.field or "",
                 "message": finding.message,
+                "title": f"{finding.rule_id} · {finding.object_id}",
+                "remediation": remediation,
+                "fix_group": fix_group,
             }
         )
     return findings

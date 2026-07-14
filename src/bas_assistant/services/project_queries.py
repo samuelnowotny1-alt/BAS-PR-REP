@@ -602,6 +602,13 @@ class ProjectQueryService:
                     .order_by(KnowledgeRecord.created_at.desc(), KnowledgeRecord.source_name)
                 )
             )
+            documents = list(
+                session.scalars(
+                    select(DocumentRecord)
+                    .where(DocumentRecord.project_id == project.id)
+                    .order_by(DocumentRecord.created_at.desc(), DocumentRecord.name)
+                )
+            )
         knowledge_view = {
             "project_id": project.project_id,
             "project_name": project.name,
@@ -624,15 +631,26 @@ class ProjectQueryService:
                 "result_count": 0,
             }
 
+        documents_by_key = {
+            (document.name, document.document_type): document
+            for document in documents
+        }
         results: list[dict[str, object]] = []
 
         for record in records:
             metadata = dict(record.metadata_json or {})
+            document = documents_by_key.get((record.source_name, record.source_type))
             for chunk in metadata.get("chunks", []):
                 chunk_text = str(chunk.get("text") or "").strip()
                 if not chunk_text:
                     continue
-                score = self._knowledge_match_score(normalized_query, query_terms, chunk_text)
+                match_details = self._knowledge_match_details(
+                    query=normalized_query,
+                    query_terms=query_terms,
+                    chunk_text=chunk_text,
+                    source_name=record.source_name,
+                )
+                score = match_details["score"]
                 if score <= 0:
                     continue
                 excerpt = self._build_knowledge_excerpt(chunk_text, query_terms)
@@ -646,15 +664,31 @@ class ProjectQueryService:
                         "chunk_index": chunk.get("index", 0),
                         "chunk_char_count": chunk.get("char_count", len(chunk_text)),
                         "score": score,
+                        "matched_terms": match_details["matched_terms"],
+                        "matched_term_count": match_details["matched_term_count"],
+                        "coverage_ratio": match_details["coverage_ratio"],
+                        "exact_phrase_match": match_details["exact_phrase_match"],
                         "excerpt": excerpt,
                         "content_format": metadata.get("content_format"),
                         "file_path": metadata.get("file_path"),
+                        "document_id": document.id if document is not None else None,
+                        "document_detail_url": (
+                            f"/project/{project.project_id}/documents/{document.id}"
+                            if document is not None
+                            else None
+                        ),
+                        "document_download_url": (
+                            f"/project/{project.project_id}/documents/{document.id}/download"
+                            if document is not None
+                            else None
+                        ),
                     }
                 )
 
         results.sort(
             key=lambda row: (
                 -float(row["score"]),
+                -float(row["coverage_ratio"]),
                 str(row["source_name"]).lower(),
                 int(row["chunk_index"]),
             )
@@ -801,16 +835,50 @@ class ProjectQueryService:
     def _tokenize_search_query(self, query: str) -> list[str]:
         return [term for term in re.findall(r"[A-Za-z0-9_/.-]+", query.lower()) if len(term) >= 2]
 
-    def _knowledge_match_score(self, query: str, query_terms: list[str], chunk_text: str) -> float:
+    def _knowledge_match_details(
+        self,
+        *,
+        query: str,
+        query_terms: list[str],
+        chunk_text: str,
+        source_name: str,
+    ) -> dict[str, object]:
         lowered_chunk = chunk_text.lower()
+        lowered_source_name = source_name.lower()
+        chunk_tokens = self._tokenize_search_query(chunk_text)
+        token_count = max(len(chunk_tokens), 1)
+        matched_terms: list[str] = []
+        total_occurrences = 0
         score = 0.0
         for term in query_terms:
-            occurrences = lowered_chunk.count(term)
+            occurrences = len(re.findall(rf"(?<![A-Za-z0-9]){re.escape(term)}(?![A-Za-z0-9])", lowered_chunk))
             if occurrences:
-                score += 2.0 + min(occurrences, 5) * 0.5
-        if query.lower() in lowered_chunk:
-            score += 4.0
-        return score
+                matched_terms.append(term)
+                total_occurrences += occurrences
+                score += 3.0 + min(occurrences, 4) * 0.8
+            elif term in lowered_chunk:
+                matched_terms.append(term)
+                score += 1.5
+        coverage_ratio = len(matched_terms) / len(query_terms) if query_terms else 0.0
+        exact_phrase_match = query.lower() in lowered_chunk
+        if exact_phrase_match:
+            score += 6.0
+        if query.lower() in lowered_source_name:
+            score += 3.0
+        for term in matched_terms:
+            if term in lowered_source_name:
+                score += 1.0
+        if coverage_ratio == 1.0:
+            score += 5.0
+        score += coverage_ratio * 4.0
+        score += min(total_occurrences / token_count, 0.35) * 10.0
+        return {
+            "score": round(score, 3),
+            "matched_terms": matched_terms,
+            "matched_term_count": len(matched_terms),
+            "coverage_ratio": round(coverage_ratio, 3),
+            "exact_phrase_match": exact_phrase_match,
+        }
 
     def _build_knowledge_excerpt(self, chunk_text: str, query_terms: list[str], *, width: int = 220) -> str:
         lowered_chunk = chunk_text.lower()

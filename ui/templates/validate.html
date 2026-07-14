@@ -107,6 +107,7 @@
                                     <option value="none">No grouping</option>
                                     <option value="category">Category</option>
                                     <option value="object_type">Object type</option>
+                                    <option value="fix_group">Fix path</option>
                                 </select>
                             </label>
                             <label class="text-sm text-gray-600 dark:text-gray-300">
@@ -179,7 +180,7 @@
                     </thead>
                     <tbody id="validation-results-body" class="divide-y divide-gray-200 dark:divide-gray-700">
                         {% for finding in findings %}
-                        {% set search_text = (finding.object_type ~ ' ' ~ finding.object_id ~ ' ' ~ finding.rule_id ~ ' ' ~ finding.category ~ ' ' ~ finding.field ~ ' ' ~ finding.message)|lower %}
+                        {% set search_text = (finding.object_type ~ ' ' ~ finding.object_id ~ ' ' ~ finding.rule_id ~ ' ' ~ finding.category ~ ' ' ~ finding.field ~ ' ' ~ finding.message ~ ' ' ~ finding.remediation ~ ' ' ~ finding.fix_group)|lower %}
                         <tr
                             class="table-row validation-row cursor-pointer"
                             data-severity="{{ finding.severity }}"
@@ -189,6 +190,9 @@
                             data-category="{{ finding.category }}"
                             data-field="{{ finding.field }}"
                             data-message="{{ finding.message }}"
+                            data-remediation="{{ finding.remediation }}"
+                            data-fix-group="{{ finding.fix_group }}"
+                            data-title="{{ finding.title }}"
                             data-search="{{ search_text }}"
                         >
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -269,6 +273,12 @@
                             <p id="validation-detail-message"></p>
                         </div>
                     </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Recommended Fix</p>
+                        <div class="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800 dark:border-orange-800 dark:bg-orange-900/20 dark:text-orange-200">
+                            <p id="validation-detail-remediation"></p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -337,6 +347,7 @@
         const detailRule = document.getElementById("validation-detail-rule");
         const detailField = document.getElementById("validation-detail-field");
         const detailMessage = document.getElementById("validation-detail-message");
+        const detailRemediation = document.getElementById("validation-detail-remediation");
 
         const state = {
             groupValue: "all",
@@ -368,7 +379,7 @@
         };
 
         const setSelectedRow = (row) => {
-            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage) {
+            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage || !detailRemediation) {
                 return;
             }
 
@@ -393,6 +404,7 @@
             detailRule.textContent = row.dataset.ruleId || "—";
             detailField.textContent = row.dataset.field || "—";
             detailMessage.textContent = row.dataset.message || "";
+            detailRemediation.textContent = row.dataset.remediation || "Review this finding and correct the source data before generation.";
 
             detailEmpty.classList.add("hidden");
             detailPanel.classList.remove("hidden");
@@ -409,7 +421,13 @@
 
             const grouped = new Map();
             for (const row of visibleRows) {
-                const key = row.dataset[groupBy === "object_type" ? "objectType" : "category"] || "unknown";
+                const key = row.dataset[
+                    groupBy === "object_type"
+                        ? "objectType"
+                        : groupBy === "fix_group"
+                            ? "fixGroup"
+                            : "category"
+                ] || "unknown";
                 if (!grouped.has(key)) {
                     grouped.set(key, { total: 0, error: 0, warning: 0, info: 0 });
                 }
@@ -420,7 +438,7 @@
 
             groupCards.innerHTML = "";
             const entries = [...grouped.entries()].sort((a, b) => b[1].total - a[1].total || a[0].localeCompare(b[0]));
-            groupNote.textContent = `Grouped by ${groupBy === "object_type" ? "object type" : "category"}`;
+            groupNote.textContent = `Grouped by ${groupBy === "object_type" ? "object type" : groupBy === "fix_group" ? "fix path" : "category"}`;
 
             for (const [key, counts] of entries) {
                 const button = document.createElement("button");
@@ -467,7 +485,11 @@
                 const matchesObjectType = objectType === "all" || row.dataset.objectType === objectType;
                 const haystack = row.dataset.search || "";
                 const matchesSearch = query === "" || haystack.includes(query);
-                const groupKey = groupBy === "object_type" ? row.dataset.objectType : row.dataset.category;
+                const groupKey = groupBy === "object_type"
+                    ? row.dataset.objectType
+                    : groupBy === "fix_group"
+                        ? row.dataset.fixGroup
+                        : row.dataset.category;
                 const matchesGroup = groupBy === "none" || state.groupValue === "all" || groupKey === state.groupValue;
                 const show = matchesSeverity && matchesObjectType && matchesSearch && matchesGroup;
                 row.classList.toggle("hidden", !show);

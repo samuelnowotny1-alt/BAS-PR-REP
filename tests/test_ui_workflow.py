@@ -409,9 +409,54 @@ def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
     assert "Knowledge Search" in page_text
     assert "sequence.txt" in page_text
     assert "supply fan status" in page_text
+    assert f'/project/{project_id}/documents/{stored_upload.document_record_id}' in page_text
     assert api_response["result_count"] >= 1
     assert api_response["results"][0]["source_name"] == "sequence.txt"
     assert "supply fan status" in api_response["results"][0]["excerpt"]
+    assert api_response["results"][0]["document_id"] == stored_upload.document_record_id
+    assert api_response["results"][0]["document_detail_url"] == f"/project/{project_id}/documents/{stored_upload.document_record_id}"
+    assert api_response["results"][0]["document_download_url"] == f"/project/{project_id}/documents/{stored_upload.document_record_id}/download"
+    assert api_response["results"][0]["matched_terms"] == ["supply", "fan"]
+
+
+def test_project_knowledge_search_ranks_exact_phrase_and_full_coverage_first() -> None:
+    project_id = create_project("knowledge-ranking-project")
+    project = main.get_project(project_id)
+    uploads = [
+        (
+            "exact-sequence.txt",
+            b"The supply fan status shall prove within 10 seconds and the supply fan status alarm shall reset automatically.",
+        ),
+        (
+            "partial-sequence.txt",
+            b"The supply airflow shall enable on occupancy and prove discharge temperature during operation.",
+        ),
+    ]
+    for filename, content in uploads:
+        stored_upload = run_async(
+            main.container.uploads.save_project_upload(
+                project=project,
+                upload=UploadFile(filename=filename, file=BytesIO(content)),
+                category="documents",
+                document_type="text_document",
+            )
+        )
+        main.container.knowledge.ingest_document(
+            project=project,
+            file_path=stored_upload.path,
+            source_name=stored_upload.source_document.name,
+            source_type=stored_upload.document_type,
+            metadata={**stored_upload.metadata, "category": stored_upload.category},
+        )
+    main.save_project(project)
+
+    api_response = run_async(main.api_project_knowledge_search(project_id, q="supply fan status"))
+
+    assert api_response["result_count"] >= 2
+    assert api_response["results"][0]["source_name"] == "exact-sequence.txt"
+    assert api_response["results"][0]["exact_phrase_match"] is True
+    assert api_response["results"][0]["coverage_ratio"] == 1.0
+    assert api_response["results"][0]["matched_terms"] == ["supply", "fan", "status"]
 
 
 def test_non_htmx_create_project_returns_redirect() -> None:
@@ -659,6 +704,8 @@ def test_validate_page_includes_filters_and_export_link(
     assert "Findings Explorer" in text
     assert 'id="validation-group-by"' in text
     assert 'id="validation-object-filter"' in text
+    assert "Fix path" in text
+    assert "Recommended Fix" in text
     assert "Selected Finding" in text
     assert "Inspect" in text
     assert f'/project/{project_id}/validate/report.json' in text
