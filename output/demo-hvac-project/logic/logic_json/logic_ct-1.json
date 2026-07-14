@@ -1,0 +1,736 @@
+{
+  "diagram_id": "logic_ct-1",
+  "name": "CT-1 Control Logic",
+  "equipment_id": "CT-1",
+  "description": "Control logic for CT CT-1",
+  "version": "1.0",
+  "created_at": "2026-07-13T21:32:06.595071",
+  "created_by": "BAS Assistant",
+  "blocks": [
+    {
+      "block_id": "ct_mode",
+      "type": "mode",
+      "name": "Cooling Tower Mode",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.1,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "fan_staging",
+      "type": "staging",
+      "name": "Fan Staging",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.30000000000000004,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "cw_temp_control",
+      "type": "pid",
+      "name": "CW Temp Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.5,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "ct_safeties",
+      "type": "interlock",
+      "name": "Cooling Tower Safeties",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.7000000000000001,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_cws",
+      "type": "alarm",
+      "name": "Alarm: CT-1 CWS",
+      "description": "High/low limit alarm for CT-1 CWS",
+      "signals": [
+        {
+          "name": "CT-1 CWS",
+          "type": "analog",
+          "description": "Value for CT-1 CWS",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 CWS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 CWS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 CWS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "95.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "60.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.18
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_cwr",
+      "type": "alarm",
+      "name": "Alarm: CT-1 CWR",
+      "description": "High/low limit alarm for CT-1 CWR",
+      "signals": [
+        {
+          "name": "CT-1 CWR",
+          "type": "analog",
+          "description": "Value for CT-1 CWR",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 CWR",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 CWR_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 CWR_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "110.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "70.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.2
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_basin_temp",
+      "type": "alarm",
+      "name": "Alarm: CT-1 BASIN TEMP",
+      "description": "High/low limit alarm for CT-1 BASIN TEMP",
+      "signals": [
+        {
+          "name": "CT-1 BASIN TEMP",
+          "type": "analog",
+          "description": "Value for CT-1 BASIN TEMP",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 BASIN TEMP",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 BASIN TEMP_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 BASIN TEMP_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "90.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "35.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.22
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_fan_cmd",
+      "type": "alarm",
+      "name": "Alarm: CT-1 FAN CMD",
+      "description": "High/low limit alarm for CT-1 FAN CMD",
+      "signals": [
+        {
+          "name": "CT-1 FAN CMD",
+          "type": "analog",
+          "description": "Value for CT-1 FAN CMD",
+          "units": "pct",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 FAN CMD",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 FAN CMD_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 FAN CMD_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.24000000000000002
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_makeup_vlv",
+      "type": "alarm",
+      "name": "Alarm: CT-1 MAKEUP VLV",
+      "description": "High/low limit alarm for CT-1 MAKEUP VLV",
+      "signals": [
+        {
+          "name": "CT-1 MAKEUP VLV",
+          "type": "analog",
+          "description": "Value for CT-1 MAKEUP VLV",
+          "units": "pct",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 MAKEUP VLV",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 MAKEUP VLV_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 MAKEUP VLV_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.26
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_level",
+      "type": "alarm",
+      "name": "Alarm: CT-1 LEVEL",
+      "description": "High/low limit alarm for CT-1 LEVEL",
+      "signals": [
+        {
+          "name": "CT-1 LEVEL",
+          "type": "analog",
+          "description": "Value for CT-1 LEVEL",
+          "units": "pct",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 LEVEL",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 LEVEL_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 LEVEL_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.28
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_ct_1_run_hrs",
+      "type": "alarm",
+      "name": "Alarm: CT-1 RUN HRS",
+      "description": "High/low limit alarm for CT-1 RUN HRS",
+      "signals": [
+        {
+          "name": "CT-1 RUN HRS",
+          "type": "analog",
+          "description": "Value for CT-1 RUN HRS",
+          "units": "hrs",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CT-1 RUN HRS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 RUN HRS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CT-1 RUN HRS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "50000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.30000000000000004
+      ],
+      "enabled": true,
+      "metadata": {}
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "equipment_type": "CT"
+  }
+}

@@ -1,0 +1,184 @@
+{
+  "name": "VAV-103 Control Logic",
+  "type": "sequence",
+  "equipment": "VAV-103",
+  "blocks": [
+    {
+      "id": "flow_control",
+      "type": "pid",
+      "name": "VAV Flow Control",
+      "inputs": [
+        "flow",
+        "flow_sp",
+        "damper_cmd"
+      ],
+      "outputs": [
+        "damper_cmd"
+      ],
+      "parameters": {
+        "kp": "1.0",
+        "ki": "0.1",
+        "deadband": "25"
+      }
+    },
+    {
+      "id": "temp_control",
+      "type": "pid",
+      "name": "Zone Temperature Control",
+      "inputs": [
+        "zone_temp",
+        "zone_temp_sp",
+        "reheat_valve"
+      ],
+      "outputs": [
+        "reheat_valve"
+      ],
+      "parameters": {
+        "kp": "2.0",
+        "ki": "0.05",
+        "deadband": "0.5"
+      }
+    },
+    {
+      "id": "alarm_vav_103_airflow",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 AIRFLOW",
+      "inputs": [
+        "VAV-103 AIRFLOW",
+        "VAV-103 AIRFLOW_high_alm",
+        "VAV-103 AIRFLOW_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 AIRFLOW_high_alm",
+        "VAV-103 AIRFLOW_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "1800.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_damper_cmd",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 DAMPER CMD",
+      "inputs": [
+        "VAV-103 DAMPER CMD",
+        "VAV-103 DAMPER CMD_high_alm",
+        "VAV-103 DAMPER CMD_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 DAMPER CMD_high_alm",
+        "VAV-103 DAMPER CMD_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "100.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_zt",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 ZT",
+      "inputs": [
+        "VAV-103 ZT",
+        "VAV-103 ZT_high_alm",
+        "VAV-103 ZT_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 ZT_high_alm",
+        "VAV-103 ZT_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "85.0",
+        "low_limit": "60.0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_space_hum",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 SPACE HUM",
+      "inputs": [
+        "VAV-103 SPACE HUM",
+        "VAV-103 SPACE HUM_high_alm",
+        "VAV-103 SPACE HUM_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 SPACE HUM_high_alm",
+        "VAV-103 SPACE HUM_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "80.0",
+        "low_limit": "15.0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_co2",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 CO2",
+      "inputs": [
+        "VAV-103 CO2",
+        "VAV-103 CO2_high_alm",
+        "VAV-103 CO2_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 CO2_high_alm",
+        "VAV-103 CO2_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "2000.0",
+        "low_limit": "350.0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_reheat_valve",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 REHEAT VALVE",
+      "inputs": [
+        "VAV-103 REHEAT VALVE",
+        "VAV-103 REHEAT VALVE_high_alm",
+        "VAV-103 REHEAT VALVE_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 REHEAT VALVE_high_alm",
+        "VAV-103 REHEAT VALVE_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "100.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_vav_103_hw_vlv_fb",
+      "type": "alarm",
+      "name": "Alarm: VAV-103 HW-VLV FB",
+      "inputs": [
+        "VAV-103 HW-VLV FB",
+        "VAV-103 HW-VLV FB_high_alm",
+        "VAV-103 HW-VLV FB_low_alm"
+      ],
+      "outputs": [
+        "VAV-103 HW-VLV FB_high_alm",
+        "VAV-103 HW-VLV FB_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "100.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    }
+  ],
+  "wires": []
+}

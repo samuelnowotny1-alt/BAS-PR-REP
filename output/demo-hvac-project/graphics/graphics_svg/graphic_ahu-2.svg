@@ -1,0 +1,88 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white"/>
+  <g class="layer-symbol">
+    <rect x="72.0" y="144.0" width="1056.0" height="480.0" fill="#f5f5f5" stroke="#333" stroke-width="2"/>
+    <rect x="81.60000000000001" y="216.0" width="134.8" height="336.0" fill="#ffffff" stroke="#455a64" stroke-width="2"/>
+    <line x1="72.0" y1="384.0" x2="226.00000000000003" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="108.0" y1="359.68" x2="190.00000000000003" y2="472.32" stroke="#455a64" stroke-width="2"/>
+    <rect x="235.60000000000002" y="216.0" width="156.79999999999998" height="336.0" fill="#eceff1" stroke="#607d8b" stroke-width="2"/>
+    <line x1="226.00000000000003" y1="224.00000000000003" x2="226.00000000000003" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="226.00000000000003" y1="384.0" x2="402.0" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="262.0" y1="359.68" x2="366.0" y2="472.32" stroke="#607d8b" stroke-width="2"/>
+    <rect x="411.6" y="216.0" width="105.46666666666667" height="336.0" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2"/>
+    <line x1="402.0" y1="224.00000000000003" x2="402.0" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="402.0" y1="384.0" x2="526.6666666666666" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="429.42666666666673" y1="304.0" x2="439.4000000000001" y2="528.0" stroke="#3f51b5" stroke-width="2"/>
+    <line x1="454.36000000000007" y1="304.0" x2="464.3333333333334" y2="528.0" stroke="#3f51b5" stroke-width="2"/>
+    <line x1="479.2933333333334" y1="304.0" x2="489.26666666666677" y2="528.0" stroke="#3f51b5" stroke-width="2"/>
+    <rect x="536.2666666666667" y="216.0" width="149.46666666666664" height="336.0" fill="#cce5ff" stroke="#1976d2" stroke-width="2"/>
+    <line x1="526.6666666666666" y1="224.00000000000003" x2="526.6666666666666" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="526.6666666666666" y1="384.0" x2="695.3333333333333" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="562.6666666666667" y1="344.32" x2="659.3333333333334" y2="344.32" stroke="#1976d2" stroke-width="2"/>
+    <line x1="562.6666666666667" y1="416.0" x2="659.3333333333334" y2="416.0" stroke="#1976d2" stroke-width="2"/>
+    <line x1="562.6666666666667" y1="487.67999999999995" x2="659.3333333333334" y2="487.67999999999995" stroke="#1976d2" stroke-width="2"/>
+    <rect x="704.9333333333333" y="216.0" width="134.8" height="336.0" fill="#ffccbc" stroke="#ef6c00" stroke-width="2"/>
+    <line x1="695.3333333333333" y1="224.00000000000003" x2="695.3333333333333" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="695.3333333333333" y1="384.0" x2="849.3333333333333" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="731.3333333333334" y1="344.32" x2="813.3333333333334" y2="344.32" stroke="#ef6c00" stroke-width="2"/>
+    <line x1="731.3333333333334" y1="416.0" x2="813.3333333333334" y2="416.0" stroke="#ef6c00" stroke-width="2"/>
+    <line x1="731.3333333333334" y1="487.67999999999995" x2="813.3333333333334" y2="487.67999999999995" stroke="#ef6c00" stroke-width="2"/>
+    <rect x="858.9333333333334" y="216.0" width="127.46666666666668" height="336.0" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+    <line x1="849.3333333333334" y1="224.00000000000003" x2="849.3333333333334" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="849.3333333333334" y1="384.0" x2="996.0" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+    <circle cx="922.6666666666667" cy="384.0" r="35.2" fill="#ffffff" stroke="#1976d2" stroke-width="2"/>
+    <rect x="1005.6000000000001" y="216.0" width="112.8" height="336.0" fill="#fafafa" stroke="#546e7a" stroke-width="2"/>
+    <line x1="996.0000000000001" y1="224.00000000000003" x2="996.0000000000001" y2="544.0" stroke="#cbd5e1" stroke-width="1"/>
+    <line x1="996.0000000000001" y1="384.0" x2="1128.0" y2="384.0" stroke="#1976d2" stroke-width="3"/>
+  </g>
+  <g class="layer-labels">
+    <text x="600.0" y="720.0" font-size="14" font-family="Arial" text-anchor="middle" dominant-baseline="middle">AHU-2</text>
+    <text x="149.0" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">OA</text>
+    <text x="314.00000000000006" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">MA</text>
+    <text x="464.33333333333337" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">FILTER</text>
+    <text x="611.0" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">CC</text>
+    <text x="772.3333333333334" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">HC</text>
+    <text x="922.6666666666667" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">SF</text>
+    <text x="1062.0000000000002" y="231.99999999999997" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">SA</text>
+    <text x="59.99999999999999" y="352.0" font-size="9" font-family="Arial" text-anchor="middle" dominant-baseline="middle">OA</text>
+    <text x="1152.0" y="352.0" font-size="9" font-family="Arial" text-anchor="middle" dominant-baseline="middle">SA</text>
+  </g>
+  <g class="layer-bindings">
+    <circle cx="1176.0" cy="520.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 OAT" data-type="value"/>
+    <text x="1188.0" y="524.0" font-size="10" fill="#333">AHU-2 OAT</text>
+    <circle cx="864.0" cy="600.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 OA HUM" data-type="value"/>
+    <text x="876.0" y="604.0" font-size="10" fill="#333">AHU-2 OA HUM</text>
+    <circle cx="314.00000000000006" cy="519.9999999999999" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 MAT" data-type="value"/>
+    <text x="326.00000000000006" y="523.9999999999999" font-size="10" fill="#333">AHU-2 MAT</text>
+    <circle cx="1176.0" cy="556.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 RAT" data-type="value"/>
+    <text x="1188.0" y="560.0" font-size="10" fill="#333">AHU-2 RAT</text>
+    <circle cx="864.0" cy="636.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 RA HUM" data-type="value"/>
+    <text x="876.0" y="640.0" font-size="10" fill="#333">AHU-2 RA HUM</text>
+    <circle cx="1098.0000000000002" cy="320.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 SAT" data-type="value"/>
+    <text x="1110.0000000000002" y="324.0" font-size="10" fill="#333">AHU-2 SAT</text>
+    <circle cx="1098.0000000000002" cy="356.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 SAT-SP" data-type="setpoint"/>
+    <text x="1110.0000000000002" y="360.0" font-size="10" fill="#333">AHU-2 SAT-SP</text>
+    <circle cx="488.33333333333337" cy="272.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 DUCT SP" data-type="value"/>
+    <text x="500.33333333333337" y="276.0" font-size="10" fill="#333">AHU-2 DUCT SP</text>
+    <circle cx="922.6666666666667" cy="384.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 SF STATUS" data-type="status"/>
+    <text x="934.6666666666667" y="388.0" font-size="10" fill="#333">AHU-2 SF STATUS</text>
+    <circle cx="922.6666666666667" cy="420.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 SF CMD" data-type="command"/>
+    <text x="934.6666666666667" y="424.0" font-size="10" fill="#333">AHU-2 SF CMD</text>
+    <circle cx="611.0" cy="120.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 CLG VALVE" data-type="command"/>
+    <text x="623.0" y="124.0" font-size="10" fill="#333">AHU-2 CLG VALVE</text>
+    <circle cx="772.3333333333334" cy="656.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 HTG VALVE" data-type="command"/>
+    <text x="784.3333333333334" y="660.0" font-size="10" fill="#333">AHU-2 HTG VALVE</text>
+    <circle cx="149.0" cy="128.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 OA DAMPER" data-type="command"/>
+    <text x="161.0" y="132.0" font-size="10" fill="#333">AHU-2 OA DAMPER</text>
+    <circle cx="288.0" cy="688.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 FREEZE STAT" data-type="status"/>
+    <text x="300.0" y="692.0" font-size="10" fill="#333">AHU-2 FREEZE STAT</text>
+    <circle cx="59.99999999999999" cy="688.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 DUCT SMOKE" data-type="alarm"/>
+    <text x="72.0" y="692.0" font-size="10" fill="#333">ALM AHU-2 DUCT SMOKE</text>
+    <circle cx="114.0" cy="688.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 AREA SMOKE" data-type="alarm"/>
+    <text x="126.0" y="692.0" font-size="10" fill="#333">ALM AHU-2 AREA SMOKE</text>
+    <circle cx="24.0" cy="688.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 FIRE ALARM" data-type="alarm"/>
+    <text x="36.0" y="692.0" font-size="10" fill="#333">ALM AHU-2 FIRE ALARM</text>
+    <circle cx="464.33333333333337" cy="424.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="AHU-2 FILTER DP" data-type="value"/>
+    <text x="476.33333333333337" y="428.0" font-size="10" fill="#333">AHU-2 FILTER DP</text>
+  </g>
+</svg>

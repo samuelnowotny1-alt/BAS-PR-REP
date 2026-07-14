@@ -1,0 +1,845 @@
+{
+  "diagram_id": "logic_chlr-1",
+  "name": "CHLR-1 Control Logic",
+  "equipment_id": "CHLR-1",
+  "description": "Control logic for CHILLER CHLR-1",
+  "version": "1.0",
+  "created_at": "2026-07-13T21:32:06.594340",
+  "created_by": "BAS Assistant",
+  "blocks": [
+    {
+      "block_id": "chiller_mode",
+      "type": "mode",
+      "name": "Chiller Mode Selection",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.1,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "chiller_staging",
+      "type": "staging",
+      "name": "Chiller Staging",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.30000000000000004,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "chw_temp_control",
+      "type": "pid",
+      "name": "CHW Supply Temp Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.5,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "cond_control",
+      "type": "pid",
+      "name": "Condenser Water Temp Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.7000000000000001,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "chiller_safeties",
+      "type": "interlock",
+      "name": "Chiller Safeties",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.9,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_chws",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 CHWS",
+      "description": "High/low limit alarm for CHLR-1 CHWS",
+      "signals": [
+        {
+          "name": "CHLR-1 CHWS",
+          "type": "analog",
+          "description": "Value for CHLR-1 CHWS",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 CHWS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHWS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHWS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "54.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "36.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.2
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_chwr",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 CHWR",
+      "description": "High/low limit alarm for CHLR-1 CHWR",
+      "signals": [
+        {
+          "name": "CHLR-1 CHWR",
+          "type": "analog",
+          "description": "Value for CHLR-1 CHWR",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 CHWR",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHWR_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHWR_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "70.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "45.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.22
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_chw_dp",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 CHW-DP",
+      "description": "High/low limit alarm for CHLR-1 CHW-DP",
+      "signals": [
+        {
+          "name": "CHLR-1 CHW-DP",
+          "type": "analog",
+          "description": "Value for CHLR-1 CHW-DP",
+          "units": "psi",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 CHW-DP",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHW-DP_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CHW-DP_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "25.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.24000000000000002
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_cws",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 CWS",
+      "description": "High/low limit alarm for CHLR-1 CWS",
+      "signals": [
+        {
+          "name": "CHLR-1 CWS",
+          "type": "analog",
+          "description": "Value for CHLR-1 CWS",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 CWS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CWS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CWS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "95.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "60.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.26
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_cwr",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 CWR",
+      "description": "High/low limit alarm for CHLR-1 CWR",
+      "signals": [
+        {
+          "name": "CHLR-1 CWR",
+          "type": "analog",
+          "description": "Value for CHLR-1 CWR",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 CWR",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CWR_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 CWR_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "110.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "70.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.28
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_load_kw",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 LOAD KW",
+      "description": "High/low limit alarm for CHLR-1 LOAD KW",
+      "signals": [
+        {
+          "name": "CHLR-1 LOAD KW",
+          "type": "analog",
+          "description": "Value for CHLR-1 LOAD KW",
+          "units": "kW",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 LOAD KW",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 LOAD KW_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 LOAD KW_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "260.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.30000000000000004
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_starts",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 STARTS",
+      "description": "High/low limit alarm for CHLR-1 STARTS",
+      "signals": [
+        {
+          "name": "CHLR-1 STARTS",
+          "type": "analog",
+          "description": "Value for CHLR-1 STARTS",
+          "units": "count",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 STARTS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 STARTS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 STARTS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "5000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.32
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chlr_1_run_hrs",
+      "type": "alarm",
+      "name": "Alarm: CHLR-1 RUN HRS",
+      "description": "High/low limit alarm for CHLR-1 RUN HRS",
+      "signals": [
+        {
+          "name": "CHLR-1 RUN HRS",
+          "type": "analog",
+          "description": "Value for CHLR-1 RUN HRS",
+          "units": "hrs",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHLR-1 RUN HRS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 RUN HRS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHLR-1 RUN HRS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "50000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.33999999999999997
+      ],
+      "enabled": true,
+      "metadata": {}
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "equipment_type": "CHILLER"
+  }
+}

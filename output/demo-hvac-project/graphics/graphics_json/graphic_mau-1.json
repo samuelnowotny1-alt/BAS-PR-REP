@@ -1,0 +1,203 @@
+{
+  "graphic_id": "graphic_mau-1",
+  "name": "MAU-1 - MAU",
+  "type": "equipment",
+  "equipment_id": "MAU-1",
+  "width": 1200,
+  "height": 800,
+  "background": "white",
+  "elements": [
+    {
+      "type": "rect",
+      "x": 0.2,
+      "y": 0.2,
+      "width": 0.6,
+      "height": 0.6,
+      "rotation": 0,
+      "fill": "#f5f5f5",
+      "stroke": "#333",
+      "stroke_width": 2,
+      "text": null,
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "equipment"
+    },
+    {
+      "type": "text",
+      "x": 0.5,
+      "y": 0.5,
+      "width": 0,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": null,
+      "stroke_width": 1,
+      "text": "MAU-1",
+      "font_size": 16,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "labels"
+    },
+    {
+      "type": "text",
+      "x": 0.5,
+      "y": 0.7,
+      "width": 0,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": null,
+      "stroke_width": 1,
+      "text": "MAU",
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "labels"
+    }
+  ],
+  "bindings": [
+    {
+      "point_name": "MAU-1 OAT",
+      "binding_type": "value",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "MAU-1 OAT",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        -20.0,
+        110.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 SAT",
+      "binding_type": "value",
+      "x": 0.05,
+      "y": 0.345,
+      "label": "MAU-1 SAT",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        45.0,
+        105.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 SAT-SP",
+      "binding_type": "setpoint",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "MAU-1 SAT-SP",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        55.0,
+        85.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 SF CMD",
+      "binding_type": "command",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "MAU-1 SF CMD",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 SF STATUS",
+      "binding_type": "status",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "MAU-1 SF STATUS",
+      "format": "on/off",
+      "color_map": {
+        "on": "#4caf50",
+        "off": "#f44336",
+        "open": "#4caf50",
+        "closed": "#f44336"
+      },
+      "min_max": null
+    },
+    {
+      "point_name": "MAU-1 GAS VLV",
+      "binding_type": "command",
+      "x": 0.05,
+      "y": 0.345,
+      "label": "MAU-1 GAS VLV",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 OA DAMPER",
+      "binding_type": "command",
+      "x": 0.05,
+      "y": 0.255,
+      "label": "MAU-1 OA DAMPER",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 FILTER DP",
+      "binding_type": "value",
+      "x": 0.05,
+      "y": 0.255,
+      "label": "MAU-1 FILTER DP",
+      "format": ".2f",
+      "color_map": null,
+      "min_max": [
+        0.0,
+        3.0
+      ]
+    },
+    {
+      "point_name": "MAU-1 SMK-ALM",
+      "binding_type": "alarm",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "ALM MAU-1 SMK-ALM",
+      "format": ".1f",
+      "color_map": {
+        "normal": "#4caf50",
+        "alarm": "#f44336",
+        "fault": "#ff9800"
+      },
+      "min_max": null
+    },
+    {
+      "point_name": "MAU-1 FLT-ALM",
+      "binding_type": "alarm",
+      "x": 0.095,
+      "y": 0.3,
+      "label": "ALM MAU-1 FLT-ALM",
+      "format": ".1f",
+      "color_map": {
+        "normal": "#4caf50",
+        "alarm": "#f44336",
+        "fault": "#ff9800"
+      },
+      "min_max": null
+    }
+  ],
+  "navigation": [
+    "graphic_mau-1",
+    "dashboard_main"
+  ],
+  "metadata": {
+    "equipment_type": "MAU",
+    "generated_by": "BAS Assistant"
+  }
+}

@@ -1,0 +1,641 @@
+{
+  "diagram_id": "logic_blr-1",
+  "name": "BLR-1 Control Logic",
+  "equipment_id": "BLR-1",
+  "description": "Control logic for BOILER BLR-1",
+  "version": "1.0",
+  "created_at": "2026-07-13T21:32:06.595288",
+  "created_by": "BAS Assistant",
+  "blocks": [
+    {
+      "block_id": "boiler_mode",
+      "type": "mode",
+      "name": "Boiler Mode Selection",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.1,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "boiler_staging",
+      "type": "staging",
+      "name": "Boiler Staging",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.30000000000000004,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "hws_temp_control",
+      "type": "pid",
+      "name": "HWS Temp Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.5,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "boiler_safeties",
+      "type": "interlock",
+      "name": "Boiler Safeties",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.7000000000000001,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_hws",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 HWS",
+      "description": "High/low limit alarm for BLR-1 HWS",
+      "signals": [
+        {
+          "name": "BLR-1 HWS",
+          "type": "analog",
+          "description": "Value for BLR-1 HWS",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 HWS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 HWS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 HWS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "190.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "120.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.18
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_hwr",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 HWR",
+      "description": "High/low limit alarm for BLR-1 HWR",
+      "signals": [
+        {
+          "name": "BLR-1 HWR",
+          "type": "analog",
+          "description": "Value for BLR-1 HWR",
+          "units": "degF",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 HWR",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 HWR_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 HWR_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "170.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "degF",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.2
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_burner_cmd",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 BURNER CMD",
+      "description": "High/low limit alarm for BLR-1 BURNER CMD",
+      "signals": [
+        {
+          "name": "BLR-1 BURNER CMD",
+          "type": "analog",
+          "description": "Value for BLR-1 BURNER CMD",
+          "units": "pct",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 BURNER CMD",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 BURNER CMD_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 BURNER CMD_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.22
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_pres",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 PRES",
+      "description": "High/low limit alarm for BLR-1 PRES",
+      "signals": [
+        {
+          "name": "BLR-1 PRES",
+          "type": "analog",
+          "description": "Value for BLR-1 PRES",
+          "units": "psi",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 PRES",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 PRES_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 PRES_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "30.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.24000000000000002
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_run_hrs",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 RUN HRS",
+      "description": "High/low limit alarm for BLR-1 RUN HRS",
+      "signals": [
+        {
+          "name": "BLR-1 RUN HRS",
+          "type": "analog",
+          "description": "Value for BLR-1 RUN HRS",
+          "units": "hrs",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 RUN HRS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 RUN HRS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 RUN HRS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "50000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.26
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_blr_1_starts",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 STARTS",
+      "description": "High/low limit alarm for BLR-1 STARTS",
+      "signals": [
+        {
+          "name": "BLR-1 STARTS",
+          "type": "analog",
+          "description": "Value for BLR-1 STARTS",
+          "units": "count",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "BLR-1 STARTS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 STARTS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "BLR-1 STARTS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "5000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "count",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.28
+      ],
+      "enabled": true,
+      "metadata": {}
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "equipment_type": "BOILER"
+  }
+}

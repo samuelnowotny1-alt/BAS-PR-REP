@@ -1,0 +1,47 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white"/>
+  <g class="layer-piping">
+    <line x1="560.0" y1="500.0" x2="1040.0" y2="500.0" stroke="#1976d2" stroke-width="3"/>
+    <line x1="1040.0" y1="250.0" x2="1120.0" y2="250.0" stroke="#1976d2" stroke-width="2"/>
+    <line x1="1040.0" y1="550.0" x2="1120.0" y2="550.0" stroke="#1976d2" stroke-width="2"/>
+    <line x1="560.0" y1="700.0" x2="1040.0" y2="700.0" stroke="#ef6c00" stroke-width="3"/>
+  </g>
+  <g class="layer-equipment">
+    <rect x="160.0" y="300.0" width="400.0" height="400.0" fill="#e0e0e0" stroke="#333" stroke-width="2"/>
+    <rect x="1120.0" y="200.0" width="240.0" height="100.0" fill="#fff" stroke="#333" stroke-width="1"/>
+    <rect x="1120.0" y="500.0" width="240.0" height="100.0" fill="#fff" stroke="#333" stroke-width="1"/>
+  </g>
+  <g class="layer-labels">
+    <text x="360.0" y="500.0" font-size="16" font-family="Arial" text-anchor="middle" dominant-baseline="middle">AHU-2</text>
+    <text x="1240.0" y="250.0" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">VAV-201</text>
+    <text x="1240.0" y="550.0" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">VAV-202</text>
+  </g>
+  <g class="layer-bindings">
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 AIRFLOW" data-type="value"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 AIRFLOW</text>
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 FLOW-SP" data-type="setpoint"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 FLOW-SP</text>
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 ZT" data-type="value"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 ZT</text>
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 ZN-T SP" data-type="setpoint"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 ZN-T SP</text>
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 SPACE HUM" data-type="value"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 SPACE HUM</text>
+    <circle cx="1360.0" cy="250.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-201 CO2" data-type="value"/>
+    <text x="1372.0" y="254.0" font-size="10" fill="#333">VAV-201 CO2</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 AIRFLOW" data-type="value"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 AIRFLOW</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 FLOW-SP" data-type="setpoint"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 FLOW-SP</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 ZT" data-type="value"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 ZT</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 ZN-T SP" data-type="setpoint"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 ZN-T SP</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 SPACE HUM" data-type="value"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 SPACE HUM</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 CO2" data-type="value"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 CO2</text>
+    <circle cx="1360.0" cy="550.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-202 HW-VLV FB" data-type="value"/>
+    <text x="1372.0" y="554.0" font-size="10" fill="#333">VAV-202 HW-VLV FB</text>
+  </g>
+</svg>

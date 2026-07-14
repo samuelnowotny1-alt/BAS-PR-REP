@@ -1,8 +1,8 @@
 {
-  "graphic_id": "graphic_ahu-1",
-  "name": "AHU-1 - AHU",
+  "graphic_id": "graphic_ahu-2",
+  "name": "AHU-2 - AHU",
   "type": "equipment",
-  "equipment_id": "AHU-1",
+  "equipment_id": "AHU-2",
   "width": 1200,
   "height": 800,
   "background": "white",
@@ -33,7 +33,7 @@
       "fill": null,
       "stroke": null,
       "stroke_width": 1,
-      "text": "AHU-1",
+      "text": "AHU-2",
       "font_size": 14,
       "font_family": "Arial",
       "symbol_name": null,
@@ -43,7 +43,7 @@
       "type": "rect",
       "x": 0.068,
       "y": 0.27,
-      "width": 0.0966829268292683,
+      "width": 0.11233333333333335,
       "height": 0.42,
       "rotation": 0,
       "fill": "#ffffff",
@@ -57,7 +57,7 @@
     },
     {
       "type": "text",
-      "x": 0.11634146341463414,
+      "x": 0.12416666666666668,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -75,7 +75,7 @@
       "type": "line",
       "x": 0.06,
       "y": 0.48,
-      "width": 0.1126829268292683,
+      "width": 0.12833333333333335,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -91,7 +91,7 @@
       "type": "line",
       "x": 0.09,
       "y": 0.4496,
-      "width": 0.0526829268292683,
+      "width": 0.06833333333333336,
       "height": 0.14079999999999998,
       "rotation": 0,
       "fill": null,
@@ -105,9 +105,9 @@
     },
     {
       "type": "rect",
-      "x": 0.1806829268292683,
+      "x": 0.19633333333333336,
       "y": 0.27,
-      "width": 0.11278048780487808,
+      "width": 0.13066666666666665,
       "height": 0.42,
       "rotation": 0,
       "fill": "#eceff1",
@@ -121,7 +121,7 @@
     },
     {
       "type": "text",
-      "x": 0.2370731707317073,
+      "x": 0.2616666666666667,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -137,7 +137,7 @@
     },
     {
       "type": "line",
-      "x": 0.17268292682926828,
+      "x": 0.18833333333333335,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -153,9 +153,9 @@
     },
     {
       "type": "line",
-      "x": 0.17268292682926828,
+      "x": 0.18833333333333335,
       "y": 0.48,
-      "width": 0.12878048780487808,
+      "width": 0.14666666666666667,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -169,9 +169,9 @@
     },
     {
       "type": "line",
-      "x": 0.20268292682926828,
+      "x": 0.21833333333333335,
       "y": 0.4496,
-      "width": 0.06878048780487808,
+      "width": 0.08666666666666667,
       "height": 0.14079999999999998,
       "rotation": 0,
       "fill": null,
@@ -185,9 +185,9 @@
     },
     {
       "type": "rect",
-      "x": 0.3094634146341464,
+      "x": 0.343,
       "y": 0.27,
-      "width": 0.07521951219512196,
+      "width": 0.08788888888888889,
       "height": 0.42,
       "rotation": 0,
       "fill": "#e8eaf6",
@@ -201,7 +201,7 @@
     },
     {
       "type": "text",
-      "x": 0.34707317073170735,
+      "x": 0.3869444444444445,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -217,7 +217,7 @@
     },
     {
       "type": "line",
-      "x": 0.3014634146341464,
+      "x": 0.335,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -233,9 +233,9 @@
     },
     {
       "type": "line",
-      "x": 0.3014634146341464,
+      "x": 0.335,
       "y": 0.48,
-      "width": 0.09121951219512196,
+      "width": 0.10388888888888889,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -249,9 +249,9 @@
     },
     {
       "type": "line",
-      "x": 0.3215317073170732,
+      "x": 0.3578555555555556,
       "y": 0.38,
-      "width": 0.007297560975609757,
+      "width": 0.008311111111111111,
       "height": 0.27999999999999997,
       "rotation": 0,
       "fill": null,
@@ -265,9 +265,9 @@
     },
     {
       "type": "line",
-      "x": 0.3397756097560976,
+      "x": 0.3786333333333334,
       "y": 0.38,
-      "width": 0.007297560975609757,
+      "width": 0.008311111111111111,
       "height": 0.27999999999999997,
       "rotation": 0,
       "fill": null,
@@ -281,9 +281,9 @@
     },
     {
       "type": "line",
-      "x": 0.358019512195122,
+      "x": 0.39941111111111116,
       "y": 0.38,
-      "width": 0.007297560975609757,
+      "width": 0.008311111111111111,
       "height": 0.27999999999999997,
       "rotation": 0,
       "fill": null,
@@ -297,9 +297,9 @@
     },
     {
       "type": "rect",
-      "x": 0.40068292682926837,
+      "x": 0.4468888888888889,
       "y": 0.27,
-      "width": 0.10741463414634148,
+      "width": 0.12455555555555554,
       "height": 0.42,
       "rotation": 0,
       "fill": "#cce5ff",
@@ -313,7 +313,7 @@
     },
     {
       "type": "text",
-      "x": 0.4543902439024391,
+      "x": 0.5091666666666667,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -329,7 +329,7 @@
     },
     {
       "type": "line",
-      "x": 0.39268292682926836,
+      "x": 0.4388888888888889,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -345,9 +345,9 @@
     },
     {
       "type": "line",
-      "x": 0.39268292682926836,
+      "x": 0.4388888888888889,
       "y": 0.48,
-      "width": 0.12341463414634148,
+      "width": 0.14055555555555554,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -361,9 +361,9 @@
     },
     {
       "type": "line",
-      "x": 0.42268292682926834,
+      "x": 0.4688888888888889,
       "y": 0.4304,
-      "width": 0.06341463414634148,
+      "width": 0.08055555555555555,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -377,9 +377,9 @@
     },
     {
       "type": "line",
-      "x": 0.42268292682926834,
+      "x": 0.4688888888888889,
       "y": 0.52,
-      "width": 0.06341463414634148,
+      "width": 0.08055555555555555,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -393,9 +393,9 @@
     },
     {
       "type": "line",
-      "x": 0.42268292682926834,
+      "x": 0.4688888888888889,
       "y": 0.6095999999999999,
-      "width": 0.06341463414634148,
+      "width": 0.08055555555555555,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -409,9 +409,9 @@
     },
     {
       "type": "rect",
-      "x": 0.5240975609756099,
+      "x": 0.5874444444444444,
       "y": 0.27,
-      "width": 0.0966829268292683,
+      "width": 0.11233333333333335,
       "height": 0.42,
       "rotation": 0,
       "fill": "#ffccbc",
@@ -425,7 +425,7 @@
     },
     {
       "type": "text",
-      "x": 0.5724390243902441,
+      "x": 0.6436111111111111,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -441,7 +441,7 @@
     },
     {
       "type": "line",
-      "x": 0.5160975609756099,
+      "x": 0.5794444444444444,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -457,9 +457,9 @@
     },
     {
       "type": "line",
-      "x": 0.5160975609756099,
+      "x": 0.5794444444444444,
       "y": 0.48,
-      "width": 0.1126829268292683,
+      "width": 0.12833333333333335,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -473,9 +473,9 @@
     },
     {
       "type": "line",
-      "x": 0.5460975609756099,
+      "x": 0.6094444444444445,
       "y": 0.4304,
-      "width": 0.0526829268292683,
+      "width": 0.06833333333333336,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -489,9 +489,9 @@
     },
     {
       "type": "line",
-      "x": 0.5460975609756099,
+      "x": 0.6094444444444445,
       "y": 0.52,
-      "width": 0.0526829268292683,
+      "width": 0.06833333333333336,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -505,9 +505,9 @@
     },
     {
       "type": "line",
-      "x": 0.5460975609756099,
+      "x": 0.6094444444444445,
       "y": 0.6095999999999999,
-      "width": 0.0526829268292683,
+      "width": 0.06833333333333336,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -521,9 +521,9 @@
     },
     {
       "type": "rect",
-      "x": 0.6367804878048782,
+      "x": 0.7157777777777778,
       "y": 0.27,
-      "width": 0.09131707317073172,
+      "width": 0.10622222222222223,
       "height": 0.42,
       "rotation": 0,
       "fill": "#e3f2fd",
@@ -537,7 +537,7 @@
     },
     {
       "type": "text",
-      "x": 0.6824390243902441,
+      "x": 0.768888888888889,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -553,7 +553,7 @@
     },
     {
       "type": "line",
-      "x": 0.6287804878048782,
+      "x": 0.7077777777777778,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -569,9 +569,9 @@
     },
     {
       "type": "line",
-      "x": 0.6287804878048782,
+      "x": 0.7077777777777778,
       "y": 0.48,
-      "width": 0.10731707317073172,
+      "width": 0.12222222222222223,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -585,10 +585,10 @@
     },
     {
       "type": "circle",
-      "x": 0.6824390243902441,
+      "x": 0.768888888888889,
       "y": 0.48,
-      "width": 0.051512195121951224,
-      "height": 0.051512195121951224,
+      "width": 0.05866666666666667,
+      "height": 0.05866666666666667,
       "rotation": 0,
       "fill": "#ffffff",
       "stroke": "#1976d2",
@@ -601,89 +601,9 @@
     },
     {
       "type": "rect",
-      "x": 0.7440975609756099,
+      "x": 0.8380000000000001,
       "y": 0.27,
-      "width": 0.09131707317073172,
-      "height": 0.42,
-      "rotation": 0,
-      "fill": "#fff3e0",
-      "stroke": "#ef6c00",
-      "stroke_width": 2,
-      "text": null,
-      "font_size": 12,
-      "font_family": "Arial",
-      "symbol_name": null,
-      "layer": "symbol"
-    },
-    {
-      "type": "text",
-      "x": 0.7897560975609758,
-      "y": 0.29,
-      "width": 0,
-      "height": 0,
-      "rotation": 0,
-      "fill": null,
-      "stroke": null,
-      "stroke_width": 1,
-      "text": "RF",
-      "font_size": 10,
-      "font_family": "Arial",
-      "symbol_name": null,
-      "layer": "labels"
-    },
-    {
-      "type": "line",
-      "x": 0.7360975609756099,
-      "y": 0.28,
-      "width": 0,
-      "height": 0.39999999999999997,
-      "rotation": 0,
-      "fill": null,
-      "stroke": "#cbd5e1",
-      "stroke_width": 1,
-      "text": null,
-      "font_size": 12,
-      "font_family": "Arial",
-      "symbol_name": null,
-      "layer": "symbol"
-    },
-    {
-      "type": "line",
-      "x": 0.7360975609756099,
-      "y": 0.48,
-      "width": 0.10731707317073172,
-      "height": 0,
-      "rotation": 0,
-      "fill": null,
-      "stroke": "#1976d2",
-      "stroke_width": 3,
-      "text": null,
-      "font_size": 12,
-      "font_family": "Arial",
-      "symbol_name": null,
-      "layer": "symbol"
-    },
-    {
-      "type": "circle",
-      "x": 0.7897560975609758,
-      "y": 0.48,
-      "width": 0.051512195121951224,
-      "height": 0.051512195121951224,
-      "rotation": 0,
-      "fill": "#ffffff",
-      "stroke": "#ef6c00",
-      "stroke_width": 2,
-      "text": null,
-      "font_size": 12,
-      "font_family": "Arial",
-      "symbol_name": null,
-      "layer": "symbol"
-    },
-    {
-      "type": "rect",
-      "x": 0.8514146341463416,
-      "y": 0.27,
-      "width": 0.08058536585365855,
+      "width": 0.094,
       "height": 0.42,
       "rotation": 0,
       "fill": "#fafafa",
@@ -697,7 +617,7 @@
     },
     {
       "type": "text",
-      "x": 0.8917073170731709,
+      "x": 0.8850000000000001,
       "y": 0.29,
       "width": 0,
       "height": 0,
@@ -713,7 +633,7 @@
     },
     {
       "type": "line",
-      "x": 0.8434146341463415,
+      "x": 0.8300000000000001,
       "y": 0.28,
       "width": 0,
       "height": 0.39999999999999997,
@@ -729,9 +649,9 @@
     },
     {
       "type": "line",
-      "x": 0.8434146341463415,
+      "x": 0.8300000000000001,
       "y": 0.48,
-      "width": 0.09658536585365855,
+      "width": 0.11,
       "height": 0,
       "rotation": 0,
       "fill": null,
@@ -778,11 +698,11 @@
   ],
   "bindings": [
     {
-      "point_name": "AHU-1 OAT",
+      "point_name": "AHU-2 OAT",
       "binding_type": "value",
-      "x": 0.8297560975609758,
-      "y": 0.6599999999999999,
-      "label": "AHU-1 OAT",
+      "x": 0.98,
+      "y": 0.65,
+      "label": "AHU-2 OAT",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -791,11 +711,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 OA HUM",
+      "point_name": "AHU-2 OA HUM",
       "binding_type": "value",
       "x": 0.72,
       "y": 0.75,
-      "label": "AHU-1 OA HUM",
+      "label": "AHU-2 OA HUM",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -804,11 +724,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 MAT",
+      "point_name": "AHU-2 MAT",
       "binding_type": "value",
-      "x": 0.2370731707317073,
+      "x": 0.2616666666666667,
       "y": 0.6499999999999999,
-      "label": "AHU-1 MAT",
+      "label": "AHU-2 MAT",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -817,11 +737,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 RAT",
+      "point_name": "AHU-2 RAT",
       "binding_type": "value",
-      "x": 0.8297560975609758,
-      "y": 0.705,
-      "label": "AHU-1 RAT",
+      "x": 0.98,
+      "y": 0.6950000000000001,
+      "label": "AHU-2 RAT",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -830,11 +750,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 RA HUM",
+      "point_name": "AHU-2 RA HUM",
       "binding_type": "value",
       "x": 0.72,
       "y": 0.795,
-      "label": "AHU-1 RA HUM",
+      "label": "AHU-2 RA HUM",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -843,11 +763,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 SAT",
+      "point_name": "AHU-2 SAT",
       "binding_type": "value",
-      "x": 0.9217073170731709,
+      "x": 0.9150000000000001,
       "y": 0.4,
-      "label": "AHU-1 SAT",
+      "label": "AHU-2 SAT",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -856,11 +776,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 SAT-SP",
+      "point_name": "AHU-2 SAT-SP",
       "binding_type": "setpoint",
-      "x": 0.9217073170731709,
+      "x": 0.9150000000000001,
       "y": 0.445,
-      "label": "AHU-1 SAT-SP",
+      "label": "AHU-2 SAT-SP",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -869,11 +789,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 DUCT SP",
+      "point_name": "AHU-2 DUCT SP",
       "binding_type": "value",
-      "x": 0.36707317073170737,
+      "x": 0.4069444444444445,
       "y": 0.33999999999999997,
-      "label": "AHU-1 DUCT SP",
+      "label": "AHU-2 DUCT SP",
       "format": ".2f",
       "color_map": null,
       "min_max": [
@@ -882,11 +802,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 SF STATUS",
+      "point_name": "AHU-2 SF STATUS",
       "binding_type": "status",
-      "x": 0.6824390243902441,
+      "x": 0.768888888888889,
       "y": 0.48,
-      "label": "AHU-1 SF STATUS",
+      "label": "AHU-2 SF STATUS",
       "format": "on/off",
       "color_map": {
         "on": "#4caf50",
@@ -897,11 +817,11 @@
       "min_max": null
     },
     {
-      "point_name": "AHU-1 SF CMD",
+      "point_name": "AHU-2 SF CMD",
       "binding_type": "command",
-      "x": 0.6824390243902441,
+      "x": 0.768888888888889,
       "y": 0.525,
-      "label": "AHU-1 SF CMD",
+      "label": "AHU-2 SF CMD",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -910,11 +830,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 CLG VALVE",
+      "point_name": "AHU-2 CLG VALVE",
       "binding_type": "command",
-      "x": 0.4543902439024391,
+      "x": 0.5091666666666667,
       "y": 0.15,
-      "label": "AHU-1 CLG VALVE",
+      "label": "AHU-2 CLG VALVE",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -923,11 +843,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 HTG VALVE",
+      "point_name": "AHU-2 HTG VALVE",
       "binding_type": "command",
-      "x": 0.5724390243902441,
+      "x": 0.6436111111111111,
       "y": 0.8200000000000001,
-      "label": "AHU-1 HTG VALVE",
+      "label": "AHU-2 HTG VALVE",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -936,11 +856,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 OA DAMPER",
+      "point_name": "AHU-2 OA DAMPER",
       "binding_type": "command",
-      "x": 0.11634146341463414,
+      "x": 0.12416666666666668,
       "y": 0.16,
-      "label": "AHU-1 OA DAMPER",
+      "label": "AHU-2 OA DAMPER",
       "format": ".1f",
       "color_map": null,
       "min_max": [
@@ -949,11 +869,11 @@
       ]
     },
     {
-      "point_name": "AHU-1 FREEZE STAT",
+      "point_name": "AHU-2 FREEZE STAT",
       "binding_type": "status",
       "x": 0.24,
       "y": 0.86,
-      "label": "AHU-1 FREEZE STAT",
+      "label": "AHU-2 FREEZE STAT",
       "format": "on/off",
       "color_map": {
         "on": "#4caf50",
@@ -964,11 +884,11 @@
       "min_max": null
     },
     {
-      "point_name": "AHU-1 DUCT SMOKE",
+      "point_name": "AHU-2 DUCT SMOKE",
       "binding_type": "alarm",
       "x": 0.049999999999999996,
       "y": 0.86,
-      "label": "ALM AHU-1 DUCT SMOKE",
+      "label": "ALM AHU-2 DUCT SMOKE",
       "format": ".1f",
       "color_map": {
         "normal": "#4caf50",
@@ -978,11 +898,11 @@
       "min_max": null
     },
     {
-      "point_name": "AHU-1 AREA SMOKE",
+      "point_name": "AHU-2 AREA SMOKE",
       "binding_type": "alarm",
       "x": 0.095,
       "y": 0.86,
-      "label": "ALM AHU-1 AREA SMOKE",
+      "label": "ALM AHU-2 AREA SMOKE",
       "format": ".1f",
       "color_map": {
         "normal": "#4caf50",
@@ -992,11 +912,11 @@
       "min_max": null
     },
     {
-      "point_name": "AHU-1 FIRE ALARM",
+      "point_name": "AHU-2 FIRE ALARM",
       "binding_type": "alarm",
       "x": 0.02,
       "y": 0.86,
-      "label": "ALM AHU-1 FIRE ALARM",
+      "label": "ALM AHU-2 FIRE ALARM",
       "format": ".1f",
       "color_map": {
         "normal": "#4caf50",
@@ -1006,11 +926,11 @@
       "min_max": null
     },
     {
-      "point_name": "AHU-1 FILTER DP",
+      "point_name": "AHU-2 FILTER DP",
       "binding_type": "value",
-      "x": 0.34707317073170735,
+      "x": 0.3869444444444445,
       "y": 0.53,
-      "label": "AHU-1 FILTER DP",
+      "label": "AHU-2 FILTER DP",
       "format": ".2f",
       "color_map": null,
       "min_max": [
@@ -1020,7 +940,7 @@
     }
   ],
   "navigation": [
-    "graphic_ahu-1",
+    "graphic_ahu-2",
     "dashboard_main"
   ],
   "metadata": {
@@ -1033,7 +953,6 @@
       "cooling_coil",
       "heating_coil",
       "supply_fan",
-      "return_fan",
       "discharge"
     ]
   }

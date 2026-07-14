@@ -1,0 +1,43 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white"/>
+  <g class="layer-symbol">
+    <rect x="60.0" y="160.0" width="1080.0" height="480.0" fill="#fff8e1" stroke="#ef6c00" stroke-width="2"/>
+    <ellipse cx="180.0" cy="400.0" rx="90.0" ry="80.0" fill="#fff" stroke="#333" stroke-width="2"/>
+    <rect x="480.0" y="240.0" width="360.0" height="320.0" fill="#ffccbc" stroke="#ef6c00" stroke-width="2"/>
+    <rect x="960.0" y="0.0" width="120.0" height="160.0" fill="#757575" stroke="#333" stroke-width="1"/>
+    <line x1="660.0" y1="240.0" x2="1200.0" y2="240.0" stroke="#ef6c00" stroke-width="3"/>
+    <line x1="660.0" y1="560.0" x2="1200.0" y2="560.0" stroke="#ef6c00" stroke-width="3"/>
+    <line x1="0.0" y1="400.0" x2="180.0" y2="400.0" stroke="#757575" stroke-width="2"/>
+  </g>
+  <g class="layer-labels">
+    <text x="180.0" y="400.0" font-size="8" font-family="Arial" text-anchor="middle" dominant-baseline="middle">BURNER</text>
+    <text x="660.0" y="400.0" font-size="10" font-family="Arial" text-anchor="middle" dominant-baseline="middle">HX</text>
+    <text x="1020.0" y="80.0" font-size="7" font-family="Arial" text-anchor="middle" dominant-baseline="middle">FLUE</text>
+    <text x="1200.0" y="200.0" font-size="8" font-family="Arial" text-anchor="middle" dominant-baseline="middle">HWS</text>
+    <text x="1200.0" y="520.0" font-size="8" font-family="Arial" text-anchor="middle" dominant-baseline="middle">HWR</text>
+    <text x="0.0" y="360.0" font-size="8" font-family="Arial" text-anchor="middle" dominant-baseline="middle">GAS</text>
+    <text x="600.0" y="760.0" font-size="12" font-family="Arial" text-anchor="middle" dominant-baseline="middle">BLR-1</text>
+  </g>
+  <g class="layer-bindings">
+    <circle cx="60.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 HWS" data-type="value"/>
+    <text x="72.0" y="244.0" font-size="10" fill="#333">BLR-1 HWS</text>
+    <circle cx="60.0" cy="276.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 HWR" data-type="value"/>
+    <text x="72.0" y="280.0" font-size="10" fill="#333">BLR-1 HWR</text>
+    <circle cx="60.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 HWS-SP" data-type="setpoint"/>
+    <text x="72.0" y="244.0" font-size="10" fill="#333">BLR-1 HWS-SP</text>
+    <circle cx="60.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 BURNER CMD" data-type="command"/>
+    <text x="72.0" y="244.0" font-size="10" fill="#333">BLR-1 BURNER CMD</text>
+    <circle cx="60.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 ENABLE STS" data-type="status"/>
+    <text x="72.0" y="244.0" font-size="10" fill="#333">BLR-1 ENABLE STS</text>
+    <circle cx="60.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 FLAME SAFETY" data-type="alarm"/>
+    <text x="72.0" y="244.0" font-size="10" fill="#333">ALM BLR-1 FLAME SAFETY</text>
+    <circle cx="60.0" cy="204.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 PRES" data-type="value"/>
+    <text x="72.0" y="208.0" font-size="10" fill="#333">BLR-1 PRES</text>
+    <circle cx="114.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 FLOW STS" data-type="status"/>
+    <text x="126.0" y="244.0" font-size="10" fill="#333">BLR-1 FLOW STS</text>
+    <circle cx="60.0" cy="312.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 RUN HRS" data-type="value"/>
+    <text x="72.0" y="316.0" font-size="10" fill="#333">BLR-1 RUN HRS</text>
+    <circle cx="60.0" cy="168.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="BLR-1 STARTS" data-type="value"/>
+    <text x="72.0" y="172.0" font-size="10" fill="#333">BLR-1 STARTS</text>
+  </g>
+</svg>

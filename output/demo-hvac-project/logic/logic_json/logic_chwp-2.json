@@ -1,0 +1,546 @@
+{
+  "diagram_id": "logic_chwp-2",
+  "name": "CHWP-2 Control Logic",
+  "equipment_id": "CHWP-2",
+  "description": "Control logic for PUMP_CHW CHWP-2",
+  "version": "1.0",
+  "created_at": "2026-07-13T21:32:06.594841",
+  "created_by": "BAS Assistant",
+  "blocks": [
+    {
+      "block_id": "pump_mode",
+      "type": "mode",
+      "name": "Pump Mode Selection",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.1,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "pump_lead_lag",
+      "type": "lead_lag",
+      "name": "Lead/Lag Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.30000000000000004,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "vfd_control",
+      "type": "pid",
+      "name": "VFD Pressure/Flow Control",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.5,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "pump_safeties",
+      "type": "interlock",
+      "name": "Pump Safeties",
+      "description": "",
+      "signals": [],
+      "parameters": [],
+      "position": [
+        0.7000000000000001,
+        0.1
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chwp_2_chw_dp",
+      "type": "alarm",
+      "name": "Alarm: CHWP-2 CHW-DP",
+      "description": "High/low limit alarm for CHWP-2 CHW-DP",
+      "signals": [
+        {
+          "name": "CHWP-2 CHW-DP",
+          "type": "analog",
+          "description": "Value for CHWP-2 CHW-DP",
+          "units": "psi",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHWP-2 CHW-DP",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 CHW-DP_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 CHW-DP_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "25.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "psi",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.18
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chwp_2_flow",
+      "type": "alarm",
+      "name": "Alarm: CHWP-2 FLOW",
+      "description": "High/low limit alarm for CHWP-2 FLOW",
+      "signals": [
+        {
+          "name": "CHWP-2 FLOW",
+          "type": "analog",
+          "description": "Value for CHWP-2 FLOW",
+          "units": "GPM",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHWP-2 FLOW",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 FLOW_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 FLOW_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "500.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "GPM",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "GPM",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "GPM",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.2
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chwp_2_spd_cmd",
+      "type": "alarm",
+      "name": "Alarm: CHWP-2 SPD CMD",
+      "description": "High/low limit alarm for CHWP-2 SPD CMD",
+      "signals": [
+        {
+          "name": "CHWP-2 SPD CMD",
+          "type": "analog",
+          "description": "Value for CHWP-2 SPD CMD",
+          "units": "pct",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHWP-2 SPD CMD",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 SPD CMD_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 SPD CMD_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "100.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "pct",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.22
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chwp_2_kw",
+      "type": "alarm",
+      "name": "Alarm: CHWP-2 KW",
+      "description": "High/low limit alarm for CHWP-2 KW",
+      "signals": [
+        {
+          "name": "CHWP-2 KW",
+          "type": "analog",
+          "description": "Value for CHWP-2 KW",
+          "units": "kW",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHWP-2 KW",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 KW_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 KW_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "40.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "kW",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.24000000000000002
+      ],
+      "enabled": true,
+      "metadata": {}
+    },
+    {
+      "block_id": "alarm_chwp_2_run_hrs",
+      "type": "alarm",
+      "name": "Alarm: CHWP-2 RUN HRS",
+      "description": "High/low limit alarm for CHWP-2 RUN HRS",
+      "signals": [
+        {
+          "name": "CHWP-2 RUN HRS",
+          "type": "analog",
+          "description": "Value for CHWP-2 RUN HRS",
+          "units": "hrs",
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": "CHWP-2 RUN HRS",
+          "is_input": true,
+          "is_output": false,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 RUN HRS_high_alm",
+          "type": "boolean",
+          "description": "High limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        },
+        {
+          "name": "CHWP-2 RUN HRS_low_alm",
+          "type": "boolean",
+          "description": "Low limit alarm",
+          "units": null,
+          "default": null,
+          "min": null,
+          "max": null,
+          "point_ref": null,
+          "is_input": true,
+          "is_output": true,
+          "is_parameter": false
+        }
+      ],
+      "parameters": [
+        {
+          "name": "high_limit",
+          "value": "50000.0",
+          "type": "analog",
+          "description": "High alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "low_limit",
+          "value": "0",
+          "type": "analog",
+          "description": "Low alarm limit",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "deadband",
+          "value": "1",
+          "type": "analog",
+          "description": "Alarm deadband",
+          "units": "hrs",
+          "min": null,
+          "max": null,
+          "tunable": true
+        },
+        {
+          "name": "delay",
+          "value": "30",
+          "type": "analog",
+          "description": "Alarm delay",
+          "units": "sec",
+          "min": 0.0,
+          "max": 300.0,
+          "tunable": true
+        }
+      ],
+      "position": [
+        0.9,
+        0.26
+      ],
+      "enabled": true,
+      "metadata": {}
+    }
+  ],
+  "connections": [],
+  "metadata": {
+    "equipment_type": "PUMP_CHW"
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "graphic_id": "graphic_uh-1",
+  "name": "UH-1 - CUSTOM",
+  "type": "equipment",
+  "equipment_id": "UH-1",
+  "width": 1200,
+  "height": 800,
+  "background": "white",
+  "elements": [
+    {
+      "type": "rect",
+      "x": 0.2,
+      "y": 0.2,
+      "width": 0.6,
+      "height": 0.6,
+      "rotation": 0,
+      "fill": "#f5f5f5",
+      "stroke": "#333",
+      "stroke_width": 2,
+      "text": null,
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "equipment"
+    },
+    {
+      "type": "text",
+      "x": 0.5,
+      "y": 0.5,
+      "width": 0,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": null,
+      "stroke_width": 1,
+      "text": "UH-1",
+      "font_size": 16,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "labels"
+    },
+    {
+      "type": "text",
+      "x": 0.5,
+      "y": 0.7,
+      "width": 0,
+      "height": 0,
+      "rotation": 0,
+      "fill": null,
+      "stroke": null,
+      "stroke_width": 1,
+      "text": "CUSTOM",
+      "font_size": 12,
+      "font_family": "Arial",
+      "symbol_name": null,
+      "layer": "labels"
+    }
+  ],
+  "bindings": [
+    {
+      "point_name": "UH-1 ZN-T",
+      "binding_type": "value",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "UH-1 ZN-T",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        40.0,
+        85.0
+      ]
+    },
+    {
+      "point_name": "UH-1 ZN-T SP",
+      "binding_type": "setpoint",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "UH-1 ZN-T SP",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        55.0,
+        72.0
+      ]
+    },
+    {
+      "point_name": "UH-1 FAN CMD",
+      "binding_type": "status",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "UH-1 FAN CMD",
+      "format": "on/off",
+      "color_map": {
+        "on": "#4caf50",
+        "off": "#f44336",
+        "open": "#4caf50",
+        "closed": "#f44336"
+      },
+      "min_max": null
+    },
+    {
+      "point_name": "UH-1 FAN STS",
+      "binding_type": "status",
+      "x": 0.095,
+      "y": 0.3,
+      "label": "UH-1 FAN STS",
+      "format": "on/off",
+      "color_map": {
+        "on": "#4caf50",
+        "off": "#f44336",
+        "open": "#4caf50",
+        "closed": "#f44336"
+      },
+      "min_max": null
+    },
+    {
+      "point_name": "UH-1 HW VLV",
+      "binding_type": "command",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "UH-1 HW VLV",
+      "format": ".1f",
+      "color_map": null,
+      "min_max": [
+        0.0,
+        100.0
+      ]
+    },
+    {
+      "point_name": "UH-1 LOW TEMP ALM",
+      "binding_type": "alarm",
+      "x": 0.05,
+      "y": 0.3,
+      "label": "ALM UH-1 LOW TEMP ALM",
+      "format": ".1f",
+      "color_map": {
+        "normal": "#4caf50",
+        "alarm": "#f44336",
+        "fault": "#ff9800"
+      },
+      "min_max": null
+    }
+  ],
+  "navigation": [
+    "graphic_uh-1",
+    "dashboard_main"
+  ],
+  "metadata": {
+    "equipment_type": "CUSTOM",
+    "generated_by": "BAS Assistant"
+  }
+}

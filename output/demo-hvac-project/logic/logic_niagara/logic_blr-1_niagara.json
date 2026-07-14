@@ -1,0 +1,160 @@
+{
+  "name": "BLR-1 Control Logic",
+  "type": "sequence",
+  "equipment": "BLR-1",
+  "blocks": [
+    {
+      "id": "boiler_mode",
+      "type": "mode",
+      "name": "Boiler Mode Selection",
+      "inputs": [],
+      "outputs": [],
+      "parameters": {}
+    },
+    {
+      "id": "boiler_staging",
+      "type": "staging",
+      "name": "Boiler Staging",
+      "inputs": [],
+      "outputs": [],
+      "parameters": {}
+    },
+    {
+      "id": "hws_temp_control",
+      "type": "pid",
+      "name": "HWS Temp Control",
+      "inputs": [],
+      "outputs": [],
+      "parameters": {}
+    },
+    {
+      "id": "boiler_safeties",
+      "type": "interlock",
+      "name": "Boiler Safeties",
+      "inputs": [],
+      "outputs": [],
+      "parameters": {}
+    },
+    {
+      "id": "alarm_blr_1_hws",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 HWS",
+      "inputs": [
+        "BLR-1 HWS",
+        "BLR-1 HWS_high_alm",
+        "BLR-1 HWS_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 HWS_high_alm",
+        "BLR-1 HWS_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "190.0",
+        "low_limit": "120.0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_blr_1_hwr",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 HWR",
+      "inputs": [
+        "BLR-1 HWR",
+        "BLR-1 HWR_high_alm",
+        "BLR-1 HWR_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 HWR_high_alm",
+        "BLR-1 HWR_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "170.0",
+        "low_limit": "100.0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_blr_1_burner_cmd",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 BURNER CMD",
+      "inputs": [
+        "BLR-1 BURNER CMD",
+        "BLR-1 BURNER CMD_high_alm",
+        "BLR-1 BURNER CMD_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 BURNER CMD_high_alm",
+        "BLR-1 BURNER CMD_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "100.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_blr_1_pres",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 PRES",
+      "inputs": [
+        "BLR-1 PRES",
+        "BLR-1 PRES_high_alm",
+        "BLR-1 PRES_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 PRES_high_alm",
+        "BLR-1 PRES_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "30.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_blr_1_run_hrs",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 RUN HRS",
+      "inputs": [
+        "BLR-1 RUN HRS",
+        "BLR-1 RUN HRS_high_alm",
+        "BLR-1 RUN HRS_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 RUN HRS_high_alm",
+        "BLR-1 RUN HRS_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "50000.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    },
+    {
+      "id": "alarm_blr_1_starts",
+      "type": "alarm",
+      "name": "Alarm: BLR-1 STARTS",
+      "inputs": [
+        "BLR-1 STARTS",
+        "BLR-1 STARTS_high_alm",
+        "BLR-1 STARTS_low_alm"
+      ],
+      "outputs": [
+        "BLR-1 STARTS_high_alm",
+        "BLR-1 STARTS_low_alm"
+      ],
+      "parameters": {
+        "high_limit": "5000.0",
+        "low_limit": "0",
+        "deadband": "1",
+        "delay": "30"
+      }
+    }
+  ],
+  "wires": []
+}

@@ -1,0 +1,45 @@
+<svg width="1200" height="800" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white"/>
+  <g class="layer-symbol">
+    <rect x="120.0" y="80.0" width="960.0" height="640.0" fill="#fff" stroke="#333" stroke-width="2"/>
+    <rect x="240.0" y="280.0" width="120.0" height="240.0" fill="#e0e0e0" stroke="#333" stroke-width="1"/>
+    <line x1="240.0" y1="400.0" x2="360.0" y2="400.0" stroke="#1976d2" stroke-width="2"/>
+    <rect x="480.0" y="240.0" width="360.0" height="320.0" fill="#ffccbc" stroke="#ef6c00" stroke-width="2"/>
+    <circle cx="1020.0" cy="400.0" r="60.0" fill="#fff" stroke="#1976d2" stroke-width="1"/>
+    <line x1="0.0" y1="400.0" x2="120.0" y2="400.0" stroke="#1976d2" stroke-width="2"/>
+    <line x1="1080.0" y1="400.0" x2="1200.0" y2="400.0" stroke="#1976d2" stroke-width="2"/>
+  </g>
+  <g class="layer-labels">
+    <text x="300.0" y="240.0" font-size="7" font-family="Arial" text-anchor="middle" dominant-baseline="middle">DMPR</text>
+    <text x="660.0" y="400.0" font-size="9" font-family="Arial" text-anchor="middle" dominant-baseline="middle">RH</text>
+    <text x="1020.0" y="400.0" font-size="8" font-family="Arial" text-anchor="middle" dominant-baseline="middle">•</text>
+    <text x="1140.0" y="360.0" font-size="7" font-family="Arial" text-anchor="middle" dominant-baseline="middle">SA</text>
+    <text x="600.0" y="720.0" font-size="9" font-family="Arial" text-anchor="middle" dominant-baseline="middle">VAV-102</text>
+  </g>
+  <g class="layer-bindings">
+    <circle cx="1140.0" cy="240.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 AIRFLOW" data-type="value"/>
+    <text x="1152.0" y="244.0" font-size="10" fill="#333">VAV-102 AIRFLOW</text>
+    <circle cx="420.0" cy="40.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 FLOW-SP" data-type="setpoint"/>
+    <text x="432.0" y="44.0" font-size="10" fill="#333">VAV-102 FLOW-SP</text>
+    <circle cx="300.0" cy="400.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 DAMPER CMD" data-type="command"/>
+    <text x="312.0" y="404.0" font-size="10" fill="#333">VAV-102 DAMPER CMD</text>
+    <circle cx="1140.0" cy="276.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 ZT" data-type="value"/>
+    <text x="1152.0" y="280.0" font-size="10" fill="#333">VAV-102 ZT</text>
+    <circle cx="473.99999999999994" cy="40.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 ZN-T SP" data-type="setpoint"/>
+    <text x="485.99999999999994" y="44.0" font-size="10" fill="#333">VAV-102 ZN-T SP</text>
+    <circle cx="420.0" cy="760.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 OCC CMD" data-type="status"/>
+    <text x="432.0" y="764.0" font-size="10" fill="#333">VAV-102 OCC CMD</text>
+    <circle cx="473.99999999999994" cy="760.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 BOX FLOW STS" data-type="status"/>
+    <text x="485.99999999999994" y="764.0" font-size="10" fill="#333">VAV-102 BOX FLOW STS</text>
+    <circle cx="96.0" cy="760.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 LOW FLOW ALM" data-type="alarm"/>
+    <text x="108.0" y="764.0" font-size="10" fill="#333">ALM VAV-102 LOW FLOW ALM</text>
+    <circle cx="1140.0" cy="204.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 SPACE HUM" data-type="value"/>
+    <text x="1152.0" y="208.0" font-size="10" fill="#333">VAV-102 SPACE HUM</text>
+    <circle cx="1140.0" cy="312.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 CO2" data-type="value"/>
+    <text x="1152.0" y="316.0" font-size="10" fill="#333">VAV-102 CO2</text>
+    <circle cx="660.0" cy="400.0" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 REHEAT VALVE" data-type="command"/>
+    <text x="672.0" y="404.0" font-size="10" fill="#333">VAV-102 REHEAT VALVE</text>
+    <circle cx="660.0" cy="436.00000000000006" r="8" fill="none" stroke="#2196f3" stroke-width="2" data-point="VAV-102 HW-VLV FB" data-type="value"/>
+    <text x="672.0" y="440.00000000000006" font-size="10" fill="#333">VAV-102 HW-VLV FB</text>
+  </g>
+</svg>

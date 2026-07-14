@@ -9,6 +9,3004 @@
       "components": [
         {
           "type": "rectangle",
+          "x": 72,
+          "y": 144,
+          "width": 1056,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "AHU-1"
+        },
+        {
+          "type": "rectangle",
+          "x": 81,
+          "y": 216,
+          "width": 116,
+          "height": 336,
+          "background": "#ffffff",
+          "borderColor": "#455a64"
+        },
+        {
+          "type": "label",
+          "x": 139,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "OA"
+        },
+        {
+          "type": "line",
+          "x": 72,
+          "y": 384,
+          "width": 135,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 108,
+          "y": 359,
+          "width": 63,
+          "height": 112,
+          "borderColor": "#455a64"
+        },
+        {
+          "type": "rectangle",
+          "x": 216,
+          "y": 216,
+          "width": 135,
+          "height": 336,
+          "background": "#eceff1",
+          "borderColor": "#607d8b"
+        },
+        {
+          "type": "label",
+          "x": 284,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "MA"
+        },
+        {
+          "type": "line",
+          "x": 207,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 207,
+          "y": 384,
+          "width": 154,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 243,
+          "y": 359,
+          "width": 82,
+          "height": 112,
+          "borderColor": "#607d8b"
+        },
+        {
+          "type": "rectangle",
+          "x": 371,
+          "y": 216,
+          "width": 90,
+          "height": 336,
+          "background": "#e8eaf6",
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "label",
+          "x": 416,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "FILTER"
+        },
+        {
+          "type": "line",
+          "x": 361,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 361,
+          "y": 384,
+          "width": 109,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 385,
+          "y": 304,
+          "width": 8,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "line",
+          "x": 407,
+          "y": 304,
+          "width": 8,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "line",
+          "x": 429,
+          "y": 304,
+          "width": 8,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 216,
+          "width": 128,
+          "height": 336,
+          "background": "#cce5ff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 545,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "CC"
+        },
+        {
+          "type": "line",
+          "x": 471,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 471,
+          "y": 384,
+          "width": 148,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 507,
+          "y": 344,
+          "width": 76,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 507,
+          "y": 416,
+          "width": 76,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 507,
+          "y": 487,
+          "width": 76,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 628,
+          "y": 216,
+          "width": 116,
+          "height": 336,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 686,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "HC"
+        },
+        {
+          "type": "line",
+          "x": 619,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 619,
+          "y": 384,
+          "width": 135,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 655,
+          "y": 344,
+          "width": 63,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "line",
+          "x": 655,
+          "y": 416,
+          "width": 63,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "line",
+          "x": 655,
+          "y": 487,
+          "width": 63,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "rectangle",
+          "x": 764,
+          "y": 216,
+          "width": 109,
+          "height": 336,
+          "background": "#e3f2fd",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 818,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "SF"
+        },
+        {
+          "type": "line",
+          "x": 754,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 754,
+          "y": 384,
+          "width": 128,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "ellipse",
+          "x": 818,
+          "y": 384,
+          "width": 61,
+          "height": 41,
+          "background": "#ffffff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 892,
+          "y": 216,
+          "width": 109,
+          "height": 336,
+          "background": "#fff3e0",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 947,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "RF"
+        },
+        {
+          "type": "line",
+          "x": 883,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 883,
+          "y": 384,
+          "width": 128,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "ellipse",
+          "x": 947,
+          "y": 384,
+          "width": 61,
+          "height": 41,
+          "background": "#ffffff",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "rectangle",
+          "x": 1021,
+          "y": 216,
+          "width": 96,
+          "height": 336,
+          "background": "#fafafa",
+          "borderColor": "#546e7a"
+        },
+        {
+          "type": "label",
+          "x": 1070,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "line",
+          "x": 1012,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 1012,
+          "y": 384,
+          "width": 115,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 59,
+          "y": 352,
+          "width": 0,
+          "height": 0,
+          "text": "OA"
+        },
+        {
+          "type": "label",
+          "x": 1152,
+          "y": 352,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "AHU-1 OAT",
+          "type": "value",
+          "x": 995,
+          "y": 527,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 OA HUM",
+          "type": "value",
+          "x": 864,
+          "y": 600,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 MAT",
+          "type": "value",
+          "x": 284,
+          "y": 519,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 RAT",
+          "type": "value",
+          "x": 995,
+          "y": 564,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 RA HUM",
+          "type": "value",
+          "x": 864,
+          "y": 636,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 SAT",
+          "type": "value",
+          "x": 1106,
+          "y": 320,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 SAT-SP",
+          "type": "setpoint",
+          "x": 1106,
+          "y": 356,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 DUCT SP",
+          "type": "value",
+          "x": 440,
+          "y": 272,
+          "format": ".2f"
+        },
+        {
+          "point": "AHU-1 SF STATUS",
+          "type": "status",
+          "x": 818,
+          "y": 384,
+          "format": "on/off"
+        },
+        {
+          "point": "AHU-1 SF CMD",
+          "type": "command",
+          "x": 818,
+          "y": 420,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 CLG VALVE",
+          "type": "command",
+          "x": 545,
+          "y": 120,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 HTG VALVE",
+          "type": "command",
+          "x": 686,
+          "y": 656,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 OA DAMPER",
+          "type": "command",
+          "x": 139,
+          "y": 128,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 FREEZE STAT",
+          "type": "status",
+          "x": 288,
+          "y": 688,
+          "format": "on/off"
+        },
+        {
+          "point": "AHU-1 DUCT SMOKE",
+          "type": "alarm",
+          "x": 59,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 AREA SMOKE",
+          "type": "alarm",
+          "x": 114,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 FIRE ALARM",
+          "type": "alarm",
+          "x": 24,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-1 FILTER DP",
+          "type": "value",
+          "x": 416,
+          "y": 424,
+          "format": ".2f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_ahu-2",
+      "title": "AHU-2 - AHU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 72,
+          "y": 144,
+          "width": 1056,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "AHU-2"
+        },
+        {
+          "type": "rectangle",
+          "x": 81,
+          "y": 216,
+          "width": 134,
+          "height": 336,
+          "background": "#ffffff",
+          "borderColor": "#455a64"
+        },
+        {
+          "type": "label",
+          "x": 149,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "OA"
+        },
+        {
+          "type": "line",
+          "x": 72,
+          "y": 384,
+          "width": 154,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 108,
+          "y": 359,
+          "width": 82,
+          "height": 112,
+          "borderColor": "#455a64"
+        },
+        {
+          "type": "rectangle",
+          "x": 235,
+          "y": 216,
+          "width": 156,
+          "height": 336,
+          "background": "#eceff1",
+          "borderColor": "#607d8b"
+        },
+        {
+          "type": "label",
+          "x": 314,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "MA"
+        },
+        {
+          "type": "line",
+          "x": 226,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 226,
+          "y": 384,
+          "width": 176,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 262,
+          "y": 359,
+          "width": 104,
+          "height": 112,
+          "borderColor": "#607d8b"
+        },
+        {
+          "type": "rectangle",
+          "x": 411,
+          "y": 216,
+          "width": 105,
+          "height": 336,
+          "background": "#e8eaf6",
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "label",
+          "x": 464,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "FILTER"
+        },
+        {
+          "type": "line",
+          "x": 402,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 402,
+          "y": 384,
+          "width": 124,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 429,
+          "y": 304,
+          "width": 9,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "line",
+          "x": 454,
+          "y": 304,
+          "width": 9,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "line",
+          "x": 479,
+          "y": 304,
+          "width": 9,
+          "height": 223,
+          "borderColor": "#3f51b5"
+        },
+        {
+          "type": "rectangle",
+          "x": 536,
+          "y": 216,
+          "width": 149,
+          "height": 336,
+          "background": "#cce5ff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 611,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "CC"
+        },
+        {
+          "type": "line",
+          "x": 526,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 526,
+          "y": 384,
+          "width": 168,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 562,
+          "y": 344,
+          "width": 96,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 562,
+          "y": 416,
+          "width": 96,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 562,
+          "y": 487,
+          "width": 96,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 704,
+          "y": 216,
+          "width": 134,
+          "height": 336,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 772,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "HC"
+        },
+        {
+          "type": "line",
+          "x": 695,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 695,
+          "y": 384,
+          "width": 154,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 731,
+          "y": 344,
+          "width": 82,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "line",
+          "x": 731,
+          "y": 416,
+          "width": 82,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "line",
+          "x": 731,
+          "y": 487,
+          "width": 82,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "rectangle",
+          "x": 858,
+          "y": 216,
+          "width": 127,
+          "height": 336,
+          "background": "#e3f2fd",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 922,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "SF"
+        },
+        {
+          "type": "line",
+          "x": 849,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 849,
+          "y": 384,
+          "width": 146,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "ellipse",
+          "x": 922,
+          "y": 384,
+          "width": 70,
+          "height": 46,
+          "background": "#ffffff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 1005,
+          "y": 216,
+          "width": 112,
+          "height": 336,
+          "background": "#fafafa",
+          "borderColor": "#546e7a"
+        },
+        {
+          "type": "label",
+          "x": 1062,
+          "y": 231,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "line",
+          "x": 996,
+          "y": 224,
+          "width": 0,
+          "height": 320,
+          "borderColor": "#cbd5e1"
+        },
+        {
+          "type": "line",
+          "x": 996,
+          "y": 384,
+          "width": 132,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 59,
+          "y": 352,
+          "width": 0,
+          "height": 0,
+          "text": "OA"
+        },
+        {
+          "type": "label",
+          "x": 1152,
+          "y": 352,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "AHU-2 OAT",
+          "type": "value",
+          "x": 1176,
+          "y": 520,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 OA HUM",
+          "type": "value",
+          "x": 864,
+          "y": 600,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 MAT",
+          "type": "value",
+          "x": 314,
+          "y": 519,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 RAT",
+          "type": "value",
+          "x": 1176,
+          "y": 556,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 RA HUM",
+          "type": "value",
+          "x": 864,
+          "y": 636,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 SAT",
+          "type": "value",
+          "x": 1098,
+          "y": 320,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 SAT-SP",
+          "type": "setpoint",
+          "x": 1098,
+          "y": 356,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 DUCT SP",
+          "type": "value",
+          "x": 488,
+          "y": 272,
+          "format": ".2f"
+        },
+        {
+          "point": "AHU-2 SF STATUS",
+          "type": "status",
+          "x": 922,
+          "y": 384,
+          "format": "on/off"
+        },
+        {
+          "point": "AHU-2 SF CMD",
+          "type": "command",
+          "x": 922,
+          "y": 420,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 CLG VALVE",
+          "type": "command",
+          "x": 611,
+          "y": 120,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 HTG VALVE",
+          "type": "command",
+          "x": 772,
+          "y": 656,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 OA DAMPER",
+          "type": "command",
+          "x": 149,
+          "y": 128,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 FREEZE STAT",
+          "type": "status",
+          "x": 288,
+          "y": 688,
+          "format": "on/off"
+        },
+        {
+          "point": "AHU-2 DUCT SMOKE",
+          "type": "alarm",
+          "x": 59,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 AREA SMOKE",
+          "type": "alarm",
+          "x": 114,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 FIRE ALARM",
+          "type": "alarm",
+          "x": 24,
+          "y": 688,
+          "format": ".1f"
+        },
+        {
+          "point": "AHU-2 FILTER DP",
+          "type": "value",
+          "x": 464,
+          "y": 424,
+          "format": ".2f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_vav-101",
+      "title": "VAV-101 - VAV",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 120,
+          "y": 80,
+          "width": 960,
+          "height": 640,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 280,
+          "width": 120,
+          "height": 240,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 240,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "DMPR"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RH"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 120,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "\u2022"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 120,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 1080,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1140,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-101"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-101 AIRFLOW",
+          "type": "value",
+          "x": 1140,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-101 FLOW-SP",
+          "type": "setpoint",
+          "x": 420,
+          "y": 40,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-101 DAMPER CMD",
+          "type": "command",
+          "x": 300,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 ZT",
+          "type": "value",
+          "x": 1140,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 ZN-T SP",
+          "type": "setpoint",
+          "x": 473,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 OCC CMD",
+          "type": "status",
+          "x": 420,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-101 BOX FLOW STS",
+          "type": "status",
+          "x": 473,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-101 LOW FLOW ALM",
+          "type": "alarm",
+          "x": 96,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 SPACE HUM",
+          "type": "value",
+          "x": 1140,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 CO2",
+          "type": "value",
+          "x": 1140,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 REHEAT VALVE",
+          "type": "command",
+          "x": 660,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 HW-VLV FB",
+          "type": "value",
+          "x": 660,
+          "y": 436,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_vav-102",
+      "title": "VAV-102 - VAV",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 120,
+          "y": 80,
+          "width": 960,
+          "height": 640,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 280,
+          "width": 120,
+          "height": 240,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 240,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "DMPR"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RH"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 120,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "\u2022"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 120,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 1080,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1140,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-102"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-102 AIRFLOW",
+          "type": "value",
+          "x": 1140,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-102 FLOW-SP",
+          "type": "setpoint",
+          "x": 420,
+          "y": 40,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-102 DAMPER CMD",
+          "type": "command",
+          "x": 300,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 ZT",
+          "type": "value",
+          "x": 1140,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 ZN-T SP",
+          "type": "setpoint",
+          "x": 473,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 OCC CMD",
+          "type": "status",
+          "x": 420,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-102 BOX FLOW STS",
+          "type": "status",
+          "x": 473,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-102 LOW FLOW ALM",
+          "type": "alarm",
+          "x": 96,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 SPACE HUM",
+          "type": "value",
+          "x": 1140,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 CO2",
+          "type": "value",
+          "x": 1140,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 REHEAT VALVE",
+          "type": "command",
+          "x": 660,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 HW-VLV FB",
+          "type": "value",
+          "x": 660,
+          "y": 436,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_vav-103",
+      "title": "VAV-103 - VAV",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 120,
+          "y": 80,
+          "width": 960,
+          "height": 640,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 280,
+          "width": 120,
+          "height": 240,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 240,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "DMPR"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RH"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 120,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "\u2022"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 120,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 1080,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1140,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-103"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-103 AIRFLOW",
+          "type": "value",
+          "x": 1140,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-103 FLOW-SP",
+          "type": "setpoint",
+          "x": 420,
+          "y": 40,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-103 DAMPER CMD",
+          "type": "command",
+          "x": 300,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 ZT",
+          "type": "value",
+          "x": 1140,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 ZN-T SP",
+          "type": "setpoint",
+          "x": 473,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 OCC CMD",
+          "type": "status",
+          "x": 420,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-103 BOX FLOW STS",
+          "type": "status",
+          "x": 473,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-103 LOW FLOW ALM",
+          "type": "alarm",
+          "x": 96,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 SPACE HUM",
+          "type": "value",
+          "x": 1140,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 CO2",
+          "type": "value",
+          "x": 1140,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 REHEAT VALVE",
+          "type": "command",
+          "x": 660,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 HW-VLV FB",
+          "type": "value",
+          "x": 660,
+          "y": 436,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_vav-201",
+      "title": "VAV-201 - VAV",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 120,
+          "y": 80,
+          "width": 960,
+          "height": 640,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 280,
+          "width": 120,
+          "height": 240,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 240,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "DMPR"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RH"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 120,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "\u2022"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 120,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 1080,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1140,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-201"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-201 AIRFLOW",
+          "type": "value",
+          "x": 1140,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-201 FLOW-SP",
+          "type": "setpoint",
+          "x": 420,
+          "y": 40,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-201 DAMPER CMD",
+          "type": "command",
+          "x": 300,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 ZT",
+          "type": "value",
+          "x": 1140,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 ZN-T SP",
+          "type": "setpoint",
+          "x": 473,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 OCC CMD",
+          "type": "status",
+          "x": 420,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-201 BOX FLOW STS",
+          "type": "status",
+          "x": 473,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-201 LOW FLOW ALM",
+          "type": "alarm",
+          "x": 96,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 SPACE HUM",
+          "type": "value",
+          "x": 1140,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 CO2",
+          "type": "value",
+          "x": 1140,
+          "y": 312,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_vav-202",
+      "title": "VAV-202 - VAV",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 120,
+          "y": 80,
+          "width": 960,
+          "height": 640,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 280,
+          "width": 120,
+          "height": 240,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 240,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 300,
+          "y": 240,
+          "width": 0,
+          "height": 0,
+          "text": "DMPR"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RH"
+        },
+        {
+          "type": "ellipse",
+          "x": 1020,
+          "y": 400,
+          "width": 120,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "\u2022"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 120,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 1080,
+          "y": 400,
+          "width": 119,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1140,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "SA"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 720,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-202"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-202 AIRFLOW",
+          "type": "value",
+          "x": 1140,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-202 FLOW-SP",
+          "type": "setpoint",
+          "x": 420,
+          "y": 40,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-202 DAMPER CMD",
+          "type": "command",
+          "x": 300,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 ZT",
+          "type": "value",
+          "x": 1140,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 ZN-T SP",
+          "type": "setpoint",
+          "x": 473,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 OCC CMD",
+          "type": "status",
+          "x": 420,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-202 BOX FLOW STS",
+          "type": "status",
+          "x": 473,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "VAV-202 LOW FLOW ALM",
+          "type": "alarm",
+          "x": 96,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 SPACE HUM",
+          "type": "value",
+          "x": 1140,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 CO2",
+          "type": "value",
+          "x": 1140,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 REHEAT VALVE",
+          "type": "command",
+          "x": 660,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 HW-VLV FB",
+          "type": "value",
+          "x": 660,
+          "y": 436,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_chlr-1",
+      "title": "CHLR-1 - CHILLER",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 60,
+          "y": 120,
+          "width": 1080,
+          "height": 560,
+          "background": "#e3f2fd",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "ellipse",
+          "x": 240,
+          "y": 400,
+          "width": 240,
+          "height": 200,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 240,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "COMP"
+        },
+        {
+          "type": "rectangle",
+          "x": 540,
+          "y": 240,
+          "width": 240,
+          "height": 320,
+          "background": "#cce5ff",
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "EVAP"
+        },
+        {
+          "type": "rectangle",
+          "x": 840,
+          "y": 240,
+          "width": 240,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 960,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "COND"
+        },
+        {
+          "type": "rectangle",
+          "x": 540,
+          "y": 120,
+          "width": 96,
+          "height": 80,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "line",
+          "x": 540,
+          "y": 160,
+          "width": 96,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 588,
+          "y": 120,
+          "width": 0,
+          "height": 0,
+          "text": "EXV"
+        },
+        {
+          "type": "line",
+          "x": 540,
+          "y": 400,
+          "width": -540,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 0,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "CHWS"
+        },
+        {
+          "type": "line",
+          "x": 660,
+          "y": 400,
+          "width": 540,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "label",
+          "x": 1200,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "CHWR"
+        },
+        {
+          "type": "line",
+          "x": 840,
+          "y": 160,
+          "width": 0,
+          "height": -160,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 840,
+          "y": 40,
+          "width": 0,
+          "height": 0,
+          "text": "CWS"
+        },
+        {
+          "type": "line",
+          "x": 840,
+          "y": 640,
+          "width": 0,
+          "height": 159,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 840,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "text": "CWR"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "text": "CHLR-1"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "CHLR-1 CHWS",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 CHWR",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 CHW-DP",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".2f"
+        },
+        {
+          "point": "CHLR-1 CWS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 CWR",
+          "type": "value",
+          "x": 60,
+          "y": 168,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 LOAD KW",
+          "type": "value",
+          "x": 60,
+          "y": 348,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 CHLR ENABLE",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHLR-1 CHWS-SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 FLOW STS",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHLR-1 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 STARTS",
+          "type": "value",
+          "x": 60,
+          "y": 131,
+          "format": ".1f"
+        },
+        {
+          "point": "CHLR-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 384,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_chwp-1",
+      "title": "CHWP-1 - PUMP_CHW",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "CHWP-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "PUMP_CHW"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "CHWP-1 CHW-DP",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".2f"
+        },
+        {
+          "point": "CHWP-1 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".0f"
+        },
+        {
+          "point": "CHWP-1 SPD CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-1 STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHWP-1 LEAD CMD",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHWP-1 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-1 KW",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_chwp-2",
+      "title": "CHWP-2 - PUMP_CHW",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "CHWP-2"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "PUMP_CHW"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "CHWP-2 CHW-DP",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".2f"
+        },
+        {
+          "point": "CHWP-2 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".0f"
+        },
+        {
+          "point": "CHWP-2 SPD CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-2 STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHWP-2 LEAD CMD",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CHWP-2 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-2 KW",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "CHWP-2 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_ct-1",
+      "title": "CT-1 - CT",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "CT-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "CT"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "CT-1 CWS",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 CWR",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 BASIN TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 FAN CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 FAN STS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "CT-1 MAKEUP VLV",
+          "type": "command",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 LEVEL",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 VIB ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 FREEZE ALM",
+          "type": "alarm",
+          "x": 114,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "CT-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 168,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_hx-1",
+      "title": "HX-1 - HX",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "HX-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "HX"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "HX-1 PRI SUP TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HX-1 PRI RET TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "HX-1 SEC SUP TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "HX-1 SEC RET TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "HX-1 BYPASS VLV",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HX-1 DP",
+          "type": "value",
+          "x": 60,
+          "y": 168,
+          "format": ".2f"
+        },
+        {
+          "point": "HX-1 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 348,
+          "format": ".0f"
+        },
+        {
+          "point": "HX-1 FOUL ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_blr-1",
+      "title": "BLR-1 - BOILER",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 60,
+          "y": 160,
+          "width": 1080,
+          "height": 480,
+          "background": "#fff8e1",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "ellipse",
+          "x": 180,
+          "y": 400,
+          "width": 180,
+          "height": 160,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 180,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "BURNER"
+        },
+        {
+          "type": "rectangle",
+          "x": 480,
+          "y": 240,
+          "width": 360,
+          "height": 320,
+          "background": "#ffccbc",
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 660,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "HX"
+        },
+        {
+          "type": "rectangle",
+          "x": 960,
+          "y": 0,
+          "width": 120,
+          "height": 160,
+          "background": "#757575",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1020,
+          "y": 80,
+          "width": 0,
+          "height": 0,
+          "text": "FLUE"
+        },
+        {
+          "type": "line",
+          "x": 660,
+          "y": 240,
+          "width": 540,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 1200,
+          "y": 200,
+          "width": 0,
+          "height": 0,
+          "text": "HWS"
+        },
+        {
+          "type": "line",
+          "x": 660,
+          "y": 560,
+          "width": 540,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        },
+        {
+          "type": "label",
+          "x": 1200,
+          "y": 520,
+          "width": 0,
+          "height": 0,
+          "text": "HWR"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 400,
+          "width": 180,
+          "height": 0,
+          "borderColor": "#757575"
+        },
+        {
+          "type": "label",
+          "x": 0,
+          "y": 360,
+          "width": 0,
+          "height": 0,
+          "text": "GAS"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "text": "BLR-1"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "BLR-1 HWS",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 HWR",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 HWS-SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 BURNER CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 ENABLE STS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "BLR-1 FLAME SAFETY",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 PRES",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".2f"
+        },
+        {
+          "point": "BLR-1 FLOW STS",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "BLR-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "BLR-1 STARTS",
+          "type": "value",
+          "x": 60,
+          "y": 168,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_hwp-1",
+      "title": "HWP-1 - PUMP_HW",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "HWP-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "PUMP_HW"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "HWP-1 HW-DP",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".2f"
+        },
+        {
+          "point": "HWP-1 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".0f"
+        },
+        {
+          "point": "HWP-1 SPD CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-1 STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "HWP-1 LEAD CMD",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "HWP-1 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-1 KW",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_hwp-2",
+      "title": "HWP-2 - PUMP_HW",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "HWP-2"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "PUMP_HW"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "HWP-2 HW-DP",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".2f"
+        },
+        {
+          "point": "HWP-2 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".0f"
+        },
+        {
+          "point": "HWP-2 SPD CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-2 STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "HWP-2 LEAD CMD",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "HWP-2 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-2 KW",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "HWP-2 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_rtu-1",
+      "title": "RTU-1 - RTU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
           "x": 60,
           "y": 80,
           "width": 1080,
@@ -34,55 +3032,38 @@
           "text": "SF"
         },
         {
-          "type": "ellipse",
-          "x": 1020,
-          "y": 400,
-          "width": 288,
-          "height": 192,
-          "background": "#fff3e0",
-          "borderColor": "#ef6c00"
-        },
-        {
-          "type": "label",
-          "x": 1020,
-          "y": 400,
-          "width": 0,
-          "height": 0,
-          "text": "RF"
-        },
-        {
           "type": "rectangle",
           "x": 420,
           "y": 120,
           "width": 360,
-          "height": 120,
+          "height": 160,
           "background": "#cce5ff",
           "borderColor": "#1976d2"
         },
         {
           "type": "label",
           "x": 600,
-          "y": 180,
+          "y": 200,
           "width": 0,
           "height": 0,
-          "text": "CC"
+          "text": "DX CC"
         },
         {
           "type": "rectangle",
           "x": 420,
-          "y": 560,
+          "y": 520,
           "width": 360,
-          "height": 120,
+          "height": 160,
           "background": "#ffccbc",
           "borderColor": "#ef6c00"
         },
         {
           "type": "label",
           "x": 600,
-          "y": 620,
+          "y": 600,
           "width": 0,
           "height": 0,
-          "text": "HC"
+          "text": "GAS HT"
         },
         {
           "type": "rectangle",
@@ -136,31 +3117,6 @@
         },
         {
           "type": "rectangle",
-          "x": 960,
-          "y": 736,
-          "width": 180,
-          "height": 48,
-          "background": "#fff",
-          "borderColor": "#333"
-        },
-        {
-          "type": "line",
-          "x": 960,
-          "y": 760,
-          "width": 179,
-          "height": 0,
-          "borderColor": "#757575"
-        },
-        {
-          "type": "label",
-          "x": 1050,
-          "y": 760,
-          "width": 0,
-          "height": 0,
-          "text": "EA"
-        },
-        {
-          "type": "rectangle",
           "x": 240,
           "y": 160,
           "width": 120,
@@ -175,23 +3131,6 @@
           "width": 0,
           "height": 0,
           "text": "FILT"
-        },
-        {
-          "type": "ellipse",
-          "x": 840,
-          "y": 600,
-          "width": 180,
-          "height": 80,
-          "background": "#e0f2f1",
-          "borderColor": "#009688"
-        },
-        {
-          "type": "label",
-          "x": 840,
-          "y": 600,
-          "width": 0,
-          "height": 0,
-          "text": "HUM"
         },
         {
           "type": "line",
@@ -231,13 +3170,811 @@
           "y": 760,
           "width": 0,
           "height": 0,
-          "text": "AHU-1"
+          "text": "RTU-1"
         }
       ],
       "bindings": [
         {
-          "point": "AHU-1 SAT",
+          "point": "RTU-1 OAT",
           "type": "value",
+          "x": 1176,
+          "y": 520,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 OA HUM",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 MAT",
+          "type": "value",
+          "x": 396,
+          "y": 400,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 RAT",
+          "type": "value",
+          "x": 1176,
+          "y": 556,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 RA HUM",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 SAT",
+          "type": "value",
+          "x": 1176,
+          "y": 280,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 SAT-SP",
+          "type": "setpoint",
+          "x": 1176,
+          "y": 315,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 DUCT SP",
+          "type": "value",
+          "x": 1152,
+          "y": 176,
+          "format": ".2f"
+        },
+        {
+          "point": "RTU-1 SF STATUS",
+          "type": "status",
+          "x": 180,
+          "y": 400,
+          "format": "on/off"
+        },
+        {
+          "point": "RTU-1 SF CMD",
+          "type": "command",
+          "x": 180,
+          "y": 436,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 CLG VALVE",
+          "type": "command",
+          "x": 600,
+          "y": 160,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 HTG VALVE",
+          "type": "command",
+          "x": 600,
+          "y": 640,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 OA DAMPER",
+          "type": "command",
+          "x": 144,
+          "y": 40,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 FREEZE STAT",
+          "type": "status",
+          "x": 360,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "RTU-1 DUCT SMOKE",
+          "type": "alarm",
+          "x": 60,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 AREA SMOKE",
+          "type": "alarm",
+          "x": 114,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 FIRE ALARM",
+          "type": "alarm",
+          "x": 24,
+          "y": 760,
+          "format": ".1f"
+        },
+        {
+          "point": "RTU-1 FILTER DP",
+          "type": "value",
+          "x": 300,
+          "y": 360,
+          "format": ".2f"
+        },
+        {
+          "point": "RTU-1 DX1 CMD",
+          "type": "status",
+          "x": 413,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "RTU-1 DX2 CMD",
+          "type": "status",
+          "x": 306,
+          "y": 760,
+          "format": "on/off"
+        },
+        {
+          "point": "RTU-1 FLT-ALM",
+          "type": "alarm",
+          "x": 168,
+          "y": 760,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_fcu-1",
+      "title": "FCU-1 - FCU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "FCU-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "FCU"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "FCU-1 ZN-T",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "FCU-1 ZN-T SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "FCU-1 FAN CMD",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "FCU-1 FAN STS",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "FCU-1 VALVE CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "FCU-1 DAT",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "FCU-1 COND ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "FCU-1 FILTER ALM",
+          "type": "alarm",
+          "x": 114,
+          "y": 240,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_eru-1",
+      "title": "ERU-1 - ERU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "ERU-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "ERU"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "ERU-1 OA-T",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 EA-T",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 SA-T",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 WHEEL CMD",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "ERU-1 WHEEL STS",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "ERU-1 SF CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 EF CMD",
+          "type": "command",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 FILTER DP",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".2f"
+        },
+        {
+          "point": "ERU-1 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "ERU-1 BYPASS DAMPER",
+          "type": "command",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_mau-1",
+      "title": "MAU-1 - MAU",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "MAU-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "MAU"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "MAU-1 OAT",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 SAT",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 SAT-SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 SF CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 SF STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "MAU-1 GAS VLV",
+          "type": "command",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 OA DAMPER",
+          "type": "command",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 FILTER DP",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".2f"
+        },
+        {
+          "point": "MAU-1 SMK-ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "MAU-1 FLT-ALM",
+          "type": "alarm",
+          "x": 114,
+          "y": 240,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_ef-1",
+      "title": "EF-1 - EF",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "EF-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "EF"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "EF-1 FAN CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "EF-1 FAN STS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "EF-1 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".0f"
+        },
+        {
+          "point": "EF-1 SPD",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "EF-1 FAULT ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "EF-1 RUN HRS",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_uh-1",
+      "title": "UH-1 - CUSTOM",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "UH-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "CUSTOM"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "UH-1 ZN-T",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "UH-1 ZN-T SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "UH-1 FAN CMD",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "UH-1 FAN STS",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "UH-1 HW VLV",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "UH-1 LOW TEMP ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_rp-1",
+      "title": "RP-1 - CUSTOM",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "RP-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "CUSTOM"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "RP-1 ZN-T",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "RP-1 ZN-T SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "RP-1 PANEL TEMP",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "RP-1 VALVE CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "RP-1 CONDENSATION ALM",
+          "type": "alarm",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "RP-1 FLOW",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".0f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_doas-1",
+      "title": "DOAS-1 - CUSTOM",
+      "width": 1200,
+      "height": 800,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 240,
+          "y": 160,
+          "width": 720,
+          "height": 480,
+          "background": "#f5f5f5",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 400,
+          "width": 0,
+          "height": 0,
+          "text": "DOAS-1"
+        },
+        {
+          "type": "label",
+          "x": 600,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "text": "CUSTOM"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "DOAS-1 OAT",
+          "type": "value",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 OAH",
+          "type": "value",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 DAT",
+          "type": "value",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 DAT-SP",
+          "type": "setpoint",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 SF CMD",
+          "type": "command",
+          "x": 60,
+          "y": 240,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 SF STATUS",
+          "type": "status",
+          "x": 60,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "DOAS-1 CLG VALVE",
+          "type": "command",
+          "x": 60,
+          "y": 276,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 HTG VALVE",
+          "type": "command",
+          "x": 60,
+          "y": 204,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 OA DAMPER",
+          "type": "command",
+          "x": 60,
+          "y": 312,
+          "format": ".1f"
+        },
+        {
+          "point": "DOAS-1 FILTER DP",
+          "type": "value",
+          "x": 60,
+          "y": 312,
+          "format": ".2f"
+        },
+        {
+          "point": "DOAS-1 WHEEL CMD",
+          "type": "status",
+          "x": 114,
+          "y": 240,
+          "format": "on/off"
+        },
+        {
+          "point": "DOAS-1 FROST ALM",
+          "type": "alarm",
           "x": 60,
           "y": 240,
           "format": ".1f"
@@ -277,6 +4014,81 @@
           "borderColor": "#1976d2"
         },
         {
+          "type": "rectangle",
+          "x": 1120,
+          "y": 200,
+          "width": 240,
+          "height": 100,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1240,
+          "y": 250,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-101"
+        },
+        {
+          "type": "line",
+          "x": 1040,
+          "y": 250,
+          "width": 80,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 1120,
+          "y": 400,
+          "width": 240,
+          "height": 100,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1240,
+          "y": 450,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-102"
+        },
+        {
+          "type": "line",
+          "x": 1040,
+          "y": 450,
+          "width": 80,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 1120,
+          "y": 600,
+          "width": 240,
+          "height": 100,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1240,
+          "y": 650,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-103"
+        },
+        {
+          "type": "line",
+          "x": 1040,
+          "y": 650,
+          "width": 80,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
           "type": "line",
           "x": 560,
           "y": 700,
@@ -285,7 +4097,340 @@
           "borderColor": "#ef6c00"
         }
       ],
-      "bindings": []
+      "bindings": [
+        {
+          "point": "VAV-101 AIRFLOW",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-101 FLOW-SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 250,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-101 ZT",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 ZN-T SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 SPACE HUM",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 CO2",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-101 HW-VLV FB",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 AIRFLOW",
+          "type": "value",
+          "x": 1360,
+          "y": 450,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-102 FLOW-SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 450,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-102 ZT",
+          "type": "value",
+          "x": 1360,
+          "y": 450,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 ZN-T SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 450,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 SPACE HUM",
+          "type": "value",
+          "x": 1360,
+          "y": 450,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 CO2",
+          "type": "value",
+          "x": 1360,
+          "y": 450,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-102 HW-VLV FB",
+          "type": "value",
+          "x": 1360,
+          "y": 450,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 AIRFLOW",
+          "type": "value",
+          "x": 1360,
+          "y": 650,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-103 FLOW-SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 650,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-103 ZT",
+          "type": "value",
+          "x": 1360,
+          "y": 650,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 ZN-T SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 650,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 SPACE HUM",
+          "type": "value",
+          "x": 1360,
+          "y": 650,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 CO2",
+          "type": "value",
+          "x": 1360,
+          "y": 650,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-103 HW-VLV FB",
+          "type": "value",
+          "x": 1360,
+          "y": 650,
+          "format": ".1f"
+        }
+      ]
+    },
+    {
+      "name": "graphic_system_ahu-2",
+      "title": "AHU-2 System",
+      "width": 1600,
+      "height": 1000,
+      "background": "white",
+      "components": [
+        {
+          "type": "rectangle",
+          "x": 160,
+          "y": 300,
+          "width": 400,
+          "height": 400,
+          "background": "#e0e0e0",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 360,
+          "y": 500,
+          "width": 0,
+          "height": 0,
+          "text": "AHU-2"
+        },
+        {
+          "type": "line",
+          "x": 560,
+          "y": 500,
+          "width": 480,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 1120,
+          "y": 200,
+          "width": 240,
+          "height": 100,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1240,
+          "y": 250,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-201"
+        },
+        {
+          "type": "line",
+          "x": 1040,
+          "y": 250,
+          "width": 80,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "rectangle",
+          "x": 1120,
+          "y": 500,
+          "width": 240,
+          "height": 100,
+          "background": "#fff",
+          "borderColor": "#333"
+        },
+        {
+          "type": "label",
+          "x": 1240,
+          "y": 550,
+          "width": 0,
+          "height": 0,
+          "text": "VAV-202"
+        },
+        {
+          "type": "line",
+          "x": 1040,
+          "y": 550,
+          "width": 80,
+          "height": 0,
+          "borderColor": "#1976d2"
+        },
+        {
+          "type": "line",
+          "x": 560,
+          "y": 700,
+          "width": 480,
+          "height": 0,
+          "borderColor": "#ef6c00"
+        }
+      ],
+      "bindings": [
+        {
+          "point": "VAV-201 AIRFLOW",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-201 FLOW-SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 250,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-201 ZT",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 ZN-T SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 SPACE HUM",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-201 CO2",
+          "type": "value",
+          "x": 1360,
+          "y": 250,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 AIRFLOW",
+          "type": "value",
+          "x": 1360,
+          "y": 550,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-202 FLOW-SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 550,
+          "format": ".0f"
+        },
+        {
+          "point": "VAV-202 ZT",
+          "type": "value",
+          "x": 1360,
+          "y": 550,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 ZN-T SP",
+          "type": "setpoint",
+          "x": 1360,
+          "y": 550,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 SPACE HUM",
+          "type": "value",
+          "x": 1360,
+          "y": 550,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 CO2",
+          "type": "value",
+          "x": 1360,
+          "y": 550,
+          "format": ".1f"
+        },
+        {
+          "point": "VAV-202 HW-VLV FB",
+          "type": "value",
+          "x": 1360,
+          "y": 550,
+          "format": ".1f"
+        }
+      ]
     }
   ]
 }
