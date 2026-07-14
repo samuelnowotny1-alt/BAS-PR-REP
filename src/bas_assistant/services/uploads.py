@@ -168,23 +168,16 @@ class UploadService:
     ) -> list[UploadRecord]:
         """Return recent uploads globally or for a project."""
         with self.db.session() as session:
-            statement = select(UploadRecord).order_by(desc(UploadRecord.created_at)).limit(limit)
+            statement = select(UploadRecord)
             if project_id is not None:
-                project_record = session.scalar(
-                    select(ProjectRecord).where(ProjectRecord.project_id == project_id)
+                statement = statement.join(ProjectRecord, UploadRecord.project_id == ProjectRecord.id).where(
+                    ProjectRecord.project_id == project_id
                 )
-                if project_record is None:
-                    return []
-                statement = statement.where(UploadRecord.project_id == project_record.id)
             elif project_ids:
-                project_db_ids = list(
-                    session.scalars(
-                        select(ProjectRecord.id).where(ProjectRecord.project_id.in_(project_ids))
-                    )
+                statement = statement.join(ProjectRecord, UploadRecord.project_id == ProjectRecord.id).where(
+                    ProjectRecord.project_id.in_(project_ids)
                 )
-                if not project_db_ids:
-                    return []
-                statement = statement.where(UploadRecord.project_id.in_(project_db_ids))
+            statement = statement.order_by(desc(UploadRecord.created_at)).limit(limit)
             return list(session.scalars(statement))
 
     def _default_category_for_suffix(self, suffix: str) -> str:
