@@ -45,6 +45,16 @@
                     <p class="mt-2 text-3xl font-bold text-rose-800 dark:text-rose-200">{{ sequence_workspace.summary.missing_checks }}</p>
                 </div>
             </div>
+            {% if sequence_workspace.summary.missing_families %}
+            <div class="mt-5">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">Missing Intent Families</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for family in sequence_workspace.summary.missing_families %}
+                    <span class="rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-300">{{ family }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         <div class="grid gap-4">
@@ -60,6 +70,13 @@
                         <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">{{ review.summary }}</p>
                         {% if review.documents %}
                         <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">Indexed from {{ review.documents|join(', ') }}</p>
+                        {% endif %}
+                        {% if review.required_families %}
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            {% for family in review.required_families %}
+                            <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if family in review.missing_families %}border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-900/20 dark:text-rose-300{% else %}border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-300{% endif %}">{{ family }}</span>
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
                     <div class="flex flex-wrap gap-3">

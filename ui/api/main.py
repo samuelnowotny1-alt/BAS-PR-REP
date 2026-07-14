@@ -1264,6 +1264,8 @@ def build_sequence_workspace(project: Project) -> dict[str, object]:
         "not_indexed": sum(1 for review in reviews if review["status"] == "not_indexed"),
         "missing_refs": sum(int(review["missing_ref_count"]) for review in reviews),
         "missing_checks": sum(int(review["missing_check_count"]) for review in reviews),
+        "required_families": sorted({family for review in reviews for family in review["required_families"]}),
+        "missing_families": sorted({family for review in reviews for family in review["missing_families"]}),
     }
     return {
         "summary": summary,

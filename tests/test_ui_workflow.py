@@ -708,6 +708,7 @@ def test_sequence_page_and_parse_show_structured_coverage_review(tmp_path: Path)
     assert "Sequence Coverage Board" in page_text
     assert "Tracked Equipment" in page_text
     assert "Control Intent Checks" in page_text
+    assert "Missing Intent Families" in page_text
     assert "AHU-1 SF-STS" in page_text
     assert parse_response.status_code == 200
     assert "Structured Coverage Review" in parse_text

@@ -79,6 +79,35 @@ class ParsedSequence:
 class SequenceParser:
     """Parses natural language sequences into structured logic requirements."""
 
+    STANDALONE_POINT_TOKEN_ALLOWLIST = {
+        "SAT", "MAT", "RAT", "OAT", "ZAT", "DAT", "SAP", "RAP", "ZSP", "CSP", "HSP",
+    }
+    STANDALONE_POINT_TOKEN_BLOCKLIST = {
+        "SP", "STS", "STATUS", "CMD", "ALM", "FLT", "PRF",
+    }
+    OCCUPANCY_TERMS = (
+        "occupied hours",
+        "unoccupied hours",
+        "occupied mode",
+        "unoccupied mode",
+        "occupancy mode",
+        "night setback",
+    )
+    SCHEDULE_TERMS = ("schedule", "occupied hours", "unoccupied hours", "holiday", "weekend", "weekday", "time clock")
+    SEMANTIC_REF_PATTERNS = (
+        (re.compile(r"\bREHEAT VALVE COMMAND\b|\bREHEAT COMMAND\b|\bHEATING VALVE COMMAND\b", re.IGNORECASE), "HTG-CMD"),
+        (re.compile(r"\bREHEAT VALVE POSITION\b|\bHEATING VALVE POSITION\b", re.IGNORECASE), "HTG-POS"),
+        (re.compile(r"\bECONOMIZER DAMPERS\b|\bECONOMIZER DAMPER\b|\bOUTSIDE AIR DAMPER COMMAND\b|\bOA DAMPER COMMAND\b", re.IGNORECASE), "DMP-CMD"),
+        (re.compile(r"\bLEAD LAG\b|\bLEAD-LAG\b", re.IGNORECASE), "LEAD-LAG"),
+        (re.compile(r"\bSTAGING\b|\bSTAGE BOILERS\b|\bSTAGE CHILLERS\b|\bSTAGE PUMPS\b", re.IGNORECASE), "STAGE-CMD"),
+        (re.compile(r"\bZONE AIR TEMPERATURE SETPOINT\b|\bZONE TEMPERATURE SETPOINT\b|\bZONE TEMP SETPOINT\b|\bROOM TEMPERATURE SETPOINT\b|\bROOM TEMP SETPOINT\b|\bSPACE TEMPERATURE SETPOINT\b|\bSPACE TEMP SETPOINT\b", re.IGNORECASE), "ZN-SP"),
+        (re.compile(r"\bZONE AIR TEMPERATURE\b|\bZONE AIR TEMP\b|\bZONE TEMPERATURE\b|\bZONE TEMP\b|\bROOM TEMPERATURE\b|\bROOM TEMP\b|\bSPACE TEMPERATURE\b|\bSPACE TEMP\b", re.IGNORECASE), "ZN-T"),
+        (re.compile(r"\bDAMPER POSITION FEEDBACK\b|\bDAMPER FEEDBACK\b|\bDAMPER POSITION\b", re.IGNORECASE), "DMP-POS"),
+        (re.compile(r"\bDAMPER COMMAND\b|\bDAMPER POSITION COMMAND\b", re.IGNORECASE), "DMP-CMD"),
+        (re.compile(r"\bAIRFLOW SETPOINT\b|\bFLOW SETPOINT\b|\bCFM SETPOINT\b|\bCFM SP\b", re.IGNORECASE), "FLOW-SP"),
+        (re.compile(r"\bAIRFLOW\b", re.IGNORECASE), "FLOW"),
+    )
+
     # Keywords that indicate specific logic types
     KEYWORDS = {
         LogicRequirementType.MODE: [
@@ -280,8 +309,34 @@ class SequenceParser:
         refs: set[str] = set()
         for pattern in patterns:
             for match in re.finditer(pattern, normalized_text, re.IGNORECASE):
-                refs.add(match.group(0).strip().upper())
+                candidate = match.group(0).strip().upper()
+                if candidate in self.STANDALONE_POINT_TOKEN_BLOCKLIST:
+                    continue
+                if candidate in self.STANDALONE_POINT_TOKEN_ALLOWLIST:
+                    refs.add(candidate)
+                    continue
+                refs.add(candidate)
+        refs.update(self._infer_semantic_point_refs(text))
         return sorted(refs)
+
+    def _infer_semantic_point_refs(self, text: str) -> set[str]:
+        text_lower = text.lower()
+        refs: set[str] = set()
+        equipment_ids = {
+            match.group(0).upper()
+            for match in re.finditer(r"\b[A-Z]{2,8}-\d+\b", text, re.IGNORECASE)
+        }
+        if any(term in text_lower for term in self.OCCUPANCY_TERMS):
+            refs.add("OCC-MODE")
+        if any(term in text_lower for term in self.SCHEDULE_TERMS):
+            refs.add("SCH")
+        for pattern, canonical in self.SEMANTIC_REF_PATTERNS:
+            if pattern.search(text):
+                if equipment_ids:
+                    refs.update(f"{equipment_id} {canonical}" for equipment_id in equipment_ids)
+                else:
+                    refs.add(canonical)
+        return refs
 
     def _extract_setpoints(self, text: str) -> list[str]:
         """Extract setpoint references."""

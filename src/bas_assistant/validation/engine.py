@@ -24,6 +24,89 @@ POINT_CODE_PATTERN = re.compile(r"^[A-Z0-9]+(?:-[A-Z0-9]+)*$")
 TEMPERATURE_TOKENS = {"temp", "sat", "mat", "rat", "oat", "eat", "lat", "dat", "zt"}
 PRESSURE_TOKENS = {"press", "pressure", "static", "dp"}
 FLOW_TOKENS = {"flow", "cfm", "gpm", "lps", "cfh", "m3h", "m3s"}
+POINT_REF_ALIAS_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bSUPPLY AIR TEMPERATURE SETPOINT\b"), "SAT-SP"),
+    (re.compile(r"\bSUPPLY AIR TEMP SETPOINT\b"), "SAT-SP"),
+    (re.compile(r"\bDISCHARGE AIR TEMPERATURE SETPOINT\b"), "DAT-SP"),
+    (re.compile(r"\bDISCHARGE AIR TEMP SETPOINT\b"), "DAT-SP"),
+    (re.compile(r"\bDISCH AIR TEMPERATURE SETPOINT\b"), "DAT-SP"),
+    (re.compile(r"\bDISCH AIR TEMP SETPOINT\b"), "DAT-SP"),
+    (re.compile(r"\bSUPPLY FAN STATUS\b"), "SF-STS"),
+    (re.compile(r"\bSUPPLY FAN PROOF\b"), "SF-STS"),
+    (re.compile(r"\bSUPPLY FAN RUN STATUS\b"), "SF-STS"),
+    (re.compile(r"\bSUPPLY FAN RUN PROOF\b"), "SF-STS"),
+    (re.compile(r"\bSUPPLY FAN COMMAND\b"), "SF-CMD"),
+    (re.compile(r"\bSUPPLY FAN START COMMAND\b"), "SF-CMD"),
+    (re.compile(r"\bSUPPLY FAN ENABLE\b"), "SF-CMD"),
+    (re.compile(r"\bFAN STATUS\b"), "SF-STS"),
+    (re.compile(r"\bFAN PROOF\b"), "SF-STS"),
+    (re.compile(r"\bFAN COMMAND\b"), "SF-CMD"),
+    (re.compile(r"\bFAN ENABLE\b"), "SF-CMD"),
+    (re.compile(r"\bRUN STATUS\b"), "STS"),
+    (re.compile(r"\bRUN PROOF\b"), "PRF"),
+    (re.compile(r"\bENABLE COMMAND\b"), "CMD"),
+    (re.compile(r"\bOCCUPIED MODE\b"), "OCC-MODE"),
+    (re.compile(r"\bUNOCCUPIED MODE\b"), "UNOCC-MODE"),
+    (re.compile(r"\bOCCUPANCY MODE\b"), "OCC-MODE"),
+    (re.compile(r"\bOCCUPIED COMMAND\b"), "OCC-CMD"),
+    (re.compile(r"\bOCCUPANCY COMMAND\b"), "OCC-CMD"),
+    (re.compile(r"\bTIME SCHEDULE\b"), "SCH"),
+    (re.compile(r"\bSCHEDULE STATUS\b"), "SCH-STS"),
+    (re.compile(r"\bSCHEDULE COMMAND\b"), "SCH-CMD"),
+    (re.compile(r"\bMODE STATUS\b"), "MODE-STS"),
+    (re.compile(r"\bVALVE COMMAND\b"), "VLV-CMD"),
+    (re.compile(r"\bVALVE POSITION COMMAND\b"), "VLV-CMD"),
+    (re.compile(r"\bREHEAT VALVE COMMAND\b"), "HTG-CMD"),
+    (re.compile(r"\bHEATING VALVE COMMAND\b"), "HTG-CMD"),
+    (re.compile(r"\bREHEAT COMMAND\b"), "HTG-CMD"),
+    (re.compile(r"\bREHEAT VALVE POSITION\b"), "HTG-POS"),
+    (re.compile(r"\bHEATING VALVE POSITION\b"), "HTG-POS"),
+    (re.compile(r"\bDAMPER COMMAND\b"), "DMP-CMD"),
+    (re.compile(r"\bDAMPER POSITION COMMAND\b"), "DMP-CMD"),
+    (re.compile(r"\bDAMPER POSITION FEEDBACK\b"), "DMP-POS"),
+    (re.compile(r"\bDAMPER FEEDBACK\b"), "DMP-POS"),
+    (re.compile(r"\bDAMPER POSITION\b"), "DMP-POS"),
+    (re.compile(r"\bECONOMIZER DAMPERS\b"), "DMP-CMD"),
+    (re.compile(r"\bECONOMIZER DAMPER\b"), "DMP-CMD"),
+    (re.compile(r"\bLEAD LAG\b"), "LEAD-LAG"),
+    (re.compile(r"\bLEAD-LAG\b"), "LEAD-LAG"),
+    (re.compile(r"\bSTAGING\b"), "STAGE-CMD"),
+    (re.compile(r"\bSUPPLY AIR TEMPERATURE\b"), "SAT"),
+    (re.compile(r"\bSUPPLY AIR TEMP\b"), "SAT"),
+    (re.compile(r"\bDISCHARGE AIR TEMPERATURE\b"), "DAT"),
+    (re.compile(r"\bDISCHARGE AIR TEMP\b"), "DAT"),
+    (re.compile(r"\bDISCH AIR TEMPERATURE\b"), "DAT"),
+    (re.compile(r"\bDISCH AIR TEMP\b"), "DAT"),
+    (re.compile(r"\bMIXED AIR TEMPERATURE\b"), "MAT"),
+    (re.compile(r"\bMIXED AIR TEMP\b"), "MAT"),
+    (re.compile(r"\bRETURN AIR TEMPERATURE\b"), "RAT"),
+    (re.compile(r"\bRETURN AIR TEMP\b"), "RAT"),
+    (re.compile(r"\bOUTSIDE AIR TEMPERATURE\b"), "OAT"),
+    (re.compile(r"\bOUTSIDE AIR TEMP\b"), "OAT"),
+    (re.compile(r"\bOUTDOOR AIR TEMPERATURE\b"), "OAT"),
+    (re.compile(r"\bOUTDOOR AIR TEMP\b"), "OAT"),
+    (re.compile(r"\bZONE AIR TEMPERATURE SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bZONE AIR TEMP SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bZONE TEMPERATURE SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bZONE TEMP SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bROOM TEMPERATURE SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bROOM TEMP SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bSPACE TEMPERATURE SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bSPACE TEMP SETPOINT\b"), "ZN-SP"),
+    (re.compile(r"\bZONE AIR TEMPERATURE\b"), "ZN-T"),
+    (re.compile(r"\bZONE AIR TEMP\b"), "ZN-T"),
+    (re.compile(r"\bZONE TEMPERATURE\b"), "ZN-T"),
+    (re.compile(r"\bZONE TEMP\b"), "ZN-T"),
+    (re.compile(r"\bROOM TEMPERATURE\b"), "ZN-T"),
+    (re.compile(r"\bROOM TEMP\b"), "ZN-T"),
+    (re.compile(r"\bSPACE TEMPERATURE\b"), "ZN-T"),
+    (re.compile(r"\bSPACE TEMP\b"), "ZN-T"),
+    (re.compile(r"\bAIRFLOW SETPOINT\b"), "FLOW-SP"),
+    (re.compile(r"\bFLOW SETPOINT\b"), "FLOW-SP"),
+    (re.compile(r"\bCFM SETPOINT\b"), "FLOW-SP"),
+    (re.compile(r"\bCFM SP\b"), "FLOW-SP"),
+    (re.compile(r"\bAIRFLOW\b"), "FLOW"),
+]
 
 
 class ValidationRule(BaseModel):
@@ -407,7 +490,15 @@ class ValidationEngine:
         return bool(self._name_tokens(point.name) & FLOW_TOKENS)
 
     def _normalize_point_ref(self, value: str) -> str:
-        return re.sub(r"\s+", " ", value.replace("_", " ").strip().upper())
+        normalized = re.sub(r"\s+", " ", value.replace("_", " ").strip().upper())
+        for pattern, replacement in POINT_REF_ALIAS_PATTERNS:
+            normalized = pattern.sub(replacement, normalized)
+        normalized = re.sub(r"\bFAULT\b", "FLT", normalized)
+        normalized = re.sub(r"\bALARM\b", "ALM", normalized)
+        normalized = re.sub(r"\bPROOF\b", "PRF", normalized)
+        normalized = re.sub(r"\bSTATUS\b", "STS", normalized)
+        normalized = re.sub(r"\bCOMMAND\b", "CMD", normalized)
+        return re.sub(r"\s+", " ", normalized).strip()
 
     def _equipment_point_refs(self, project: Project, equipment_id: str) -> set[str]:
         refs: set[str] = set()
@@ -423,6 +514,60 @@ class ValidationEngine:
             self._normalize_point_ref(point.name).split(" ", 1)[-1]
             for point in project.get_points_for_equipment(equipment_id)
         }
+
+    def _has_suffix_family(self, point_suffixes: set[str], family: set[str]) -> bool:
+        for suffix in point_suffixes:
+            if suffix in family:
+                return True
+            if any(suffix.endswith(token) for token in family):
+                return True
+            if any(token in suffix for token in family if "-" in token):
+                return True
+        return False
+
+    def _split_equipment_ref(self, value: str) -> tuple[str | None, str]:
+        normalized = self._normalize_point_ref(value)
+        parts = normalized.split(" ", 1)
+        if len(parts) == 2 and EQUIPMENT_ID_PATTERN.match(parts[0]):
+            return parts[0], parts[1]
+        return None, normalized
+
+    def _suffix_family_label(self, suffix: str) -> str | None:
+        normalized = self._normalize_point_ref(suffix)
+        if self._has_suffix_family({normalized}, {"SF-CMD", "CMD", "START-CMD", "ENABLE-CMD", "VLV-CMD", "DMP-CMD", "DPR-CMD", "HTG-CMD"}):
+            return "command"
+        if self._has_suffix_family({normalized}, {"SF-STS", "STATUS", "STS", "PRF", "RUN-STS", "RUN-STATUS", "MODE-STS"}):
+            return "status"
+        if self._has_suffix_family({normalized}, {"SP", "SETPOINT", "SAT-SP", "DAT-SP", "ZN-SP", "ZAT-SP", "FLOW-SP", "PRESS-SP"}):
+            return "setpoint"
+        if self._has_suffix_family({normalized}, {"ALM", "FLT", "FAULT", "ALARM"}):
+            return "alarm"
+        if self._has_suffix_family({normalized}, {"OCC-MODE", "UNOCC-MODE", "MODE-STS", "SCH", "SCH-STS", "SCH-CMD", "OCC-CMD"}):
+            return "mode_schedule"
+        if self._has_suffix_family({normalized}, {"STAGE-CMD", "LEAD-LAG", "LL-MODE", "ROTATE-CMD"}):
+            return "staging"
+        if self._has_suffix_family({normalized}, {"ZN-T", "ZAT"}):
+            return "zone_temp"
+        if self._has_suffix_family({normalized}, {"FLOW", "AIRFLOW", "CFM"}):
+            return "airflow"
+        if self._has_suffix_family({normalized}, {"DMP-POS", "POS", "POSITION", "FEEDBACK"}):
+            return "position_feedback"
+        return None
+
+    def _refs_match(self, reference: str, candidate: str) -> bool:
+        left = self._normalize_point_ref(reference)
+        right = self._normalize_point_ref(candidate)
+        if left == right:
+            return True
+
+        left_equipment, left_suffix = self._split_equipment_ref(left)
+        right_equipment, right_suffix = self._split_equipment_ref(right)
+        if left_equipment and right_equipment and left_equipment != right_equipment:
+            return False
+
+        left_family = self._suffix_family_label(left_suffix)
+        right_family = self._suffix_family_label(right_suffix)
+        return left_family is not None and left_family == right_family
 
     def _is_sequence_document(self, document: SourceDocument) -> bool:
         doc_type = str(document.type or "").lower()
@@ -530,8 +675,16 @@ class ValidationEngine:
             documents = [str(document) for document in (documents or [])]
 
         equipment_refs = self._equipment_point_refs(project, equipment_id)
-        matched_refs = sorted(reference for reference in point_refs if reference in equipment_refs)
-        missing_refs = sorted(reference for reference in point_refs if reference not in equipment_refs)
+        matched_refs = sorted(
+            reference
+            for reference in point_refs
+            if any(self._refs_match(reference, candidate) for candidate in equipment_refs)
+        )
+        missing_refs = sorted(
+            reference
+            for reference in point_refs
+            if not any(self._refs_match(reference, candidate) for candidate in equipment_refs)
+        )
         point_suffixes = self._point_suffixes(project, equipment_id)
 
         coverage_checks = []
@@ -549,34 +702,57 @@ class ValidationEngine:
         requires_start_stop = "start_stop" in requirement_type_values
         requires_pid = "pid" in requirement_type_values
         requires_alarm = "alarm" in requirement_type_values
+        requires_mode_schedule = "mode" in requirement_type_values or "schedule" in requirement_type_values
+        requires_staging = "staging" in requirement_type_values or "lead_lag" in requirement_type_values
+        command_family = {"SF-CMD", "CMD", "START-CMD", "ENABLE-CMD", "VLV-CMD", "DMP-CMD", "DPR-CMD", "HTG-CMD"}
+        status_family = {"SF-STS", "STATUS", "STS", "PRF", "RUN-STS", "RUN-STATUS", "MODE-STS"}
+        setpoint_family = {"SP", "SETPOINT", "SAT-SP", "DAT-SP", "ZN-SP", "ZAT-SP", "FLOW-SP", "PRESS-SP"}
+        alarm_family = {"ALM", "FLT", "FAULT", "ALARM"}
+        mode_schedule_family = {"OCC-MODE", "UNOCC-MODE", "MODE-STS", "SCH", "SCH-STS", "SCH-CMD", "OCC-CMD"}
+        staging_family = {"STAGE-CMD", "LEAD-LAG", "LL-MODE", "ROTATE-CMD"}
 
         add_check(
             "Command point",
             requires_start_stop,
-            any(token in point_suffixes for token in {"SF-CMD", "CMD", "START-CMD"}),
+            self._has_suffix_family(point_suffixes, command_family),
             "Add a command point such as `SF-CMD` for sequence-driven enable/disable control.",
         )
         add_check(
             "Status/proof point",
             requires_start_stop,
-            any(token in point_suffixes for token in {"SF-STS", "STATUS", "STS", "PRF"}),
+            self._has_suffix_family(point_suffixes, status_family),
             "Add a status or proof point such as `SF-STS` or `PRF` for run verification.",
         )
         add_check(
             "Setpoint point",
             requires_pid,
-            any(token.endswith("SP") or token.endswith("SETPOINT") for token in point_suffixes),
+            self._has_suffix_family(point_suffixes, setpoint_family),
             "Add a setpoint point so PID intent from the sequence is represented in structured data.",
         )
         add_check(
             "Alarm/fault point",
             requires_alarm,
-            any("ALM" in token or "FLT" in token for token in point_suffixes),
+            self._has_suffix_family(point_suffixes, alarm_family),
             "Add an alarm or fault point so alarm intent from the sequence is represented in structured data.",
+        )
+        add_check(
+            "Mode/schedule point",
+            requires_mode_schedule,
+            self._has_suffix_family(point_suffixes, mode_schedule_family),
+            "Add an occupancy mode, schedule, or related command/status point so time-based control intent is represented.",
+        )
+        add_check(
+            "Staging/rotation point",
+            requires_staging,
+            self._has_suffix_family(point_suffixes, staging_family),
+            "Add a staging or lead-lag command/mode point so plant rotation intent is represented.",
         )
 
         actionable_checks = [check for check in coverage_checks if check["required"]]
         missing_check_count = sum(1 for check in actionable_checks if not check["passed"])
+        required_families = [check["label"] for check in actionable_checks]
+        missing_families = [check["label"] for check in actionable_checks if not check["passed"]]
+        covered_families = [check["label"] for check in actionable_checks if check["passed"]]
 
         if not point_refs and not actionable_checks:
             status = "not_indexed"
@@ -599,6 +775,9 @@ class ValidationEngine:
             "missing_refs": missing_refs,
             "requirement_types": sorted(requirement_type_values),
             "coverage_checks": coverage_checks,
+            "required_families": required_families,
+            "covered_families": covered_families,
+            "missing_families": missing_families,
             "summary": summary,
         }
 
