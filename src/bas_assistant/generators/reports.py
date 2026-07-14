@@ -57,7 +57,8 @@ class ReportGenerator:
 
         rows = []
         for equip in self.project.equipment:
-            controller = self.project.get_controller(equip.controller_id) if equip.controller_id else None
+            effective_controller_id = self.project.effective_equipment_controller_id(equip)
+            controller = self.project.get_controller(effective_controller_id) if effective_controller_id else None
             points = self.project.get_points_for_equipment(equip.id)
 
             point_counts = {}
@@ -72,7 +73,7 @@ class ReportGenerator:
                 "Floor": equip.floor or "",
                 "Room": equip.room or "",
                 "Served Area": equip.served_area or "",
-                "Controller": equip.controller_id or "Unassigned",
+                "Controller": effective_controller_id or "Unassigned",
                 "Controller Vendor": controller.vendor if controller else "",
                 "Controller Model": controller.model if controller else "",
                 "Design CFM": equip.design_cfm or "",
@@ -110,12 +111,14 @@ class ReportGenerator:
 
         rows = []
         for point in self.project.points:
-            equip = self.project.get_equipment(point.equipment_id)
-            controller = self.project.get_controller(point.controller_id) if point.controller_id else None
+            effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+            effective_controller_id = self.project.effective_point_controller_id(point)
+            equip = self.project.get_equipment(effective_equipment_id)
+            controller = self.project.get_controller(effective_controller_id) if effective_controller_id else None
 
             rows.append({
                 "Point Name": point.name,
-                "Equipment": point.equipment_id,
+                "Equipment": effective_equipment_id,
                 "Equipment Type": equip.type.value if equip else "UNKNOWN",
                 "Kind": point.kind.value,
                 "Direction": point.direction.value,
@@ -123,7 +126,7 @@ class ReportGenerator:
                 "Unit System": point.unit_system or self.project.metadata.unit_system.value,
                 "Range Min": point.range_min or "",
                 "Range Max": point.range_max or "",
-                "Controller": point.controller_id or "Unassigned",
+                "Controller": effective_controller_id or "Unassigned",
                 "Controller Vendor": controller.vendor if controller else "",
                 "BACnet Object Type": point.bacnet_object_type or "",
                 "BACnet Instance": point.bacnet_instance or "",
@@ -210,7 +213,7 @@ class ReportGenerator:
                 "Panel Location": ctrl.panel_location or "",
                 "Electrical Panel": ctrl.electrical_panel or "",
                 "Circuit": ctrl.circuit or "",
-                "Serves Equipment": ", ".join(ctrl.serves_equipment_ids),
+                "Serves Equipment": ", ".join(self.project.effective_controller_serves_equipment_ids(ctrl)),
                 "Equipment Count": len(equip),
                 "Owned Points": len(points),
                 **{f"Points - {k.title()}": v for k, v in point_counts.items()},

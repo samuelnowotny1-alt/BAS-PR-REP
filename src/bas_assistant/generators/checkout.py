@@ -93,14 +93,15 @@ class CheckoutGenerator:
 
     def _generate_equipment_sheet(self, equip: Equipment) -> CheckoutSheet:
         """Generate checkout sheet for one equipment."""
-        controller = self.project.get_controller(equip.controller_id) if equip.controller_id else None
+        effective_controller_id = self.project.effective_equipment_controller_id(equip)
+        controller = self.project.get_controller(effective_controller_id) if effective_controller_id else None
         points = self.project.get_points_for_equipment(equip.id)
 
         sheet = CheckoutSheet(
             equipment_id=equip.id,
             equipment_type=equip.type.value,
             location=f"{equip.building or ''} {equip.floor or ''} {equip.room or ''}".strip() or "Unknown",
-            controller_id=equip.controller_id or "Unassigned",
+            controller_id=effective_controller_id or "Unassigned",
         )
 
         # Generate items for each point
@@ -219,13 +220,14 @@ class CheckoutGenerator:
         ))
 
         # Controller communication
-        if equip.controller_id:
+        effective_controller_id = self.project.effective_equipment_controller_id(equip)
+        if effective_controller_id:
             sheet.add_item(CheckoutItem(
                 item_id=f"{equip.id}-COMM-001",
                 equipment_id=equip.id,
                 point_name="N/A (Controller Comm)",
                 test_type="functional",
-                description=f"Verify controller {equip.controller_id} communication and time sync",
+                description=f"Verify controller {effective_controller_id} communication and time sync",
                 expected_result="Controller online, time synced, no comm errors",
                 acceptance_criteria="Heartbeat present, time within 1 sec of NTP, no error logs",
                 tools_required=["Controller workstation", "Network ping tool"],

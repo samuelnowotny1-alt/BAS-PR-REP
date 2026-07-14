@@ -188,14 +188,64 @@ class Project(BaseModel):
     def get_controller(self, controller_id: str) -> Controller | None:
         return next((c for c in self.controllers if c.id == controller_id), None)
 
+    def mapping_decision_for_key(self, mapping_key: str) -> MappingReviewDecision | None:
+        for decision in reversed(self.review_state.mapping_decisions):
+            if decision.mapping_key == mapping_key:
+                return decision
+        return None
+
+    def effective_mapping_target(self, mapping_key: str) -> str | None:
+        decision = self.mapping_decision_for_key(mapping_key)
+        if decision is None:
+            return None
+        if decision.status not in {
+            ReviewDecisionStatus.ACCEPTED.value,
+            ReviewDecisionStatus.RESOLVED.value,
+            ReviewDecisionStatus.APPROVED.value,
+        }:
+            return None
+        return decision.mapped_to
+
+    def effective_equipment_controller_id(self, equipment: Equipment | str) -> str | None:
+        equip = equipment if isinstance(equipment, Equipment) else self.get_equipment(equipment)
+        if equip is None:
+            return None
+        return self.effective_mapping_target(f"equipment-controller:{equip.id}") or equip.controller_id
+
+    def effective_point_equipment_id(self, point: Point | str) -> str | None:
+        point_obj = point if isinstance(point, Point) else self.get_point(point)
+        if point_obj is None:
+            return None
+        return self.effective_mapping_target(f"point-equipment:{point_obj.name}") or point_obj.equipment_id
+
+    def effective_point_controller_id(self, point: Point | str) -> str | None:
+        point_obj = point if isinstance(point, Point) else self.get_point(point)
+        if point_obj is None:
+            return None
+        return (
+            self.effective_mapping_target(f"point-controller:{point_obj.name}")
+            or point_obj.controller_id
+            or self.effective_equipment_controller_id(point_obj.equipment_id)
+        )
+
+    def effective_controller_serves_equipment_ids(self, controller: Controller | str) -> list[str]:
+        ctrl = controller if isinstance(controller, Controller) else self.get_controller(controller)
+        if ctrl is None:
+            return []
+        equipment_ids = {equipment_id for equipment_id in ctrl.serves_equipment_ids}
+        for equipment in self.equipment:
+            if self.effective_equipment_controller_id(equipment) == ctrl.id:
+                equipment_ids.add(equipment.id)
+        return sorted(equipment_ids)
+
     def get_points_for_equipment(self, equipment_id: str) -> list[Point]:
-        return [p for p in self.points if p.equipment_id == equipment_id]
+        return [p for p in self.points if self.effective_point_equipment_id(p) == equipment_id]
 
     def get_points_for_controller(self, controller_id: str) -> list[Point]:
-        return [p for p in self.points if p.controller_id == controller_id]
+        return [p for p in self.points if self.effective_point_controller_id(p) == controller_id]
 
     def get_equipment_for_controller(self, controller_id: str) -> list[Equipment]:
-        return [e for e in self.equipment if e.controller_id == controller_id]
+        return [e for e in self.equipment if self.effective_equipment_controller_id(e) == controller_id]
 
     def update_timestamp(self) -> None:
         self.metadata.updated_at = datetime.now()

@@ -940,6 +940,70 @@ def test_review_decisions_persist_reload_and_drive_report_summary() -> None:
     assert "Ready for downstream report generation." in summary_text
 
 
+def test_mapping_decision_persists_and_changes_generated_relationships() -> None:
+    project_id = create_project("mapping-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            serves_equipment_ids=["AHU-1"],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-2",
+            protocols=[Protocol.BACNET_IP],
+            serves_equipment_ids=["AHU-1"],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id=None,
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    mappings_page = run_async(main.mappings_page(request(f"/project/{project_id}/mappings"), project_id))
+    mappings_text = response_text(mappings_page)
+    assert mappings_page.status_code == 200
+    assert "Relationship Mappings" in mappings_text
+    assert "equipment_controller" not in mappings_text
+    assert "point controller" in mappings_text.lower()
+    assert "MPC-1" in mappings_text
+    assert "MPC-2" in mappings_text
+
+    response = run_async(
+        main.save_mapping_decision(
+            project_id=project_id,
+            mapping_key="point-controller:AHU-1 SAT",
+            mapped_to="MPC-2",
+            notes="Controller schedule is authoritative.",
+        )
+    )
+    assert response.status_code == 303
+
+    main.projects.clear()
+    main.container.projects.clear_cache()
+    reloaded = main.get_project(project_id)
+    assert reloaded.effective_point_controller_id("AHU-1 SAT") == "MPC-2"
+
+    report_paths = generate_reports(reloaded, main.OUTPUT_DIR / project_id / "reports")
+    point_schedule = pd.read_excel(report_paths["point_schedule"], sheet_name="Point Schedule")
+    controller_schedule = pd.read_excel(report_paths["controller_schedule"], sheet_name="Controller Schedule")
+    assert point_schedule.loc[0, "Controller"] == "MPC-2"
+    mpc2_row = controller_schedule.loc[controller_schedule["Controller ID"] == "MPC-2"].iloc[0]
+    assert mpc2_row["Owned Points"] == 1
+
+
 def test_read_only_project_api_endpoints() -> None:
     project_id = create_project()
 

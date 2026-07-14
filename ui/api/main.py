@@ -23,7 +23,7 @@ from bas_assistant.core import build_container
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
-    ApprovalReviewDecision, GapReviewDecision, ReviewAssumptionRecord,
+    ApprovalReviewDecision, GapReviewDecision, MappingReviewDecision, ReviewAssumptionRecord,
     ControllerNetworkAddress, ControllerIOCapacity, StationConnectionConfig,
     StationSyncProtocol
 )
@@ -601,6 +601,152 @@ def record_output_approval(
     )
     project.review_state.approvals = approvals
     save_project(project)
+
+
+def upsert_mapping_decision(
+    project: Project,
+    *,
+    mapping_key: str,
+    mapped_to: str,
+    notes: str = "",
+    decided_by: str | None = None,
+) -> None:
+    decisions = [
+        decision
+        for decision in project.review_state.mapping_decisions
+        if decision.mapping_key != mapping_key
+    ]
+    decisions.append(
+        MappingReviewDecision(
+            mapping_key=mapping_key,
+            mapped_to=mapped_to,
+            status="accepted",
+            notes=notes,
+            decided_by=decided_by,
+        )
+    )
+    project.review_state.mapping_decisions = decisions
+    save_project(project)
+
+
+def mapping_candidates_for_project(project: Project) -> list[dict[str, object]]:
+    existing_decisions = {decision.mapping_key: decision for decision in project.review_state.mapping_decisions}
+    candidates: list[dict[str, object]] = []
+
+    for equipment in project.equipment:
+        controller_candidates = sorted(
+            {
+                controller.id
+                for controller in project.controllers
+                if equipment.id in controller.serves_equipment_ids
+                or any(
+                    point_name == owned_point or owned_point.startswith(f"{equipment.id} ")
+                    for owned_point in controller.owned_point_names
+                    for point_name in ([owned_point] if owned_point else [])
+                )
+            }
+        )
+        mapping_key = f"equipment-controller:{equipment.id}"
+        decision = existing_decisions.get(mapping_key)
+        if (
+            decision is not None
+            or (not equipment.controller_id and controller_candidates)
+            or len(controller_candidates) > 1
+            or (
+                equipment.controller_id is not None
+                and controller_candidates
+                and equipment.controller_id not in controller_candidates
+            )
+        ):
+            candidates.append(
+                {
+                    "mapping_key": mapping_key,
+                    "subject_type": "equipment_controller",
+                    "subject_label": equipment.id,
+                    "current_value": equipment.controller_id,
+                    "resolved_value": project.effective_equipment_controller_id(equipment),
+                    "candidate_values": controller_candidates,
+                    "recommended_value": controller_candidates[0] if len(controller_candidates) == 1 else None,
+                    "notes": None if decision is None else decision.notes,
+                    "status": None if decision is None else decision.status,
+                    "reason": "Controller candidates derived from served-equipment and owned-point declarations.",
+                }
+            )
+
+    for point in project.points:
+        equipment_candidates = sorted(
+            {
+                equipment.id
+                for equipment in project.equipment
+                if point.name == equipment.id or point.name.startswith(f"{equipment.id} ")
+            }
+        )
+        controller_candidates = sorted(
+            {
+                candidate
+                for candidate in (
+                    project.get_equipment(point.equipment_id).controller_id if project.get_equipment(point.equipment_id) else None,
+                    *[
+                        controller.id
+                        for controller in project.controllers
+                        if point.name in controller.owned_point_names
+                        or point.equipment_id in controller.serves_equipment_ids
+                    ],
+                )
+                if candidate
+            }
+        )
+
+        point_equipment_key = f"point-equipment:{point.name}"
+        equipment_decision = existing_decisions.get(point_equipment_key)
+        if (
+            equipment_decision is not None
+            or (equipment_candidates and point.equipment_id not in equipment_candidates)
+            or len(equipment_candidates) > 1
+        ):
+            candidates.append(
+                {
+                    "mapping_key": point_equipment_key,
+                    "subject_type": "point_equipment",
+                    "subject_label": point.name,
+                    "current_value": point.equipment_id,
+                    "resolved_value": project.effective_point_equipment_id(point),
+                    "candidate_values": equipment_candidates,
+                    "recommended_value": equipment_candidates[0] if len(equipment_candidates) == 1 else None,
+                    "notes": None if equipment_decision is None else equipment_decision.notes,
+                    "status": None if equipment_decision is None else equipment_decision.status,
+                    "reason": "Equipment candidates derived from point-name prefixes.",
+                }
+            )
+
+        point_controller_key = f"point-controller:{point.name}"
+        controller_decision = existing_decisions.get(point_controller_key)
+        if (
+            controller_decision is not None
+            or (not point.controller_id and controller_candidates)
+            or len(controller_candidates) > 1
+            or (
+                point.controller_id is not None
+                and controller_candidates
+                and point.controller_id not in controller_candidates
+            )
+        ):
+            candidates.append(
+                {
+                    "mapping_key": point_controller_key,
+                    "subject_type": "point_controller",
+                    "subject_label": point.name,
+                    "current_value": point.controller_id,
+                    "resolved_value": project.effective_point_controller_id(point),
+                    "candidate_values": controller_candidates,
+                    "recommended_value": controller_candidates[0] if len(controller_candidates) == 1 else None,
+                    "notes": None if controller_decision is None else controller_decision.notes,
+                    "status": None if controller_decision is None else controller_decision.status,
+                    "reason": "Controller candidates derived from the point's equipment assignment and controller ownership declarations.",
+                }
+            )
+
+    return sorted(candidates, key=lambda item: (str(item["subject_type"]), str(item["subject_label"])))
 
 
 def get_station_connection(project: Project) -> StationConnectionConfig:
@@ -1682,6 +1828,37 @@ async def gaps_page(request: Request, project_id: str):
         "project": project,
         "gap_report": report,
     })
+
+
+@app.get("/project/{project_id}/mappings", response_class=HTMLResponse)
+async def mappings_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="mappings.html",
+        context={
+            "project": project,
+            "mapping_candidates": mapping_candidates_for_project(project),
+        },
+    )
+
+
+@app.post("/project/{project_id}/mappings")
+async def save_mapping_decision(
+    project_id: str,
+    mapping_key: str = Form(...),
+    mapped_to: str = Form(...),
+    notes: str = Form(""),
+):
+    project = get_project(project_id)
+    upsert_mapping_decision(
+        project,
+        mapping_key=mapping_key,
+        mapped_to=mapped_to,
+        notes=notes,
+        decided_by="UI",
+    )
+    return RedirectResponse(url=f"/project/{project_id}/mappings", status_code=303)
 
 
 @app.post("/project/{project_id}/gaps/{gap_id}/resolve")

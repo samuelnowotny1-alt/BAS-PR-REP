@@ -167,6 +167,10 @@
                     <span class="sidebar-link-icon"><i class="fas fa-search"></i></span>
                     <span class="sidebar-link-label">Gap Analysis</span>
                 </a>
+                <a href="/project/{{ project.metadata.project_id }}/mappings" class="sidebar-link {% if '/mappings' in request.url.path %}active{% endif %}">
+                    <span class="sidebar-link-icon"><i class="fas fa-link"></i></span>
+                    <span class="sidebar-link-label">Mappings</span>
+                </a>
                 <a href="/project/{{ project.metadata.project_id }}/checkout" class="sidebar-link {% if '/checkout' in request.url.path %}active{% endif %}">
                     <span class="sidebar-link-icon"><i class="fas fa-clipboard-check"></i></span>
                     <span class="sidebar-link-label">Checkout Sheets</span>

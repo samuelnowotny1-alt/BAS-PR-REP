@@ -37,6 +37,7 @@ class StationSyncService:
             )
 
         for equip in project.equipment:
+            effective_controller_id = project.effective_equipment_controller_id(equip)
             items.append(
                 StationSyncPlanItem(
                     category="equipment",
@@ -49,11 +50,11 @@ class StationSyncService:
                     details=f"Prepare equipment hierarchy and PX navigation for {equip.id}.",
                 )
             )
-            if not equip.controller_id:
+            if not effective_controller_id:
                 warnings.append(f"{equip.id} has no controller assignment; live sync cannot bind its points cleanly.")
 
         for point in project.points:
-            controller_id = point.controller_id or "Unassigned"
+            controller_id = project.effective_point_controller_id(point) or "Unassigned"
             items.append(
                 StationSyncPlanItem(
                     category="point",
