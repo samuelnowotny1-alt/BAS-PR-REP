@@ -525,6 +525,21 @@ class ProjectQueryService:
             },
         }
 
+    def document_download(self, project_id: str, document_id: int) -> dict[str, object] | None:
+        """Return minimal download metadata for a specific project document."""
+        with self.db.session() as session:
+            project = self._project_record(session, project_id)
+            if project is None:
+                return None
+            document = session.get(DocumentRecord, document_id)
+            if document is None or document.project_id != project.id:
+                return None
+        return {
+            "id": document.id,
+            "name": document.name,
+            "file_path": document.file_path,
+        }
+
     def knowledge_view(self, project_id: str) -> dict[str, object] | None:
         """Return knowledge records for a project."""
         with self.db.session() as session:

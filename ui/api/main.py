@@ -1163,11 +1163,12 @@ async def project_document_detail_page(request: Request, project_id: str, docume
 
 @app.get("/project/{project_id}/documents/{document_id}/download")
 async def project_document_download(project_id: str, document_id: int):
-    documents_view = container.project_queries.documents_view(project_id)
-    if documents_view is None:
-        raise HTTPException(status_code=404, detail="Project not found")
-    document = next((row for row in documents_view["documents"] if row["id"] == document_id), None)
-    if document is None or not document.get("file_path"):
+    document = container.project_queries.document_download(project_id, document_id)
+    if document is None:
+        if container.project_queries.summary(project_id) is None:
+            raise HTTPException(status_code=404, detail="Project not found")
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not document.get("file_path"):
         raise HTTPException(status_code=404, detail="Document not found")
     file_path = Path(str(document["file_path"]))
     if not file_path.exists():
