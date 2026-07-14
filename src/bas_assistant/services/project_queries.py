@@ -23,6 +23,8 @@ from bas_assistant.database import (
     UploadRecord,
     UserAccount,
 )
+
+
 @dataclass(slots=True)
 class ProjectQueryScope:
     """Project filter scope derived from the current user."""
@@ -75,7 +77,7 @@ class ProjectQueryService:
     def summary(self, project_id: str) -> dict[str, object] | None:
         """Return a summary view for a single project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             equipment_count = session.scalar(
@@ -102,7 +104,7 @@ class ProjectQueryService:
     def detail_view(self, project_id: str) -> dict[str, object] | None:
         """Return a DB-backed detail view for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             equipment_records = list(
@@ -168,21 +170,13 @@ class ProjectQueryService:
                     .order_by(UserAccount.username)
                 )
             )
-
-        equipment_view = []
-        for record in equipment_records:
-            payload = dict(record.payload_json or {})
-            equipment_view.append(
-                {
-                    "id": record.equipment_key,
-                    "type": record.equipment_type,
-                    "building": payload.get("building"),
-                    "controller_id": payload.get("controller_id"),
-                    "graphic_sections": ((payload.get("template") or {}).get("parameters") or {}).get("graphic_sections", ""),
-                    "point_count": len(payload.get("point_names", [])),
-                    "status": record.status,
-                    "provenance": dict(payload.get("provenance") or {}),
-                }
+            point_records = list(
+                session.scalars(
+                    select(PointRecord)
+                    .where(PointRecord.project_id == project.id)
+                    .order_by(PointRecord.point_name)
+                    .limit(8)
+                )
             )
 
         return {
@@ -196,9 +190,9 @@ class ProjectQueryService:
             "point_count": int(point_count),
             "controller_count": int(controller_count),
             "source_document_count": len(documents),
-            "equipment": equipment_view,
-            "points": self.points_list(project_id)[:8],
-            "controllers": self.controllers_list(project_id)[:8],
+            "equipment": [self._detail_equipment_row(record) for record in equipment_records],
+            "points": [self._point_row(record) for record in point_records],
+            "controllers": [self._controller_row(record) for record in controller_records[:8]],
             "documents": [
                 {
                     "name": record.name,
@@ -256,7 +250,7 @@ class ProjectQueryService:
     def equipment_detail(self, project_id: str, equipment_id: str) -> dict[str, object] | None:
         """Return detailed view data for an equipment object."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             record = session.scalar(
@@ -289,7 +283,7 @@ class ProjectQueryService:
     def point_detail(self, project_id: str, point_name: str) -> dict[str, object] | None:
         """Return detailed view data for a point object."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             record = session.scalar(
@@ -321,7 +315,7 @@ class ProjectQueryService:
     def controller_detail(self, project_id: str, controller_id: str) -> dict[str, object] | None:
         """Return detailed view data for a controller object."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             record = session.scalar(
@@ -352,7 +346,7 @@ class ProjectQueryService:
     def activity_view(self, project_id: str) -> dict[str, object] | None:
         """Return project activity history including task status transitions."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             tasks = list(
@@ -390,7 +384,7 @@ class ProjectQueryService:
     def import_status_view(self, project_id: str) -> dict[str, object] | None:
         """Return recent import and artifact-ingestion status for the import workspace."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             tasks = list(
@@ -416,7 +410,7 @@ class ProjectQueryService:
     def memberships_view(self, project_id: str) -> dict[str, object] | None:
         """Return project membership management data."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             users = list(session.scalars(select(UserAccount).order_by(UserAccount.username)))
@@ -445,7 +439,7 @@ class ProjectQueryService:
     def documents_view(self, project_id: str) -> dict[str, object] | None:
         """Return document library data for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             documents = list(
@@ -491,7 +485,7 @@ class ProjectQueryService:
     def document_detail(self, project_id: str, document_id: int) -> dict[str, object] | None:
         """Return detail view for a specific project document."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             document = session.get(DocumentRecord, document_id)
@@ -549,7 +543,7 @@ class ProjectQueryService:
     def knowledge_view(self, project_id: str) -> dict[str, object] | None:
         """Return knowledge records for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return None
             records = list(
@@ -562,27 +556,28 @@ class ProjectQueryService:
         return {
             "project_id": project.project_id,
             "project_name": project.name,
-            "records": [
-                {
-                    "id": record.id,
-                    "source_name": record.source_name,
-                    "source_type": record.source_type,
-                    "status": record.status,
-                    "chunk_count": record.chunk_count,
-                    "content_hash": record.content_hash,
-                    "metadata": dict(record.metadata_json or {}),
-                    "created_at": record.created_at,
-                }
-                for record in records
-            ],
+            "records": [self._knowledge_row(record) for record in records],
         }
 
     def search_knowledge(self, project_id: str, query: str, *, limit: int = 12) -> dict[str, object] | None:
         """Return deterministic chunk search results for project knowledge."""
         normalized_query = query.strip()
-        knowledge_view = self.knowledge_view(project_id)
-        if knowledge_view is None:
-            return None
+        with self.db.session() as session:
+            project = self._project_record(session, project_id)
+            if project is None:
+                return None
+            records = list(
+                session.scalars(
+                    select(KnowledgeRecord)
+                    .where(KnowledgeRecord.project_id == project.id)
+                    .order_by(KnowledgeRecord.created_at.desc(), KnowledgeRecord.source_name)
+                )
+            )
+        knowledge_view = {
+            "project_id": project.project_id,
+            "project_name": project.name,
+            "records": [self._knowledge_row(record) for record in records],
+        }
         if not normalized_query:
             return {
                 **knowledge_view,
@@ -601,17 +596,6 @@ class ProjectQueryService:
             }
 
         results: list[dict[str, object]] = []
-        with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
-            if project is None:
-                return None
-            records = list(
-                session.scalars(
-                    select(KnowledgeRecord)
-                    .where(KnowledgeRecord.project_id == project.id)
-                    .order_by(KnowledgeRecord.created_at.desc(), KnowledgeRecord.source_name)
-                )
-            )
 
         for record in records:
             metadata = dict(record.metadata_json or {})
@@ -657,7 +641,7 @@ class ProjectQueryService:
     def equipment_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured equipment records for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return []
             records = list(
@@ -667,23 +651,12 @@ class ProjectQueryService:
                     .order_by(EquipmentRecord.equipment_key)
                 )
             )
-        return [
-            {
-                "id": record.equipment_key,
-                "type": record.equipment_type,
-                "controller": record.payload_json.get("controller_id"),
-                "points": len(record.payload_json.get("point_names", [])),
-                "status": record.status,
-                "parent": record.parent_equipment_key,
-                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
-            }
-            for record in records
-        ]
+        return [self._equipment_row(record) for record in records]
 
     def points_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured point records for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return []
             records = list(
@@ -693,22 +666,12 @@ class ProjectQueryService:
                     .order_by(PointRecord.point_name)
                 )
             )
-        return [
-            {
-                "name": record.point_name,
-                "equipment": record.equipment_key,
-                "kind": record.point_kind,
-                "units": record.units,
-                "controller": record.controller_key,
-                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
-            }
-            for record in records
-        ]
+        return [self._point_row(record) for record in records]
 
     def controllers_list(self, project_id: str) -> list[dict[str, object]]:
         """Return structured controller records for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return []
             records = list(
@@ -718,27 +681,12 @@ class ProjectQueryService:
                     .order_by(ControllerRecord.controller_key)
                 )
             )
-        return [
-            {
-                "id": record.controller_key,
-                "type": record.controller_type,
-                "protocols": list(payload.get("protocols") or ([record.protocol] if record.protocol else [])),
-                "addresses": [
-                    self._format_controller_address(address)
-                    for address in payload.get("network_addresses", [])
-                ],
-                "equipment": len(record.payload_json.get("serves_equipment_ids", [])),
-                "points": len(record.payload_json.get("owned_point_names", [])),
-                "source_name": (record.payload_json.get("provenance") or {}).get("source_name"),
-            }
-            for record in records
-            for payload in [dict(record.payload_json or {})]
-        ]
+        return [self._controller_row(record) for record in records]
 
     def count_project_memberships(self, project_id: str) -> int:
         """Return membership count for a project."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return 0
             return session.scalar(
@@ -1075,7 +1023,7 @@ class ProjectQueryService:
     def artifact_links_for_entity(self, project_id: str, entity_type: str, entity_key: str) -> list[dict[str, object]]:
         """Return explicit artifact links for an entity."""
         with self.db.session() as session:
-            project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+            project = self._project_record(session, project_id)
             if project is None:
                 return []
             rows = list(
@@ -1106,3 +1054,69 @@ class ProjectQueryService:
             }
             for parser_name, relationship_type, metadata_json, document_name, document_type in rows
         ]
+
+    def _project_record(self, session, project_id: str) -> ProjectRecord | None:
+        return session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+
+    def _detail_equipment_row(self, record: EquipmentRecord) -> dict[str, object]:
+        payload = dict(record.payload_json or {})
+        return {
+            "id": record.equipment_key,
+            "type": record.equipment_type,
+            "building": payload.get("building"),
+            "controller_id": payload.get("controller_id"),
+            "graphic_sections": ((payload.get("template") or {}).get("parameters") or {}).get("graphic_sections", ""),
+            "point_count": len(payload.get("point_names", [])),
+            "status": record.status,
+            "provenance": dict(payload.get("provenance") or {}),
+        }
+
+    def _equipment_row(self, record: EquipmentRecord) -> dict[str, object]:
+        payload = dict(record.payload_json or {})
+        return {
+            "id": record.equipment_key,
+            "type": record.equipment_type,
+            "controller": payload.get("controller_id"),
+            "points": len(payload.get("point_names", [])),
+            "status": record.status,
+            "parent": record.parent_equipment_key,
+            "source_name": (payload.get("provenance") or {}).get("source_name"),
+        }
+
+    def _point_row(self, record: PointRecord) -> dict[str, object]:
+        payload = dict(record.payload_json or {})
+        return {
+            "name": record.point_name,
+            "equipment": record.equipment_key,
+            "kind": record.point_kind,
+            "units": record.units,
+            "controller": record.controller_key,
+            "source_name": (payload.get("provenance") or {}).get("source_name"),
+        }
+
+    def _controller_row(self, record: ControllerRecord) -> dict[str, object]:
+        payload = dict(record.payload_json or {})
+        return {
+            "id": record.controller_key,
+            "type": record.controller_type,
+            "protocols": list(payload.get("protocols") or ([record.protocol] if record.protocol else [])),
+            "addresses": [
+                self._format_controller_address(address)
+                for address in payload.get("network_addresses", [])
+            ],
+            "equipment": len(payload.get("serves_equipment_ids", [])),
+            "points": len(payload.get("owned_point_names", [])),
+            "source_name": (payload.get("provenance") or {}).get("source_name"),
+        }
+
+    def _knowledge_row(self, record: KnowledgeRecord) -> dict[str, object]:
+        return {
+            "id": record.id,
+            "source_name": record.source_name,
+            "source_type": record.source_type,
+            "status": record.status,
+            "chunk_count": record.chunk_count,
+            "content_hash": record.content_hash,
+            "metadata": dict(record.metadata_json or {}),
+            "created_at": record.created_at,
+        }
