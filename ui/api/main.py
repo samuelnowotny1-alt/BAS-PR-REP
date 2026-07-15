@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from io import StringIO
 from pathlib import Path
 from typing import Optional, List
+from urllib.parse import urlencode
 from xml.sax.saxutils import escape
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
@@ -1063,6 +1064,236 @@ def apply_validation_filters_to_rows(
     }
 
 
+def object_list_redirect_target(project_id: str, entity_type: str, filters: dict[str, str]) -> str:
+    plural = entity_type if entity_type == "equipment" else f"{entity_type}s"
+    query_items = [(key, value) for key, value in filters.items() if value]
+    if not query_items:
+        return f"/project/{project_id}/{plural}"
+    query = urlencode(query_items)
+    return f"/project/{project_id}/{plural}?{query}"
+
+
+def available_bulk_remediation_actions(entity_type: str, project: Project) -> list[dict[str, str]]:
+    actions = [{"value": "fill_missing_provenance", "label": "Fill Missing Provenance"}]
+    if entity_type == "equipment":
+        if len(project.controllers) == 1:
+            actions.append({"value": "assign_default_controller", "label": "Assign Default Controller"})
+        actions.append({"value": "fill_missing_served_area", "label": "Fill Missing Served Area"})
+    if entity_type == "point":
+        if project.controllers:
+            actions.append({"value": "assign_default_controller", "label": "Assign Default Controller"})
+    return actions
+
+
+def apply_bulk_remediation(
+    *,
+    project: Project,
+    entity_type: str,
+    target_ids: list[str],
+    action: str,
+) -> tuple[int, str]:
+    updated = 0
+    action_label = action.replace("_", " ")
+    if entity_type == "equipment":
+        default_controller = project.controllers[0].id if len(project.controllers) == 1 else None
+        for entity_id in target_ids:
+            equipment = project.get_equipment(entity_id)
+            if equipment is None:
+                continue
+            if action == "fill_missing_provenance" and not equipment.provenance.get("source_name"):
+                equipment.provenance.setdefault("parser", "bulk_remediation")
+                equipment.provenance["source_name"] = "bulk_remediation"
+                updated += 1
+            elif action == "assign_default_controller" and default_controller and not equipment.controller_id:
+                equipment.controller_id = default_controller
+                updated += 1
+            elif action == "fill_missing_served_area" and not equipment.served_area:
+                equipment.served_area = "TBD Served Area"
+                updated += 1
+    elif entity_type == "point":
+        default_controller = project.controllers[0].id if len(project.controllers) == 1 else None
+        for entity_id in target_ids:
+            point = project.get_point(entity_id)
+            if point is None:
+                continue
+            if action == "fill_missing_provenance" and not point.provenance.get("source_name"):
+                point.provenance.setdefault("parser", "bulk_remediation")
+                point.provenance["source_name"] = "bulk_remediation"
+                updated += 1
+            elif action == "assign_default_controller" and not point.controller_id:
+                equipment = project.get_equipment(point.equipment_id) if point.equipment_id else None
+                resolved_controller = equipment.controller_id if equipment and equipment.controller_id else default_controller
+                if resolved_controller:
+                    point.controller_id = resolved_controller
+                    updated += 1
+    elif entity_type == "controller":
+        for entity_id in target_ids:
+            controller = project.get_controller(entity_id)
+            if controller is None:
+                continue
+            if action == "fill_missing_provenance" and not controller.provenance.get("source_name"):
+                controller.provenance.setdefault("parser", "bulk_remediation")
+                controller.provenance["source_name"] = "bulk_remediation"
+                updated += 1
+    if updated:
+        save_project(project)
+    return updated, action_label
+
+
+def preview_bulk_remediation(
+    *,
+    project: Project,
+    entity_type: str,
+    target_ids: list[str],
+    action: str,
+) -> dict[str, object]:
+    action_label = action.replace("_", " ")
+    changes: list[dict[str, object]] = []
+    skipped: list[dict[str, str]] = []
+    if entity_type == "equipment":
+        default_controller = project.controllers[0].id if len(project.controllers) == 1 else None
+        for entity_id in target_ids:
+            equipment = project.get_equipment(entity_id)
+            if equipment is None:
+                skipped.append({"entity_id": entity_id, "reason": "Object no longer exists"})
+                continue
+            field_changes: list[dict[str, str]] = []
+            if action == "fill_missing_provenance":
+                if not equipment.provenance.get("source_name"):
+                    field_changes.append({"field": "provenance.source_name", "from": "", "to": "bulk_remediation"})
+                    parser_from = str(equipment.provenance.get("parser") or "")
+                    if not parser_from:
+                        field_changes.append({"field": "provenance.parser", "from": "", "to": "bulk_remediation"})
+                else:
+                    skipped.append({"entity_id": entity_id, "reason": "Provenance already present"})
+                    continue
+            elif action == "assign_default_controller":
+                if equipment.controller_id:
+                    skipped.append({"entity_id": entity_id, "reason": "Controller already assigned"})
+                    continue
+                if not default_controller:
+                    skipped.append({"entity_id": entity_id, "reason": "Project does not have exactly one controller"})
+                    continue
+                field_changes.append({"field": "controller_id", "from": "", "to": default_controller})
+            elif action == "fill_missing_served_area":
+                if equipment.served_area:
+                    skipped.append({"entity_id": entity_id, "reason": "Served area already present"})
+                    continue
+                field_changes.append({"field": "served_area", "from": "", "to": "TBD Served Area"})
+            if field_changes:
+                changes.append({"entity_id": entity_id, "changes": field_changes})
+    elif entity_type == "point":
+        default_controller = project.controllers[0].id if len(project.controllers) == 1 else None
+        for entity_id in target_ids:
+            point = project.get_point(entity_id)
+            if point is None:
+                skipped.append({"entity_id": entity_id, "reason": "Object no longer exists"})
+                continue
+            field_changes = []
+            if action == "fill_missing_provenance":
+                if not point.provenance.get("source_name"):
+                    field_changes.append({"field": "provenance.source_name", "from": "", "to": "bulk_remediation"})
+                    parser_from = str(point.provenance.get("parser") or "")
+                    if not parser_from:
+                        field_changes.append({"field": "provenance.parser", "from": "", "to": "bulk_remediation"})
+                else:
+                    skipped.append({"entity_id": entity_id, "reason": "Provenance already present"})
+                    continue
+            elif action == "assign_default_controller":
+                if point.controller_id:
+                    skipped.append({"entity_id": entity_id, "reason": "Controller already assigned"})
+                    continue
+                equipment = project.get_equipment(point.equipment_id) if point.equipment_id else None
+                resolved_controller = equipment.controller_id if equipment and equipment.controller_id else default_controller
+                if not resolved_controller:
+                    skipped.append({"entity_id": entity_id, "reason": "No deterministic controller available"})
+                    continue
+                field_changes.append({"field": "controller_id", "from": "", "to": resolved_controller})
+            if field_changes:
+                changes.append({"entity_id": entity_id, "changes": field_changes})
+    elif entity_type == "controller":
+        for entity_id in target_ids:
+            controller = project.get_controller(entity_id)
+            if controller is None:
+                skipped.append({"entity_id": entity_id, "reason": "Object no longer exists"})
+                continue
+            if action == "fill_missing_provenance":
+                if not controller.provenance.get("source_name"):
+                    field_changes = [{"field": "provenance.source_name", "from": "", "to": "bulk_remediation"}]
+                    parser_from = str(controller.provenance.get("parser") or "")
+                    if not parser_from:
+                        field_changes.append({"field": "provenance.parser", "from": "", "to": "bulk_remediation"})
+                    changes.append({"entity_id": entity_id, "changes": field_changes})
+                else:
+                    skipped.append({"entity_id": entity_id, "reason": "Provenance already present"})
+    return {
+        "action": action,
+        "action_label": action_label,
+        "targeted_count": len(target_ids),
+        "change_count": len(changes),
+        "skipped_count": len(skipped),
+        "changes": changes[:25],
+        "skipped": skipped[:25],
+    }
+
+
+def build_object_list_view(
+    *,
+    project: Project,
+    entity_type: str,
+    status: str = "",
+    controller_state: str = "",
+    addressing_state: str = "",
+    provenance_state: str = "",
+    equipment_type: str = "",
+    point_kind: str = "",
+    protocol: str = "",
+    validation_category: str = "",
+    fix_group: str = "",
+    remediation_count: int = 0,
+    remediation_action: str = "",
+    bulk_preview: dict[str, object] | None = None,
+) -> dict[str, object]:
+    if entity_type == "equipment":
+        list_view = container.project_queries.equipment_list(
+            project.metadata.project_id,
+            status=status,
+            controller_state=controller_state,
+            provenance_state=provenance_state,
+            equipment_type=equipment_type,
+        )
+    elif entity_type == "point":
+        list_view = container.project_queries.points_list(
+            project.metadata.project_id,
+            status=status,
+            controller_state=controller_state,
+            provenance_state=provenance_state,
+            point_kind=point_kind,
+        )
+    else:
+        list_view = container.project_queries.controllers_list(
+            project.metadata.project_id,
+            status=status,
+            addressing_state=addressing_state,
+            provenance_state=provenance_state,
+            protocol=protocol,
+        )
+    filtered_rows, validation_view = apply_validation_filters_to_rows(
+        project,
+        entity_type=entity_type,
+        rows=list(list_view["rows"]),
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    list_view["rows"] = filtered_rows
+    list_view["filtered_count"] = len(filtered_rows)
+    list_view["validation_filters"] = validation_view
+    list_view["bulk_actions"] = available_bulk_remediation_actions(entity_type, project)
+    list_view["bulk_result"] = {"count": remediation_count, "action": remediation_action}
+    list_view["bulk_preview"] = bulk_preview
+    return list_view
+
+
 def get_station_connection(project: Project) -> StationConnectionConfig:
     if project.station_connection is None:
         project.station_connection = StationConnectionConfig()
@@ -1890,25 +2121,22 @@ async def equipment_list_page(
     equipment_type: str = "",
     validation_category: str = "",
     fix_group: str = "",
+    remediation_count: int = 0,
+    remediation_action: str = "",
 ):
     project = get_project(project_id)
-    equipment_view = container.project_queries.equipment_list(
-        project_id,
+    equipment_view = build_object_list_view(
+        project=project,
+        entity_type="equipment",
         status=status,
         controller_state=controller_state,
         provenance_state=provenance_state,
         equipment_type=equipment_type,
-    )
-    filtered_rows, validation_view = apply_validation_filters_to_rows(
-        project,
-        entity_type="equipment",
-        rows=list(equipment_view["rows"]),
         validation_category=validation_category,
         fix_group=fix_group,
+        remediation_count=remediation_count,
+        remediation_action=remediation_action,
     )
-    equipment_view["rows"] = filtered_rows
-    equipment_view["filtered_count"] = len(filtered_rows)
-    equipment_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -1916,7 +2144,7 @@ async def equipment_list_page(
             "project": project,
             "title": "Equipment",
             "entity_type": "equipment",
-            "rows": filtered_rows,
+            "rows": equipment_view["rows"],
             "list_view": equipment_view,
         },
     )
@@ -1946,25 +2174,22 @@ async def points_list_page(
     point_kind: str = "",
     validation_category: str = "",
     fix_group: str = "",
+    remediation_count: int = 0,
+    remediation_action: str = "",
 ):
     project = get_project(project_id)
-    points_view = container.project_queries.points_list(
-        project_id,
+    points_view = build_object_list_view(
+        project=project,
+        entity_type="point",
         status=status,
         controller_state=controller_state,
         provenance_state=provenance_state,
         point_kind=point_kind,
-    )
-    filtered_rows, validation_view = apply_validation_filters_to_rows(
-        project,
-        entity_type="point",
-        rows=list(points_view["rows"]),
         validation_category=validation_category,
         fix_group=fix_group,
+        remediation_count=remediation_count,
+        remediation_action=remediation_action,
     )
-    points_view["rows"] = filtered_rows
-    points_view["filtered_count"] = len(filtered_rows)
-    points_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -1972,7 +2197,7 @@ async def points_list_page(
             "project": project,
             "title": "Points",
             "entity_type": "point",
-            "rows": filtered_rows,
+            "rows": points_view["rows"],
             "list_view": points_view,
         },
     )
@@ -2002,25 +2227,22 @@ async def controllers_list_page(
     protocol: str = "",
     validation_category: str = "",
     fix_group: str = "",
+    remediation_count: int = 0,
+    remediation_action: str = "",
 ):
     project = get_project(project_id)
-    controllers_view = container.project_queries.controllers_list(
-        project_id,
+    controllers_view = build_object_list_view(
+        project=project,
+        entity_type="controller",
         status=status,
         addressing_state=addressing_state,
         provenance_state=provenance_state,
         protocol=protocol,
-    )
-    filtered_rows, validation_view = apply_validation_filters_to_rows(
-        project,
-        entity_type="controller",
-        rows=list(controllers_view["rows"]),
         validation_category=validation_category,
         fix_group=fix_group,
+        remediation_count=remediation_count,
+        remediation_action=remediation_action,
     )
-    controllers_view["rows"] = filtered_rows
-    controllers_view["filtered_count"] = len(filtered_rows)
-    controllers_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -2028,8 +2250,128 @@ async def controllers_list_page(
             "project": project,
             "title": "Controllers",
             "entity_type": "controller",
-            "rows": filtered_rows,
+            "rows": controllers_view["rows"],
             "list_view": controllers_view,
+        },
+    )
+
+
+@app.post("/project/{project_id}/{entity_plural}/bulk-remediate")
+async def bulk_remediate_object_list(
+    project_id: str,
+    entity_plural: str,
+    action: str = Form(...),
+    status: str = Form(""),
+    controller_state: str = Form(""),
+    addressing_state: str = Form(""),
+    provenance_state: str = Form(""),
+    equipment_type: str = Form(""),
+    point_kind: str = Form(""),
+    protocol: str = Form(""),
+    validation_category: str = Form(""),
+    fix_group: str = Form(""),
+):
+    project = get_project(project_id)
+    plural_map = {"equipment": "equipment", "points": "point", "controllers": "controller"}
+    entity_type = plural_map.get(entity_plural)
+    if entity_type is None:
+        raise HTTPException(status_code=404, detail="Unsupported entity type")
+
+    list_view = build_object_list_view(
+        project=project,
+        entity_type=entity_type,
+        status=status,
+        controller_state=controller_state,
+        addressing_state=addressing_state,
+        provenance_state=provenance_state,
+        equipment_type=equipment_type,
+        point_kind=point_kind,
+        protocol=protocol,
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    target_rows = list(list_view["rows"])
+    row_key = "id" if entity_type != "point" else "name"
+    target_ids = [str(row.get(row_key)) for row in target_rows if row.get(row_key)]
+    updated_count, action_label = apply_bulk_remediation(
+        project=project,
+        entity_type=entity_type,
+        target_ids=target_ids,
+        action=action,
+    )
+    redirect_filters = {
+        "status": status,
+        "controller_state": controller_state,
+        "addressing_state": addressing_state,
+        "provenance_state": provenance_state,
+        "equipment_type": equipment_type,
+        "point_kind": point_kind,
+        "protocol": protocol,
+        "validation_category": validation_category,
+        "fix_group": fix_group,
+        "remediation_count": str(updated_count) if updated_count else "",
+        "remediation_action": action_label if updated_count else "",
+    }
+    return RedirectResponse(
+        url=object_list_redirect_target(project_id, entity_type, redirect_filters),
+        status_code=303,
+    )
+
+
+@app.post("/project/{project_id}/{entity_plural}/bulk-remediate/preview")
+async def preview_bulk_remediate_object_list(
+    request: Request,
+    project_id: str,
+    entity_plural: str,
+    action: str = Form(...),
+    status: str = Form(""),
+    controller_state: str = Form(""),
+    addressing_state: str = Form(""),
+    provenance_state: str = Form(""),
+    equipment_type: str = Form(""),
+    point_kind: str = Form(""),
+    protocol: str = Form(""),
+    validation_category: str = Form(""),
+    fix_group: str = Form(""),
+):
+    project = get_project(project_id)
+    plural_map = {"equipment": "equipment", "points": "point", "controllers": "controller"}
+    entity_type = plural_map.get(entity_plural)
+    if entity_type is None:
+        raise HTTPException(status_code=404, detail="Unsupported entity type")
+
+    list_view = build_object_list_view(
+        project=project,
+        entity_type=entity_type,
+        status=status,
+        controller_state=controller_state,
+        addressing_state=addressing_state,
+        provenance_state=provenance_state,
+        equipment_type=equipment_type,
+        point_kind=point_kind,
+        protocol=protocol,
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    row_key = "id" if entity_type != "point" else "name"
+    target_ids = [str(row.get(row_key)) for row in list_view["rows"] if row.get(row_key)]
+    preview = preview_bulk_remediation(
+        project=project,
+        entity_type=entity_type,
+        target_ids=target_ids,
+        action=action,
+    )
+    list_view["bulk_preview"] = preview
+    return templates.TemplateResponse(
+        request=request,
+        name="object_list.html",
+        context={
+            "project": project,
+            "title": "Equipment" if entity_type == "equipment" else ("Points" if entity_type == "point" else "Controllers"),
+            "entity_type": entity_type,
+            "rows": list_view["rows"],
+            "list_view": list_view,
+            "current_user": get_current_user(request),
         },
     )
 

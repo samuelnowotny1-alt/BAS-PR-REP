@@ -1024,6 +1024,68 @@ def test_equipment_list_page_filters_by_validation_fix_group() -> None:
     assert "All fix groups" in text
 
 
+def test_bulk_remediation_fills_missing_equipment_provenance() -> None:
+    project_id = create_project("bulk-remediation-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.add_equipment(Equipment(id="AHU-2", type=EquipmentType.AHU, controller_id="MPC-1", provenance={"source_name": "equip.csv"}))
+    main.save_project(project)
+
+    response = run_async(
+        main.bulk_remediate_object_list(
+            project_id=project_id,
+            entity_plural="equipment",
+            action="fill_missing_provenance",
+            status="",
+            controller_state="",
+            addressing_state="",
+            provenance_state="missing",
+            equipment_type="",
+            point_kind="",
+            protocol="",
+            validation_category="",
+            fix_group="",
+        )
+    )
+
+    updated_project = main.get_project(project_id)
+    assert response.status_code == 303
+    assert "remediation_count=1" in response.headers["location"]
+    assert updated_project.get_equipment("AHU-1").provenance["source_name"] == "bulk_remediation"
+    assert updated_project.get_equipment("AHU-2").provenance["source_name"] == "equip.csv"
+
+
+def test_bulk_remediation_preview_shows_proposed_equipment_changes() -> None:
+    project_id = create_project("bulk-preview-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    main.save_project(project)
+
+    response = run_async(
+        main.preview_bulk_remediate_object_list(
+            request(f"/project/{project_id}/equipment/bulk-remediate/preview", method="POST"),
+            project_id=project_id,
+            entity_plural="equipment",
+            action="fill_missing_provenance",
+            status="",
+            controller_state="",
+            addressing_state="",
+            provenance_state="missing",
+            equipment_type="",
+            point_kind="",
+            protocol="",
+            validation_category="",
+            fix_group="",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Preview Changes" in text
+    assert "provenance.source_name" in text
+    assert "AHU-1" in text
+
+
 def test_project_detail_renders_validation_triage_shortcuts() -> None:
     project_id = create_project("validation-triage-project")
     project = main.get_project(project_id)
