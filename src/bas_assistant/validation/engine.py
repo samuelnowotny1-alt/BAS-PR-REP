@@ -714,6 +714,9 @@ class ValidationEngine:
                     "missing_refs": [],
                     "requirement_types": [],
                     "coverage_checks": [],
+                    "required_families": [],
+                    "covered_families": [],
+                    "missing_families": [],
                     "summary": "No indexed sequence context found for this equipment.",
                 }
             point_refs = set(sequence_data["point_refs"])

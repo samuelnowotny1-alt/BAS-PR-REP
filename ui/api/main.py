@@ -833,6 +833,60 @@ def review_release_state(project: Project) -> dict[str, object]:
     }
 
 
+def build_project_development_status(project: Project) -> dict[str, object]:
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    release = review_release_state(project)
+    sequence_workspace = build_sequence_workspace(project)
+    sequence_summary = sequence_workspace["summary"]
+    readiness = build_generation_readiness(project)
+    equipment_with_controller = sum(1 for equipment in project.equipment if project.effective_equipment_controller_id(equipment))
+    controllers_with_addresses = sum(1 for controller in project.controllers if controller.network_addresses)
+    checks = [
+        {
+            "label": "Validation",
+            "status": "ready" if not report.has_errors else "attention",
+            "detail": f"{report.summary['errors']} errors, {report.summary['warnings']} warnings",
+        },
+        {
+            "label": "Sequence Coverage",
+            "status": "ready" if not sequence_summary["attention"] and not sequence_summary["not_indexed"] else "attention",
+            "detail": f"{sequence_summary['attention']} attention, {sequence_summary['not_indexed']} not indexed",
+        },
+        {
+            "label": "Mappings",
+            "status": "ready" if not release["unresolved_mappings"] else "attention",
+            "detail": f"{len(release['unresolved_mappings'])} unresolved mapping decisions",
+        },
+        {
+            "label": "Assumptions",
+            "status": "ready" if not release["pending_assumptions"] else "attention",
+            "detail": f"{len(release['pending_assumptions'])} pending or deferred assumptions",
+        },
+        {
+            "label": "Delivery Outputs",
+            "status": "ready" if readiness["can_generate"] else "attention",
+            "detail": f"{len(readiness['blockers'])} blockers, {len(readiness['cautions'])} cautions",
+        },
+    ]
+    ready_count = sum(1 for check in checks if check["status"] == "ready")
+    score_pct = int(round((ready_count / len(checks)) * 100)) if checks else 0
+    status = "ready" if ready_count == len(checks) else ("attention" if ready_count else "blocked")
+    return {
+        "status": status,
+        "score_pct": score_pct,
+        "checks": checks,
+        "validation_summary": report.summary,
+        "release_review": release,
+        "generation_readiness": readiness,
+        "sequence_summary": sequence_summary,
+        "equipment_with_controller": equipment_with_controller,
+        "equipment_total": len(project.equipment),
+        "controllers_with_addresses": controllers_with_addresses,
+        "controllers_total": len(project.controllers),
+    }
+
+
 def get_station_connection(project: Project) -> StationConnectionConfig:
     if project.station_connection is None:
         project.station_connection = StationConnectionConfig()
@@ -1605,11 +1659,22 @@ async def project_detail(request: Request, project_id: str):
     )
     if project_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
+    project_view["development_status"] = build_project_development_status(project)
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
         "project": project,
         "project_view": project_view,
         "graphic_presets_for": equipment_graphic_presets,
         "current_user": get_current_user(request),
+    })
+
+
+@app.get("/project/{project_id}/status", response_class=HTMLResponse)
+async def project_status_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    development_status = build_project_development_status(project)
+    return templates.TemplateResponse(request=request, name="project_status.html", context={
+        "project": project,
+        "development_status": development_status,
     })
 
 
@@ -2789,6 +2854,12 @@ async def api_project_summary(project_id: str):
     if summary is None:
         raise HTTPException(status_code=404, detail="Project not found")
     return summary
+
+
+@app.get("/api/project/{project_id}/status")
+async def api_project_status(project_id: str):
+    project = get_project(project_id)
+    return build_project_development_status(project)
 
 
 @app.get("/api/project/{project_id}/equipment")

@@ -172,6 +172,7 @@ def test_project_detail_page_renders_engineering_status_summary() -> None:
     text = response_text(response)
     assert response.status_code == 200
     assert "Engineering Status" in text
+    assert "Development Status" in text
     assert "Controller Assignment Coverage" in text
     assert "Controller Addressing" in text
     assert "Knowledge Indexed" in text
@@ -2168,15 +2169,56 @@ def test_read_only_project_api_endpoints() -> None:
     project_id = create_project()
 
     summary = run_async(main.api_project_summary(project_id))
+    status = run_async(main.api_project_status(project_id))
     equipment = run_async(main.api_equipment_list(project_id))
     points = run_async(main.api_points_list(project_id))
     controllers = run_async(main.api_controllers_list(project_id))
 
     assert summary["project_id"] == project_id
+    assert "score_pct" in status
+    assert "checks" in status
     assert summary["equipment_count"] == 0
     assert equipment == []
     assert points == []
     assert controllers == []
+
+
+def test_project_status_page_renders_development_snapshot() -> None:
+    project_id = create_project("status-page-project")
+    project = main.get_project(project_id)
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=2001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(main.project_status_page(request(f"/project/{project_id}/status"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Development Status" in text
+    assert "Sequence Debt" in text
+    assert "Generator Readiness" in text
 
 
 def test_equipment_graphic_sections_update_route_persists_to_equipment() -> None:
@@ -2384,3 +2426,59 @@ def test_validation_report_markdown_includes_sequence_coverage_summary(tmp_path:
     assert "### AHU-1" in validation_text
     assert "- Missing point refs: AHU-1 SF-STS" in validation_text
     assert "`COMP-007` equipment `AHU-1`" in validation_text
+
+
+def test_development_status_report_markdown_summarizes_readiness(tmp_path: Path) -> None:
+    project = Project(
+        metadata=ProjectMetadata(
+            project_id="development-status-project",
+            name="Development Status Project",
+        )
+    )
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    report_paths = generate_reports(project, tmp_path / "reports")
+    development_text = report_paths["development_status"].read_text(encoding="utf-8")
+
+    assert "# Development Status" in development_text
+    assert "**Readiness Score:**" in development_text
+    assert "- **Sequence Coverage:** attention" in development_text
+    assert "- Needs attention: 1" in development_text
+    assert "- Missing referenced points: 1" in development_text
