@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "BAS Programming Assistant - deterministic import, validation, and generation for building automation systems"
 readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "Proprietary"}
 dependencies = [
     "pydantic>=2.8",
     "pydantic-settings>=2.3",

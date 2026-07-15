@@ -2,6 +2,12 @@
 """
 Extract and normalize BAS training data from multiple sources into trainable formats.
 Outputs: JSONL (for LLMs), CSV (for tabular), Parquet (for ML pipelines)
+
+Legal note:
+This script references external data sources that may carry their own license
+or redistribution terms. Treat downloaded data and derived outputs as
+third-party governed material until a source-by-source rights review is
+completed.
 """
 
 import csv

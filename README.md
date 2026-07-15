@@ -168,14 +168,20 @@ pytest tests/ -v
 # focused regression suite currently passes in CI/dev runs
 ```
 
+## Legal Status
+
+- Current repo license posture: proprietary
+- External training-data connectors exist under `training_data/` and require
+  separate source-by-source rights review before redistribution
+- See `docs/LEGAL_SETUP.md`, `docs/THIRD_PARTY_INVENTORY.md`, and
+  `docs/DEPENDENCY_COMPLIANCE.md`
+
 ## License
 
-MIT — see LICENSE for details.
+This repository is currently proprietary. See `LICENSE` for the current rights
+reservation.
 
 ## Contributing
 
-1. Read `docs/ARCHITECTURE.md` and `docs/DESIGN_PRINCIPLES.md`
-2. Check `docs/DECISIONS.md` for context on past choices
-3. Follow `conventions/python.md` and `conventions/naming.md`
-4. Add tests for new validation rules or generators
-5. Run `ruff check . && mypy src/` before PR
+See `CONTRIBUTING.md` before submitting any material. This repository is not
+currently open for unsolicited public contributions.
