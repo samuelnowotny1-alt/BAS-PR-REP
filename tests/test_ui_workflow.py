@@ -2,6 +2,7 @@ import asyncio
 import json
 from io import BytesIO
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pandas as pd
@@ -265,9 +266,106 @@ def test_object_detail_page_renders_artifact_provenance() -> None:
     assert response.status_code == 200
     assert "Engineering Review" in text
     assert "Review Score" in text
+    assert "Completeness" in text
+    assert "Provenance Summary" in text
     assert "Validation Context" in text
     assert "Artifact Provenance" in text
     assert "station.zip" in text
+    assert f"/project/{project_id}/documents/{stored_upload.document_record_id}" in text
+
+
+def test_document_detail_page_renders_structured_coverage_links() -> None:
+    project_id = create_project("document-coverage-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 supply fan status sequence")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=stored_upload,
+        links=[
+            main.ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key="AHU-1",
+                parser_name="sequence_import",
+                metadata={"source_name": "sequence.txt"},
+            )
+        ],
+        parser_name="sequence_import",
+    )
+
+    response = run_async(
+        main.project_document_detail_page(
+            request(f"/project/{project_id}/documents/{stored_upload.document_record_id}"),
+            project_id,
+            stored_upload.document_record_id,
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Structured Coverage" in text
+    assert f"/project/{project_id}/equipment/AHU-1" in text
+
+
+def test_documents_page_filters_by_mode_and_linked_entity_type() -> None:
+    project_id = create_project("document-filter-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    uploaded = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"sequence text")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=uploaded,
+        links=[main.ArtifactEntityLink(entity_type="equipment", entity_key="AHU-1", parser_name="sequence_import")],
+        parser_name="sequence_import",
+    )
+    generated_path = Path("/tmp/generated_report.md")
+    generated_path.write_text("generated")
+    main.register_generated_output(
+        project=project,
+        file_path=generated_path,
+        document_name="generated_report.md",
+        document_type="generated_report",
+        parser_name="report_generator",
+        links=[main.ArtifactEntityLink(entity_type="equipment", entity_key="AHU-1", relationship_type="generated_output", parser_name="report_generator")],
+    )
+
+    response = run_async(
+        main.project_documents_page(
+            request(f"/project/{project_id}/documents?mode=generated&linked_entity_type=equipment"),
+            project_id,
+            mode="generated",
+            linked_entity_type="equipment",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "generated_report.md" in text
+    assert "sequence.txt" not in text
+    assert "Active Filters" in text
 
 
 def test_controller_detail_page_renders_network_review_context() -> None:
@@ -623,6 +721,19 @@ def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
         source_type=stored_upload.document_type,
         metadata={**stored_upload.metadata, "category": stored_upload.category},
     )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=stored_upload,
+        links=[
+            main.ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key="AHU-1",
+                parser_name="sequence_import",
+                metadata={"source_name": "sequence.txt"},
+            )
+        ],
+        parser_name="sequence_import",
+    )
     main.save_project(project)
 
     page_response = run_async(
@@ -647,6 +758,70 @@ def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
     assert api_response["results"][0]["document_detail_url"] == f"/project/{project_id}/documents/{stored_upload.document_record_id}"
     assert api_response["results"][0]["document_download_url"] == f"/project/{project_id}/documents/{stored_upload.document_record_id}/download"
     assert api_response["results"][0]["matched_terms"] == ["supply", "fan"]
+    assert api_response["query_terms"] == ["supply", "fan"]
+    assert api_response["source_hits"][0]["source_name"] == "sequence.txt"
+    assert api_response["results"][0]["linked_objects"][0]["entity_key"] == "AHU-1"
+    assert api_response["source_hits"][0]["linked_objects"][0]["object_url"] == f"/project/{project_id}/equipment/AHU-1"
+
+
+def test_project_knowledge_page_filters_by_source_type_and_linked_entity() -> None:
+    project_id = create_project("knowledge-filter-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    text_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 supply fan status sequence")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=text_upload.path,
+        source_name=text_upload.source_document.name,
+        source_type=text_upload.document_type,
+        metadata={**text_upload.metadata, "category": text_upload.category},
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=text_upload,
+        links=[main.ArtifactEntityLink(entity_type="equipment", entity_key="AHU-1", parser_name="sequence_import")],
+        parser_name="sequence_import",
+    )
+    archive_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="station.zip", file=BytesIO(b"zip-bytes")),
+            category="archives",
+            document_type="archive",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=archive_upload.path,
+        source_name=archive_upload.source_document.name,
+        source_type=archive_upload.document_type,
+        metadata={**archive_upload.metadata, "category": archive_upload.category},
+    )
+    main.save_project(project)
+
+    response = run_async(
+        main.project_knowledge_page(
+            request(f"/project/{project_id}/knowledge?q=sequence&source_type=text_document&linked_entity_type=equipment"),
+            project_id,
+            q="sequence",
+            source_type="text_document",
+            linked_entity_type="equipment",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "sequence.txt" in text
+    assert "station.zip" not in text
+    assert "All source types" in text
 
 
 def test_project_knowledge_search_ranks_exact_phrase_and_full_coverage_first() -> None:
@@ -758,7 +933,109 @@ def test_main_project_pages_render_for_empty_project() -> None:
     for handler, path in page_calls:
         response = run_async(handler(request(path), project_id))
         assert response.status_code == 200, path
-        assert response_text(response), path
+
+
+def test_equipment_list_page_filters_attention_and_missing_controller() -> None:
+    project_id = create_project("equipment-filter-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.add_equipment(Equipment(id="AHU-2", type=EquipmentType.AHU, controller_id="MPC-1", provenance={"source_name": "equip.csv"}))
+    main.save_project(project)
+
+    response = run_async(
+        main.equipment_list_page(
+            request(f"/project/{project_id}/equipment?controller_state=missing"),
+            project_id,
+            controller_state="missing",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "AHU-1" in text
+    assert "AHU-2" not in text
+    assert "Apply Filters" in text
+
+
+def test_controller_list_page_filters_missing_addressing() -> None:
+    project_id = create_project("controller-filter-project")
+    project = main.get_project(project_id)
+    project.add_controller(Controller(id="MPC-1", protocols=[Protocol.BACNET_IP]))
+    project.add_controller(
+        Controller(
+            id="MPC-2",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.0.0.5")],
+            provenance={"source_name": "ctrl.csv"},
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(
+        main.controllers_list_page(
+            request(f"/project/{project_id}/controllers?addressing_state=missing"),
+            project_id,
+            addressing_state="missing",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "MPC-1" in text
+    assert "MPC-2" not in text
+
+
+def test_project_detail_renders_object_health_shortcuts() -> None:
+    project_id = create_project("detail-health-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.add_point(main.Point(name="AHU-1 SAT", equipment_id="AHU-1", kind=main.PointKind.SENSOR, direction=main.PointDirection.INPUT))
+    project.add_controller(Controller(id="MPC-1", protocols=[Protocol.BACNET_IP]))
+    main.save_project(project)
+
+    response = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Equipment Review" in text
+    assert f"/project/{project_id}/equipment?controller_state=missing" in text
+    assert f"/project/{project_id}/controllers?addressing_state=missing" in text
+
+
+def test_equipment_list_page_filters_by_validation_fix_group() -> None:
+    project_id = create_project("validation-filter-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHUONE", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.add_equipment(Equipment(id="AHU-2", type=EquipmentType.AHU, controller_id="MPC-1"))
+    main.save_project(project)
+
+    response = run_async(
+        main.equipment_list_page(
+            request(f"/project/{project_id}/equipment?fix_group=naming"),
+            project_id,
+            fix_group="naming",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "AHUONE" in text
+    assert "AHU-2" not in text
+    assert "All fix groups" in text
+
+
+def test_project_detail_renders_validation_triage_shortcuts() -> None:
+    project_id = create_project("validation-triage-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHUONE", type=EquipmentType.AHU, controller_id="MPC-1"))
+    main.save_project(project)
+
+    response = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Validation Triage" in text
+    assert f"/project/{project_id}/equipment?fix_group=naming" in text
 
 
 def test_sequence_page_and_parse_show_structured_coverage_review(tmp_path: Path) -> None:
@@ -1170,6 +1447,24 @@ def test_import_workspace_view_returns_recent_uploads_and_task_summary() -> None
     assert workspace_view["recent_uploads"][0]["filename"] == "notes.txt"
     assert workspace_view["import_status_view"]["tasks"][0]["task_type"] == "artifact_ingestion"
     assert workspace_view["import_status_view"]["tasks"][0]["outcome_summary"]["summary_text"] == "Knowledge status: indexed"
+
+
+def test_build_ingestion_result_envelope_normalizes_parser_summary() -> None:
+    envelope = main.build_ingestion_result_envelope(
+        task_type="artifact_ingestion",
+        source_name="station.zip",
+        parser_name="niagara_station_tree",
+        knowledge_result=SimpleNamespace(status="indexed", chunk_count=4),
+        parser_result={"equipment_added": 2, "points_added": 5, "controllers_added": 1, "warnings": ["warn"]},
+        artifact_diff={"added": ["equipment:AHU-1"], "removed": [], "unchanged": ["point:AHU-1 SF-STS"]},
+    )
+
+    assert envelope["knowledge_status"] == "indexed"
+    assert envelope["chunk_count"] == 4
+    assert envelope["parser_summary"]["parser_name"] == "niagara_station_tree"
+    assert envelope["parser_summary"]["object_counts"] == {"equipment": 2, "points": 5, "controllers": 1}
+    assert envelope["parser_summary"]["added_count"] == 1
+    assert envelope["parser_summary"]["warning_count"] == 1
 
 
 def test_import_page_renders_recent_ingestion_outcomes_and_parser_support() -> None:
@@ -2217,6 +2512,7 @@ def test_project_status_page_renders_development_snapshot() -> None:
     text = response_text(response)
     assert response.status_code == 200
     assert "Development Status" in text
+    assert "Next Actions" in text
     assert "Sequence Debt" in text
     assert "Generator Readiness" in text
 

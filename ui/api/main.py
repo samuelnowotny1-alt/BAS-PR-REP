@@ -215,6 +215,58 @@ def persist_artifact_links(
     )
 
 
+def build_ingestion_result_envelope(
+    *,
+    task_type: str,
+    source_name: str,
+    parser_name: str,
+    knowledge_result=None,
+    import_result: dict[str, object] | None = None,
+    parser_result: dict[str, object] | None = None,
+    artifact_diff: dict[str, list[str]] | None = None,
+) -> dict[str, object]:
+    """Normalize import/parser task results into one UI-friendly envelope."""
+    diff = artifact_diff or {"added": [], "removed": [], "unchanged": []}
+    parsed_counts = {
+        "equipment": int((parser_result or {}).get("equipment_added", 0) or 0),
+        "points": int((parser_result or {}).get("points_added", 0) or 0),
+        "controllers": int((parser_result or {}).get("controllers_added", 0) or 0),
+    }
+    imported_count = int((import_result or {}).get("count", 0) or 0)
+    warning_count = len((import_result or {}).get("warnings") or []) + len((parser_result or {}).get("warnings") or [])
+    error_count = len((import_result or {}).get("errors") or [])
+    summary_parts = [
+        f"{imported_count} imported" if import_result else None,
+        f"{parsed_counts['equipment']} equipment" if parsed_counts["equipment"] else None,
+        f"{parsed_counts['points']} points" if parsed_counts["points"] else None,
+        f"{parsed_counts['controllers']} controllers" if parsed_counts["controllers"] else None,
+        f"{len(diff.get('added', []))} links added",
+        f"{len(diff.get('removed', []))} links removed" if diff.get("removed") else None,
+    ]
+    return {
+        "import_result": import_result or {},
+        "parser_result": parser_result or {},
+        "knowledge_status": getattr(knowledge_result, "status", None),
+        "chunk_count": getattr(knowledge_result, "chunk_count", 0),
+        "artifact_diff": diff,
+        "parser_summary": {
+            "task_type": task_type,
+            "source_name": source_name,
+            "parser_name": parser_name,
+            "imported_count": imported_count,
+            "object_counts": parsed_counts,
+            "warning_count": warning_count,
+            "error_count": error_count,
+            "added_count": len(diff.get("added", [])),
+            "removed_count": len(diff.get("removed", [])),
+            "unchanged_count": len(diff.get("unchanged", [])),
+            "knowledge_status": getattr(knowledge_result, "status", None),
+            "chunk_count": getattr(knowledge_result, "chunk_count", 0),
+            "summary_text": ", ".join(part for part in summary_parts if part) or source_name,
+        },
+    }
+
+
 def generated_document_links_for_entities(
     *,
     entity_type: str,
@@ -884,6 +936,130 @@ def build_project_development_status(project: Project) -> dict[str, object]:
         "equipment_total": len(project.equipment),
         "controllers_with_addresses": controllers_with_addresses,
         "controllers_total": len(project.controllers),
+    }
+
+
+def build_project_next_actions(project: Project, project_view: dict[str, object]) -> list[dict[str, str]]:
+    """Return the highest-signal next actions for the project dashboard."""
+    actions: list[dict[str, str]] = []
+    development_status = dict(project_view.get("development_status") or {})
+    engineering_status = dict(project_view.get("engineering_status") or {})
+    import_activity = dict(project_view.get("import_activity") or {})
+    validation_summary = dict(development_status.get("validation_summary") or {})
+    generation_readiness = dict(development_status.get("generation_readiness") or {})
+    sequence_summary = dict(development_status.get("sequence_summary") or {})
+
+    if int(validation_summary.get("errors", 0) or 0) > 0:
+        actions.append({
+            "title": "Resolve validation errors",
+            "detail": f"{validation_summary.get('errors', 0)} blocking validation errors are preventing release-ready outputs.",
+            "url": f"/project/{project.metadata.project_id}/validate",
+        })
+    if int(sequence_summary.get("attention", 0) or 0) > 0 or int(sequence_summary.get("not_indexed", 0) or 0) > 0:
+        actions.append({
+            "title": "Close sequence coverage gaps",
+            "detail": f"{sequence_summary.get('attention', 0)} equipment items need point coverage cleanup and {sequence_summary.get('not_indexed', 0)} are not indexed yet.",
+            "url": f"/project/{project.metadata.project_id}/sequence",
+        })
+    if generation_readiness.get("blockers"):
+        actions.append({
+            "title": "Unblock generators",
+            "detail": f"{len(generation_readiness.get('blockers') or [])} generator blockers remain across checkout, reports, graphics, logic, or export.",
+            "url": f"/project/{project.metadata.project_id}/status",
+        })
+    if int(engineering_status.get("knowledge_indexed", 0) or 0) < int(engineering_status.get("knowledge_total", 0) or 0):
+        actions.append({
+            "title": "Finish knowledge indexing",
+            "detail": f"{engineering_status.get('knowledge_total', 0) - engineering_status.get('knowledge_indexed', 0)} uploaded references are not yet indexed for search.",
+            "url": f"/project/{project.metadata.project_id}/knowledge",
+        })
+    if int(engineering_status.get("artifact_link_count", 0) or 0) == 0:
+        actions.append({
+            "title": "Establish artifact lineage",
+            "detail": "No artifact-to-object links are recorded yet, so provenance and reimport diffs are weak.",
+            "url": f"/project/{project.metadata.project_id}/documents",
+        })
+    if int(import_activity.get("warning_count", 0) or 0) > 0 or int(import_activity.get("error_count", 0) or 0) > 0:
+        actions.append({
+            "title": "Review import and parser signals",
+            "detail": f"{import_activity.get('warning_count', 0)} warnings and {import_activity.get('error_count', 0)} errors were recorded in recent ingestion tasks.",
+            "url": f"/project/{project.metadata.project_id}/activity",
+        })
+    return actions[:5]
+
+
+def build_validation_triage(project: Project) -> dict[str, object]:
+    """Summarize validation categories and fix groups into drill-down shortcuts."""
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report, project.metadata.project_id)
+    categories: dict[tuple[str, str], dict[str, object]] = {}
+    fix_groups: dict[tuple[str, str], dict[str, object]] = {}
+    for finding in findings:
+        entity_type = str(finding["object_type"])
+        category_key = (entity_type, str(finding["category"]))
+        fix_group_key = (entity_type, str(finding["fix_group"]))
+        if category_key not in categories:
+            categories[category_key] = {
+                "entity_type": entity_type,
+                "category": finding["category"],
+                "count": 0,
+                "url": f"/project/{project.metadata.project_id}/{entity_type if entity_type == 'equipment' else entity_type + 's'}?validation_category={finding['category']}",
+            }
+        categories[category_key]["count"] += 1
+        if fix_group_key not in fix_groups:
+            fix_groups[fix_group_key] = {
+                "entity_type": entity_type,
+                "fix_group": finding["fix_group"],
+                "count": 0,
+                "url": f"/project/{project.metadata.project_id}/{entity_type if entity_type == 'equipment' else entity_type + 's'}?fix_group={finding['fix_group']}",
+            }
+        fix_groups[fix_group_key]["count"] += 1
+    return {
+        "categories": sorted(categories.values(), key=lambda item: (-int(item["count"]), str(item["entity_type"]), str(item["category"]))),
+        "fix_groups": sorted(fix_groups.values(), key=lambda item: (-int(item["count"]), str(item["entity_type"]), str(item["fix_group"]))),
+    }
+
+
+def apply_validation_filters_to_rows(
+    project: Project,
+    *,
+    entity_type: str,
+    rows: list[dict[str, object]],
+    validation_category: str = "",
+    fix_group: str = "",
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Filter object-list rows by live validation findings."""
+    normalized_category = validation_category.strip().lower()
+    normalized_fix_group = fix_group.strip().lower()
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report, project.metadata.project_id)
+    relevant = [finding for finding in findings if str(finding["object_type"]) == entity_type]
+    category_options = sorted({str(finding["category"]) for finding in relevant})
+    fix_group_options = sorted({str(finding["fix_group"]) for finding in relevant})
+    if not normalized_category and not normalized_fix_group:
+        return rows, {
+            "validation_category": "",
+            "fix_group": "",
+            "category_options": category_options,
+            "fix_group_options": fix_group_options,
+            "active_count": 0,
+        }
+    matching_ids = {
+        str(finding["object_id"])
+        for finding in relevant
+        if (not normalized_category or str(finding["category"]).lower() == normalized_category)
+        and (not normalized_fix_group or str(finding["fix_group"]).lower() == normalized_fix_group)
+    }
+    row_key = "id" if entity_type != "point" else "name"
+    filtered = [row for row in rows if str(row.get(row_key)) in matching_ids]
+    return filtered, {
+        "validation_category": normalized_category,
+        "fix_group": normalized_fix_group,
+        "category_options": category_options,
+        "fix_group_options": fix_group_options,
+        "active_count": (1 if normalized_category else 0) + (1 if normalized_fix_group else 0),
     }
 
 
@@ -1660,6 +1836,8 @@ async def project_detail(request: Request, project_id: str):
     if project_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
     project_view["development_status"] = build_project_development_status(project)
+    project_view["next_actions"] = build_project_next_actions(project, project_view)
+    project_view["validation_triage"] = build_validation_triage(project)
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
         "project": project,
         "project_view": project_view,
@@ -1672,9 +1850,19 @@ async def project_detail(request: Request, project_id: str):
 async def project_status_page(request: Request, project_id: str):
     project = get_project(project_id)
     development_status = build_project_development_status(project)
+    project_view = container.project_queries.detail_view(project_id) or {}
+    next_actions = build_project_next_actions(
+        project,
+        {
+            "development_status": development_status,
+            "engineering_status": project_view.get("engineering_status", {}),
+            "import_activity": project_view.get("import_activity", {}),
+        },
+    )
     return templates.TemplateResponse(request=request, name="project_status.html", context={
         "project": project,
         "development_status": development_status,
+        "next_actions": next_actions,
     })
 
 
@@ -1693,8 +1881,34 @@ async def equipment_detail_page(request: Request, project_id: str, equipment_id:
 
 
 @app.get("/project/{project_id}/equipment", response_class=HTMLResponse)
-async def equipment_list_page(request: Request, project_id: str):
+async def equipment_list_page(
+    request: Request,
+    project_id: str,
+    status: str = "",
+    controller_state: str = "",
+    provenance_state: str = "",
+    equipment_type: str = "",
+    validation_category: str = "",
+    fix_group: str = "",
+):
     project = get_project(project_id)
+    equipment_view = container.project_queries.equipment_list(
+        project_id,
+        status=status,
+        controller_state=controller_state,
+        provenance_state=provenance_state,
+        equipment_type=equipment_type,
+    )
+    filtered_rows, validation_view = apply_validation_filters_to_rows(
+        project,
+        entity_type="equipment",
+        rows=list(equipment_view["rows"]),
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    equipment_view["rows"] = filtered_rows
+    equipment_view["filtered_count"] = len(filtered_rows)
+    equipment_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -1702,7 +1916,8 @@ async def equipment_list_page(request: Request, project_id: str):
             "project": project,
             "title": "Equipment",
             "entity_type": "equipment",
-            "rows": container.project_queries.equipment_list(project_id),
+            "rows": filtered_rows,
+            "list_view": equipment_view,
         },
     )
 
@@ -1722,8 +1937,34 @@ async def point_detail_page(request: Request, project_id: str, point_name: str):
 
 
 @app.get("/project/{project_id}/points", response_class=HTMLResponse)
-async def points_list_page(request: Request, project_id: str):
+async def points_list_page(
+    request: Request,
+    project_id: str,
+    status: str = "",
+    controller_state: str = "",
+    provenance_state: str = "",
+    point_kind: str = "",
+    validation_category: str = "",
+    fix_group: str = "",
+):
     project = get_project(project_id)
+    points_view = container.project_queries.points_list(
+        project_id,
+        status=status,
+        controller_state=controller_state,
+        provenance_state=provenance_state,
+        point_kind=point_kind,
+    )
+    filtered_rows, validation_view = apply_validation_filters_to_rows(
+        project,
+        entity_type="point",
+        rows=list(points_view["rows"]),
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    points_view["rows"] = filtered_rows
+    points_view["filtered_count"] = len(filtered_rows)
+    points_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -1731,7 +1972,8 @@ async def points_list_page(request: Request, project_id: str):
             "project": project,
             "title": "Points",
             "entity_type": "point",
-            "rows": container.project_queries.points_list(project_id),
+            "rows": filtered_rows,
+            "list_view": points_view,
         },
     )
 
@@ -1751,8 +1993,34 @@ async def controller_detail_page(request: Request, project_id: str, controller_i
 
 
 @app.get("/project/{project_id}/controllers", response_class=HTMLResponse)
-async def controllers_list_page(request: Request, project_id: str):
+async def controllers_list_page(
+    request: Request,
+    project_id: str,
+    status: str = "",
+    addressing_state: str = "",
+    provenance_state: str = "",
+    protocol: str = "",
+    validation_category: str = "",
+    fix_group: str = "",
+):
     project = get_project(project_id)
+    controllers_view = container.project_queries.controllers_list(
+        project_id,
+        status=status,
+        addressing_state=addressing_state,
+        provenance_state=provenance_state,
+        protocol=protocol,
+    )
+    filtered_rows, validation_view = apply_validation_filters_to_rows(
+        project,
+        entity_type="controller",
+        rows=list(controllers_view["rows"]),
+        validation_category=validation_category,
+        fix_group=fix_group,
+    )
+    controllers_view["rows"] = filtered_rows
+    controllers_view["filtered_count"] = len(filtered_rows)
+    controllers_view["validation_filters"] = validation_view
     return templates.TemplateResponse(
         request=request,
         name="object_list.html",
@@ -1760,7 +2028,8 @@ async def controllers_list_page(request: Request, project_id: str):
             "project": project,
             "title": "Controllers",
             "entity_type": "controller",
-            "rows": container.project_queries.controllers_list(project_id),
+            "rows": filtered_rows,
+            "list_view": controllers_view,
         },
     )
 
@@ -1783,11 +2052,22 @@ async def project_activity_page(request: Request, project_id: str):
 
 
 @app.get("/project/{project_id}/documents", response_class=HTMLResponse)
-async def project_documents_page(request: Request, project_id: str):
+async def project_documents_page(
+    request: Request,
+    project_id: str,
+    document_type: str = "",
+    mode: str = "",
+    linked_entity_type: str = "",
+):
     project = get_project(project_id)
     documents_view = timed_page_context(
         f"project_documents:{project_id}",
-        lambda: container.project_queries.documents_view(project_id),
+        lambda: container.project_queries.documents_view(
+            project_id,
+            document_type=document_type,
+            mode=mode,
+            linked_entity_type=linked_entity_type,
+        ),
     )
     if documents_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -1835,11 +2115,24 @@ async def project_document_download(project_id: str, document_id: int):
 
 
 @app.get("/project/{project_id}/knowledge", response_class=HTMLResponse)
-async def project_knowledge_page(request: Request, project_id: str, q: str = ""):
+async def project_knowledge_page(
+    request: Request,
+    project_id: str,
+    q: str = "",
+    source_type: str = "",
+    linked_entity_type: str = "",
+    status: str = "",
+):
     project = get_project(project_id)
     knowledge_view = timed_page_context(
         f"project_knowledge:{project_id}",
-        lambda: container.project_queries.search_knowledge(project_id, q),
+        lambda: container.project_queries.search_knowledge(
+            project_id,
+            q,
+            source_type=source_type,
+            linked_entity_type=linked_entity_type,
+            status=status,
+        ),
     )
     if knowledge_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -1977,12 +2270,14 @@ async def import_data(
         )
         container.tasks.complete_task(
             task_id,
-            result={
-                "import_result": results["equipment"],
-                "knowledge_status": knowledge_result.status,
-                "chunk_count": knowledge_result.chunk_count,
-                "artifact_diff": artifact_diff,
-            },
+            result=build_ingestion_result_envelope(
+                task_type="equipment_import",
+                source_name=stored_upload.source_document.name,
+                parser_name="csv_equipment_import",
+                knowledge_result=knowledge_result,
+                import_result=results["equipment"],
+                artifact_diff=artifact_diff,
+            ),
         )
 
     if points_file and getattr(points_file, "filename", None):
@@ -2022,12 +2317,14 @@ async def import_data(
         )
         container.tasks.complete_task(
             task_id,
-            result={
-                "import_result": results["points"],
-                "knowledge_status": knowledge_result.status,
-                "chunk_count": knowledge_result.chunk_count,
-                "artifact_diff": artifact_diff,
-            },
+            result=build_ingestion_result_envelope(
+                task_type="points_import",
+                source_name=stored_upload.source_document.name,
+                parser_name="csv_points_import",
+                knowledge_result=knowledge_result,
+                import_result=results["points"],
+                artifact_diff=artifact_diff,
+            ),
         )
 
     if controllers_file and getattr(controllers_file, "filename", None):
@@ -2067,12 +2364,14 @@ async def import_data(
         )
         container.tasks.complete_task(
             task_id,
-            result={
-                "import_result": results["controllers"],
-                "knowledge_status": knowledge_result.status,
-                "chunk_count": knowledge_result.chunk_count,
-                "artifact_diff": artifact_diff,
-            },
+            result=build_ingestion_result_envelope(
+                task_type="controllers_import",
+                source_name=stored_upload.source_document.name,
+                parser_name="csv_controllers_import",
+                knowledge_result=knowledge_result,
+                import_result=results["controllers"],
+                artifact_diff=artifact_diff,
+            ),
         )
 
     normalized_supporting_files = supporting_files if isinstance(supporting_files, list) else []
@@ -2097,10 +2396,12 @@ async def import_data(
             source_type=stored_upload.document_type,
             metadata={**stored_upload.metadata, "category": stored_upload.category},
         )
-        task_result = {
-            "knowledge_status": knowledge_result.status,
-            "chunk_count": knowledge_result.chunk_count,
-        }
+        task_result = build_ingestion_result_envelope(
+            task_type="artifact_ingestion",
+            source_name=stored_upload.source_document.name,
+            parser_name="knowledge_ingestion",
+            knowledge_result=knowledge_result,
+        )
         if container.parsers.can_parse(stored_upload.path):
             container.tasks.mark_status(task_id, status="parsing", detail={"parser": "niagara"})
             parser_result = container.parsers.parse(project=project, file_path=stored_upload.path)
@@ -2119,7 +2420,14 @@ async def import_data(
                 "details": parser_result.details,
                 "artifact_diff": artifact_diff,
             }
-            task_result["parser_result"] = results[stored_upload.source_document.name]
+            task_result = build_ingestion_result_envelope(
+                task_type="artifact_ingestion",
+                source_name=stored_upload.source_document.name,
+                parser_name=parser_result.parser_name,
+                knowledge_result=knowledge_result,
+                parser_result=results[stored_upload.source_document.name],
+                artifact_diff=artifact_diff,
+            )
         container.tasks.complete_task(task_id, result=task_result)
 
     save_project(project)
@@ -2864,17 +3172,17 @@ async def api_project_status(project_id: str):
 
 @app.get("/api/project/{project_id}/equipment")
 async def api_equipment_list(project_id: str):
-    return container.project_queries.equipment_list(project_id)
+    return container.project_queries.equipment_list(project_id)["rows"]
 
 
 @app.get("/api/project/{project_id}/points")
 async def api_points_list(project_id: str):
-    return container.project_queries.points_list(project_id)
+    return container.project_queries.points_list(project_id)["rows"]
 
 
 @app.get("/api/project/{project_id}/controllers")
 async def api_controllers_list(project_id: str):
-    return container.project_queries.controllers_list(project_id)
+    return container.project_queries.controllers_list(project_id)["rows"]
 
 
 @app.get("/api/project/{project_id}/knowledge/search")
@@ -2886,7 +3194,9 @@ async def api_project_knowledge_search(project_id: str, q: str = ""):
         "project_id": result["project_id"],
         "project_name": result["project_name"],
         "query": result["query"],
+        "query_terms": result.get("query_terms", []),
         "result_count": result["result_count"],
+        "source_hits": result.get("source_hits", []),
         "results": result["results"],
     }
 

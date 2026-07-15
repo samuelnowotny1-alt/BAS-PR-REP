@@ -15,16 +15,60 @@
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Knowledge Search</h2>
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Search indexed manuals, sequences, schedules, and imported engineering references.</p>
             </div>
-            <form method="get" action="/project/{{ project.metadata.project_id }}/knowledge" class="flex w-full max-w-3xl gap-3">
+            <form method="get" action="/project/{{ project.metadata.project_id }}/knowledge" class="grid w-full gap-3 xl:max-w-5xl md:grid-cols-2 xl:grid-cols-4">
                 <input
                     type="text"
                     name="q"
                     value="{{ knowledge_view.query }}"
                     placeholder="Search sequences, equipment, alarms, control modes..."
-                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                    class="xl:col-span-4 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 shadow-sm focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
                 >
-                <button type="submit" class="rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-600">Search</button>
+                <select name="source_type" class="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    <option value="">All source types</option>
+                    {% for option in knowledge_view.filter_options.source_types %}
+                    <option value="{{ option }}" {% if knowledge_view.filters.source_type == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <select name="linked_entity_type" class="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    <option value="">All linked object types</option>
+                    {% for option in knowledge_view.filter_options.linked_entity_types %}
+                    <option value="{{ option }}" {% if knowledge_view.filters.linked_entity_type == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <select name="status" class="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    <option value="">All statuses</option>
+                    {% for option in knowledge_view.filter_options.statuses %}
+                    <option value="{{ option }}" {% if knowledge_view.filters.status == option %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <div class="flex gap-3">
+                    <button type="submit" class="rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-white hover:bg-orange-600">Search</button>
+                    <a href="/project/{{ project.metadata.project_id }}/knowledge" class="rounded-xl border border-gray-300 px-5 py-3 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:text-gray-200">Reset</a>
+                </div>
             </form>
+        </div>
+
+        <div class="mt-5 grid gap-3 md:grid-cols-4">
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/60">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Knowledge Records</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ knowledge_view.record_count }}</p>
+            </div>
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-900/40 dark:bg-emerald-900/20">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Indexed</p>
+                <p class="mt-2 text-2xl font-bold text-emerald-900 dark:text-emerald-100">{{ knowledge_view.indexed_record_count }}</p>
+            </div>
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/60">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Documents</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ knowledge_view.document_count }}</p>
+            </div>
+            <div class="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-4 dark:border-orange-900/40 dark:bg-orange-900/20">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-orange-700 dark:text-orange-300">Query Terms</p>
+                <p class="mt-2 text-2xl font-bold text-orange-900 dark:text-orange-100">{{ knowledge_view.query_terms|length if knowledge_view.query_terms else 0 }}</p>
+            </div>
+        </div>
+        <div class="mt-3 text-sm text-gray-500 dark:text-gray-400">
+            Showing {{ knowledge_view.result_count if knowledge_view.query else knowledge_view.record_count }} {% if knowledge_view.query %}matches{% else %}records{% endif %} with
+            {{ (1 if knowledge_view.filters.source_type else 0) + (1 if knowledge_view.filters.linked_entity_type else 0) + (1 if knowledge_view.filters.status else 0) }} active filters.
         </div>
 
         {% if knowledge_view.query %}
@@ -33,6 +77,33 @@
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Results</h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ knowledge_view.result_count }} matches</p>
             </div>
+            {% if knowledge_view.source_hits %}
+            <div class="mt-4 grid gap-3 lg:grid-cols-3">
+                {% for source in knowledge_view.source_hits %}
+                <div class="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900/60">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            {% if source.document_detail_url %}
+                            <a href="{{ source.document_detail_url }}" class="text-sm font-semibold text-gray-900 hover:text-orange-600 dark:text-white dark:hover:text-orange-300">{{ source.source_name }}</a>
+                            {% else %}
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ source.source_name }}</p>
+                            {% endif %}
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ source.source_type }}</p>
+                        </div>
+                        <span class="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ source.match_count }} hits</span>
+                    </div>
+                    <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">Best score {{ '%.1f'|format(source.best_score) }}{% if source.exact_match_count %} · {{ source.exact_match_count }} exact phrase{% endif %}</p>
+                    {% if source.linked_objects %}
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        {% for linked in source.linked_objects[:4] %}
+                        <a href="{{ linked.object_url }}" class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300">{{ linked.entity_type }} · {{ linked.entity_key }}</a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
             <div class="mt-4 space-y-3">
                 {% for result in knowledge_view.results %}
                 <article class="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
@@ -57,6 +128,13 @@
                     <div class="mt-3 flex flex-wrap gap-2">
                         {% for term in result.matched_terms %}
                         <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ term }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if result.linked_objects %}
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        {% for linked in result.linked_objects[:5] %}
+                        <a href="{{ linked.object_url }}" class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300">{{ linked.entity_type }} · {{ linked.entity_key }}</a>
                         {% endfor %}
                     </div>
                     {% endif %}

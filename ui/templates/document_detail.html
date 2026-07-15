@@ -52,6 +52,16 @@
                 {% endfor %}
             </div>
             {% endif %}
+            {% if detail.linked_object_summary %}
+            <div class="mt-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Structured Coverage</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for linked in detail.linked_object_summary %}
+                    <a href="{{ linked.object_url }}" class="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300">{{ linked.entity_type }} · {{ linked.entity_key }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -61,7 +71,7 @@
             {% for link in detail.linked_objects %}
             <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
                 <div class="flex items-center justify-between gap-3">
-                    <a href="/project/{{ project.metadata.project_id }}/{{ link.entity_type }}s/{{ link.entity_key }}" class="text-sm font-semibold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-300">{{ link.entity_type }} · {{ link.entity_key }}</a>
+                    <a href="{{ link.object_url }}" class="text-sm font-semibold text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-300">{{ link.entity_type }} · {{ link.entity_key }}</a>
                     <span class="text-[11px] uppercase tracking-[0.18em] text-gray-400">{{ link.relationship_type }}</span>
                 </div>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ link.parser_name or 'unknown_parser' }}</p>

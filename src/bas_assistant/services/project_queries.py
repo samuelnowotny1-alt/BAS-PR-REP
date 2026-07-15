@@ -217,6 +217,11 @@ class ProjectQueryService:
                 tasks=tasks,
                 artifact_link_count=int(artifact_link_count),
             ),
+            "object_health": self._build_object_health_summary(
+                equipment_records=equipment_records,
+                point_records=point_records,
+                controller_records=controller_records,
+            ),
             "memberships": [
                 {
                     "username": username,
@@ -247,9 +252,14 @@ class ProjectQueryService:
                     .order_by(PointRecord.point_name)
                 )
             )
-            artifact_links = self._artifact_links_for_entity(session, project.id, "equipment", equipment_id)
+            artifact_links = self._artifact_links_for_entity(session, project.id, project_id, "equipment", equipment_id)
         payload = dict(record.payload_json or {})
         review = self._build_equipment_review(payload, linked_points_count=len(point_records))
+        related_entities = []
+        if payload.get("controller_id"):
+            related_entities.append({"entity_type": "controller", "entity_key": payload["controller_id"]})
+        if record.parent_equipment_key:
+            related_entities.append({"entity_type": "equipment", "entity_key": record.parent_equipment_key})
         return {
             "entity_type": "equipment",
             "project_id": project_id,
@@ -258,7 +268,10 @@ class ProjectQueryService:
             "payload": payload,
             "linked_points": [point.point_name for point in point_records],
             "artifact_links": artifact_links,
+            "related_entities": related_entities,
             "review": review,
+            "completeness": self._build_completeness_summary(payload, self._equipment_missing_fields(payload, linked_points_count=len(point_records))),
+            "provenance_summary": self._build_provenance_summary(payload, artifact_links),
         }
 
     def point_detail(self, project_id: str, point_name: str) -> dict[str, object] | None:
@@ -275,7 +288,7 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
-            artifact_links = self._artifact_links_for_entity(session, project.id, "point", point_name)
+            artifact_links = self._artifact_links_for_entity(session, project.id, project_id, "point", point_name)
         payload = dict(record.payload_json or {})
         related = []
         if payload.get("equipment_id"):
@@ -293,6 +306,8 @@ class ProjectQueryService:
             "artifact_links": artifact_links,
             "related_entities": related,
             "review": review,
+            "completeness": self._build_completeness_summary(payload, self._point_missing_fields(payload)),
+            "provenance_summary": self._build_provenance_summary(payload, artifact_links),
         }
 
     def controller_detail(self, project_id: str, controller_id: str) -> dict[str, object] | None:
@@ -309,7 +324,7 @@ class ProjectQueryService:
             )
             if record is None:
                 return None
-            artifact_links = self._artifact_links_for_entity(session, project.id, "controller", controller_id)
+            artifact_links = self._artifact_links_for_entity(session, project.id, project_id, "controller", controller_id)
         payload = dict(record.payload_json or {})
         related = [
             {"entity_type": "equipment", "entity_key": equipment_id}
@@ -326,6 +341,8 @@ class ProjectQueryService:
             "artifact_links": artifact_links,
             "related_entities": related,
             "review": review,
+            "completeness": self._build_completeness_summary(payload, self._controller_missing_fields(payload)),
+            "provenance_summary": self._build_provenance_summary(payload, artifact_links),
         }
 
     def activity_view(self, project_id: str) -> dict[str, object] | None:
@@ -450,8 +467,18 @@ class ProjectQueryService:
             ],
         }
 
-    def documents_view(self, project_id: str) -> dict[str, object] | None:
+    def documents_view(
+        self,
+        project_id: str,
+        *,
+        document_type: str = "",
+        mode: str = "",
+        linked_entity_type: str = "",
+    ) -> dict[str, object] | None:
         """Return document library data for a project."""
+        normalized_document_type = document_type.strip()
+        normalized_mode = mode.strip().lower()
+        normalized_linked_entity_type = linked_entity_type.strip().lower()
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
@@ -467,33 +494,60 @@ class ProjectQueryService:
                 session.execute(
                     select(
                         ArtifactObjectLinkRecord.document_id,
+                        ArtifactObjectLinkRecord.entity_type,
                         func.count(),
                     )
                     .where(ArtifactObjectLinkRecord.project_id == project.id)
-                    .group_by(ArtifactObjectLinkRecord.document_id)
+                    .group_by(ArtifactObjectLinkRecord.document_id, ArtifactObjectLinkRecord.entity_type)
                 )
             )
-        link_counts = {document_id: int(count) for document_id, count in links}
+        link_counts: dict[int, int] = defaultdict(int)
+        link_entity_types: dict[int, set[str]] = defaultdict(set)
+        for document_id, entity_type, count in links:
+            link_counts[int(document_id)] += int(count)
+            if entity_type:
+                link_entity_types[int(document_id)].add(str(entity_type))
         rows = []
         for document in documents:
             metadata = dict(document.metadata_json or {})
-            rows.append(
-                {
-                    "id": document.id,
-                    "name": document.name,
-                    "document_type": document.document_type,
-                    "created_at": document.created_at,
-                    "file_path": document.file_path,
-                    "linked_object_count": link_counts.get(document.id, 0),
-                    "is_generated": document.document_type.startswith("generated_"),
-                    "category": metadata.get("category", ""),
-                    "metadata": metadata,
-                }
-            )
+            row = {
+                "id": document.id,
+                "name": document.name,
+                "document_type": document.document_type,
+                "created_at": document.created_at,
+                "file_path": document.file_path,
+                "linked_object_count": link_counts.get(document.id, 0),
+                "linked_entity_types": sorted(link_entity_types.get(document.id, set())),
+                "is_generated": document.document_type.startswith("generated_"),
+                "category": metadata.get("category", ""),
+                "metadata": metadata,
+                "mode": "generated" if document.document_type.startswith("generated_") else "uploaded",
+            }
+            if normalized_document_type and row["document_type"] != normalized_document_type:
+                continue
+            if normalized_mode and row["mode"] != normalized_mode:
+                continue
+            if normalized_linked_entity_type and normalized_linked_entity_type not in row["linked_entity_types"]:
+                continue
+            rows.append(row)
+        all_document_types = sorted({document.document_type for document in documents})
+        all_linked_entity_types = sorted({entity_type for entity_types in link_entity_types.values() for entity_type in entity_types})
         return {
             "project_id": project.project_id,
             "project_name": project.name,
             "documents": rows,
+            "filters": {
+                "document_type": normalized_document_type,
+                "mode": normalized_mode,
+                "linked_entity_type": normalized_linked_entity_type,
+            },
+            "filter_options": {
+                "document_types": all_document_types,
+                "modes": ["uploaded", "generated"],
+                "linked_entity_types": all_linked_entity_types,
+            },
+            "total_count": len(documents),
+            "filtered_count": len(rows),
         }
 
     def document_detail(self, project_id: str, document_id: int) -> dict[str, object] | None:
@@ -544,9 +598,21 @@ class ProjectQueryService:
                     "relationship_type": relationship_type,
                     "parser_name": parser_name,
                     "metadata": dict(metadata_json or {}),
+                    "object_url": self._entity_url(project.project_id, entity_type, entity_key),
                 }
                 for entity_type, entity_key, relationship_type, parser_name, metadata_json in links
             ],
+            "linked_object_summary": self._summarize_linked_objects(
+                project.project_id,
+                [
+                    {
+                        "entity_type": entity_type,
+                        "entity_key": entity_key,
+                        "relationship_type": relationship_type,
+                    }
+                    for entity_type, entity_key, relationship_type, _parser_name, _metadata_json in links
+                ],
+            ),
             "knowledge": {
                 "status": knowledge.status if knowledge is not None else "not_ingested",
                 "chunk_count": knowledge.chunk_count if knowledge is not None else 0,
@@ -588,9 +654,21 @@ class ProjectQueryService:
             "records": [self._knowledge_row(record) for record in records],
         }
 
-    def search_knowledge(self, project_id: str, query: str, *, limit: int = 12) -> dict[str, object] | None:
+    def search_knowledge(
+        self,
+        project_id: str,
+        query: str,
+        *,
+        limit: int = 12,
+        source_type: str = "",
+        linked_entity_type: str = "",
+        status: str = "",
+    ) -> dict[str, object] | None:
         """Return deterministic chunk search results for project knowledge."""
         normalized_query = query.strip()
+        normalized_source_type = source_type.strip()
+        normalized_linked_entity_type = linked_entity_type.strip().lower()
+        normalized_status = status.strip().lower()
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
@@ -609,10 +687,75 @@ class ProjectQueryService:
                     .order_by(DocumentRecord.created_at.desc(), DocumentRecord.name)
                 )
             )
+            document_links = list(
+                session.execute(
+                    select(
+                        ArtifactObjectLinkRecord.document_id,
+                        ArtifactObjectLinkRecord.entity_type,
+                        ArtifactObjectLinkRecord.entity_key,
+                        ArtifactObjectLinkRecord.relationship_type,
+                    )
+                    .join(DocumentRecord, ArtifactObjectLinkRecord.document_id == DocumentRecord.id)
+                    .where(DocumentRecord.project_id == project.id)
+                )
+            )
+        document_links_by_id: dict[int, list[dict[str, object]]] = defaultdict(list)
+        for document_id, entity_type, entity_key, relationship_type in document_links:
+            document_links_by_id[int(document_id)].append(
+                {
+                    "entity_type": entity_type,
+                    "entity_key": entity_key,
+                    "relationship_type": relationship_type,
+                }
+            )
+        documents_by_key = {
+            (document.name, document.document_type): document
+            for document in documents
+        }
+        filtered_records = []
+        for record in records:
+            if normalized_source_type and record.source_type != normalized_source_type:
+                continue
+            if normalized_status and str(record.status).lower() != normalized_status:
+                continue
+            document = documents_by_key.get((record.source_name, record.source_type))
+            linked_objects = self._summarize_linked_objects(
+                project.project_id,
+                document_links_by_id.get(document.id if document is not None else -1, []),
+            )
+            if normalized_linked_entity_type and not any(
+                str(item.get("entity_type", "")).lower() == normalized_linked_entity_type for item in linked_objects
+            ):
+                continue
+            filtered_records.append(record)
+        source_type_options = sorted({record.source_type for record in records})
+        linked_entity_type_options = sorted(
+            {
+                str(item.get("entity_type"))
+                for items in document_links_by_id.values()
+                for item in items
+                if item.get("entity_type")
+            }
+        )
+        status_options = sorted({record.status for record in records})
         knowledge_view = {
             "project_id": project.project_id,
             "project_name": project.name,
-            "records": [self._knowledge_row(record) for record in records],
+            "records": [self._knowledge_row(record) for record in filtered_records],
+            "indexed_record_count": sum(1 for record in filtered_records if record.status == "indexed"),
+            "record_count": len(filtered_records),
+            "document_count": len(documents),
+            "filters": {
+                "source_type": normalized_source_type,
+                "linked_entity_type": normalized_linked_entity_type,
+                "status": normalized_status,
+            },
+            "filter_options": {
+                "source_types": source_type_options,
+                "linked_entity_types": linked_entity_type_options,
+                "statuses": status_options,
+            },
+            "total_record_count": len(records),
         }
         if not normalized_query:
             return {
@@ -620,6 +763,8 @@ class ProjectQueryService:
                 "query": "",
                 "results": [],
                 "result_count": 0,
+                "source_hits": [],
+                "query_terms": [],
             }
 
         query_terms = self._tokenize_search_query(normalized_query)
@@ -629,17 +774,19 @@ class ProjectQueryService:
                 "query": normalized_query,
                 "results": [],
                 "result_count": 0,
+                "source_hits": [],
+                "query_terms": [],
             }
 
-        documents_by_key = {
-            (document.name, document.document_type): document
-            for document in documents
-        }
         results: list[dict[str, object]] = []
 
-        for record in records:
+        for record in filtered_records:
             metadata = dict(record.metadata_json or {})
             document = documents_by_key.get((record.source_name, record.source_type))
+            linked_objects = self._summarize_linked_objects(
+                project.project_id,
+                document_links_by_id.get(document.id if document is not None else -1, []),
+            )
             for chunk in metadata.get("chunks", []):
                 chunk_text = str(chunk.get("text") or "").strip()
                 if not chunk_text:
@@ -682,6 +829,8 @@ class ProjectQueryService:
                             if document is not None
                             else None
                         ),
+                        "linked_objects": linked_objects,
+                        "linked_object_count": sum(item["count"] for item in linked_objects),
                     }
                 )
 
@@ -694,19 +843,31 @@ class ProjectQueryService:
             )
         )
         limited = results[:limit]
+        source_hits = self._build_knowledge_source_hits(results)
         return {
             **knowledge_view,
             "query": normalized_query,
+            "query_terms": query_terms,
             "results": limited,
             "result_count": len(results),
+            "source_hits": source_hits[:6],
+            "exact_match_count": sum(1 for row in results if row["exact_phrase_match"]),
         }
 
-    def equipment_list(self, project_id: str) -> list[dict[str, object]]:
+    def equipment_list(
+        self,
+        project_id: str,
+        *,
+        status: str = "",
+        controller_state: str = "",
+        provenance_state: str = "",
+        equipment_type: str = "",
+    ) -> dict[str, object]:
         """Return structured equipment records for a project."""
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
-                return []
+                return {"rows": [], "filters": {}, "filter_options": {}, "filtered_count": 0, "total_count": 0}
             records = list(
                 session.scalars(
                     select(EquipmentRecord)
@@ -714,14 +875,44 @@ class ProjectQueryService:
                     .order_by(EquipmentRecord.equipment_key)
                 )
             )
-        return [self._equipment_row(record) for record in records]
+        rows = [self._equipment_row(record) for record in records]
+        normalized = {
+            "status": status.strip().lower(),
+            "controller_state": controller_state.strip().lower(),
+            "provenance_state": provenance_state.strip().lower(),
+            "equipment_type": equipment_type.strip(),
+        }
+        filtered = [
+            row for row in rows
+            if self._matches_object_filters(row, entity_type="equipment", filters=normalized)
+        ]
+        return {
+            "rows": filtered,
+            "filters": normalized,
+            "filter_options": {
+                "status": ["all", "complete", "attention"],
+                "controller_state": ["all", "assigned", "missing"],
+                "provenance_state": ["all", "present", "missing"],
+                "equipment_type": sorted({str(row["type"]) for row in rows if row.get("type")}),
+            },
+            "filtered_count": len(filtered),
+            "total_count": len(rows),
+        }
 
-    def points_list(self, project_id: str) -> list[dict[str, object]]:
+    def points_list(
+        self,
+        project_id: str,
+        *,
+        status: str = "",
+        controller_state: str = "",
+        provenance_state: str = "",
+        point_kind: str = "",
+    ) -> dict[str, object]:
         """Return structured point records for a project."""
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
-                return []
+                return {"rows": [], "filters": {}, "filter_options": {}, "filtered_count": 0, "total_count": 0}
             records = list(
                 session.scalars(
                     select(PointRecord)
@@ -729,14 +920,44 @@ class ProjectQueryService:
                     .order_by(PointRecord.point_name)
                 )
             )
-        return [self._point_row(record) for record in records]
+        rows = [self._point_row(record) for record in records]
+        normalized = {
+            "status": status.strip().lower(),
+            "controller_state": controller_state.strip().lower(),
+            "provenance_state": provenance_state.strip().lower(),
+            "point_kind": point_kind.strip(),
+        }
+        filtered = [
+            row for row in rows
+            if self._matches_object_filters(row, entity_type="point", filters=normalized)
+        ]
+        return {
+            "rows": filtered,
+            "filters": normalized,
+            "filter_options": {
+                "status": ["all", "complete", "attention"],
+                "controller_state": ["all", "assigned", "missing"],
+                "provenance_state": ["all", "present", "missing"],
+                "point_kind": sorted({str(row["kind"]) for row in rows if row.get("kind")}),
+            },
+            "filtered_count": len(filtered),
+            "total_count": len(rows),
+        }
 
-    def controllers_list(self, project_id: str) -> list[dict[str, object]]:
+    def controllers_list(
+        self,
+        project_id: str,
+        *,
+        status: str = "",
+        addressing_state: str = "",
+        provenance_state: str = "",
+        protocol: str = "",
+    ) -> dict[str, object]:
         """Return structured controller records for a project."""
         with self.db.session() as session:
             project = self._project_record(session, project_id)
             if project is None:
-                return []
+                return {"rows": [], "filters": {}, "filter_options": {}, "filtered_count": 0, "total_count": 0}
             records = list(
                 session.scalars(
                     select(ControllerRecord)
@@ -744,7 +965,30 @@ class ProjectQueryService:
                     .order_by(ControllerRecord.controller_key)
                 )
             )
-        return [self._controller_row(record) for record in records]
+        rows = [self._controller_row(record) for record in records]
+        normalized = {
+            "status": status.strip().lower(),
+            "addressing_state": addressing_state.strip().lower(),
+            "provenance_state": provenance_state.strip().lower(),
+            "protocol": protocol.strip(),
+        }
+        filtered = [
+            row for row in rows
+            if self._matches_object_filters(row, entity_type="controller", filters=normalized)
+        ]
+        protocols = sorted({protocol for row in rows for protocol in row.get("protocols", [])})
+        return {
+            "rows": filtered,
+            "filters": normalized,
+            "filter_options": {
+                "status": ["all", "complete", "attention"],
+                "addressing_state": ["all", "addressed", "missing"],
+                "provenance_state": ["all", "present", "missing"],
+                "protocol": protocols,
+            },
+            "filtered_count": len(filtered),
+            "total_count": len(rows),
+        }
 
     def count_project_memberships(self, project_id: str) -> int:
         """Return membership count for a project."""
@@ -819,6 +1063,7 @@ class ProjectQueryService:
             "status_history": list(result_json.get("status_history", [])),
             "artifact_diff": dict(result.get("artifact_diff") or {}),
             "generated_documents": list(result.get("generated_documents") or []),
+            "parser_summary": dict(result.get("parser_summary") or {}),
             "outcome_summary": outcome_summary,
             "warning_messages": warning_messages,
             "error_messages": error_messages,
@@ -880,6 +1125,32 @@ class ProjectQueryService:
             "exact_phrase_match": exact_phrase_match,
         }
 
+    def _build_knowledge_source_hits(self, results: list[dict[str, object]]) -> list[dict[str, object]]:
+        grouped: dict[tuple[str, str], dict[str, object]] = {}
+        for row in results:
+            key = (str(row["source_name"]), str(row["source_type"]))
+            entry = grouped.setdefault(
+                key,
+                {
+                    "source_name": row["source_name"],
+                    "source_type": row["source_type"],
+                    "match_count": 0,
+                    "best_score": float(row["score"]),
+                    "exact_match_count": 0,
+                    "document_detail_url": row.get("document_detail_url"),
+                    "linked_objects": list(row.get("linked_objects") or []),
+                    "linked_object_count": int(row.get("linked_object_count") or 0),
+                },
+            )
+            entry["match_count"] += 1
+            entry["best_score"] = max(float(entry["best_score"]), float(row["score"]))
+            if row["exact_phrase_match"]:
+                entry["exact_match_count"] += 1
+        return sorted(
+            grouped.values(),
+            key=lambda entry: (-int(entry["match_count"]), -float(entry["best_score"]), str(entry["source_name"]).lower()),
+        )
+
     def _build_knowledge_excerpt(self, chunk_text: str, query_terms: list[str], *, width: int = 220) -> str:
         lowered_chunk = chunk_text.lower()
         start = 0
@@ -927,6 +1198,109 @@ class ProjectQueryService:
         ]
         return self._finalize_review(checks, payload)
 
+    def _equipment_missing_fields(self, payload: dict[str, object], *, linked_points_count: int) -> list[str]:
+        missing = []
+        if not payload.get("controller_id"):
+            missing.append("controller_id")
+        if not (payload.get("building") or payload.get("floor") or payload.get("room")):
+            missing.append("location_context")
+        if not payload.get("served_area"):
+            missing.append("served_area")
+        if linked_points_count == 0:
+            missing.append("linked_points")
+        if not (payload.get("provenance") or {}).get("source_name"):
+            missing.append("provenance.source_name")
+        return missing
+
+    def _point_missing_fields(self, payload: dict[str, object]) -> list[str]:
+        missing = []
+        if not payload.get("equipment_id"):
+            missing.append("equipment_id")
+        if not payload.get("controller_id"):
+            missing.append("controller_id")
+        if not payload.get("units"):
+            missing.append("units")
+        if not (payload.get("bacnet_object_type") or payload.get("modbus_register")):
+            missing.append("protocol_mapping")
+        if not (payload.get("provenance") or {}).get("source_name"):
+            missing.append("provenance.source_name")
+        return missing
+
+    def _controller_missing_fields(self, payload: dict[str, object]) -> list[str]:
+        missing = []
+        if not payload.get("protocols"):
+            missing.append("protocols")
+        if not payload.get("network_addresses"):
+            missing.append("network_addresses")
+        if not payload.get("serves_equipment_ids"):
+            missing.append("serves_equipment_ids")
+        if not payload.get("owned_point_names"):
+            missing.append("owned_point_names")
+        if not (payload.get("provenance") or {}).get("source_name"):
+            missing.append("provenance.source_name")
+        return missing
+
+    def _build_completeness_summary(self, payload: dict[str, object], missing_fields: list[str]) -> dict[str, object]:
+        total_keys = len(payload)
+        populated_keys = sum(1 for value in payload.values() if value not in (None, "", [], {}))
+        score_pct = int(round((populated_keys / total_keys) * 100)) if total_keys else 0
+        return {
+            "score_pct": score_pct,
+            "populated_field_count": populated_keys,
+            "total_field_count": total_keys,
+            "missing_fields": missing_fields,
+            "missing_count": len(missing_fields),
+        }
+
+    def _build_provenance_summary(
+        self,
+        payload: dict[str, object],
+        artifact_links: list[dict[str, object]],
+    ) -> dict[str, object]:
+        provenance = dict(payload.get("provenance") or {})
+        parser_names = {str(name) for name in [provenance.get("parser")] if name}
+        source_names = {str(name) for name in [provenance.get("source_name")] if name}
+        relationship_counts: dict[str, int] = defaultdict(int)
+        for link in artifact_links:
+            if link.get("parser_name"):
+                parser_names.add(str(link["parser_name"]))
+            if link.get("document_name"):
+                source_names.add(str(link["document_name"]))
+            relationship_counts[str(link.get("relationship_type") or "source")] += 1
+        return {
+            "parser_names": sorted(parser_names),
+            "source_names": sorted(source_names),
+            "relationship_counts": dict(sorted(relationship_counts.items())),
+            "artifact_link_count": len(artifact_links),
+            "source_document_count": len({link.get("document_name") for link in artifact_links if link.get("document_name")}),
+        }
+
+    def _entity_url(self, project_id: str, entity_type: str, entity_key: str) -> str:
+        plural = "equipment" if entity_type == "equipment" else ("points" if entity_type == "point" else "controllers")
+        return f"/project/{project_id}/{plural}/{entity_key}"
+
+    def _summarize_linked_objects(
+        self,
+        project_id: str,
+        linked_objects: list[dict[str, object]],
+    ) -> list[dict[str, object]]:
+        grouped: dict[tuple[str, str], dict[str, object]] = {}
+        for item in linked_objects:
+            entity_type = str(item.get("entity_type") or "")
+            entity_key = str(item.get("entity_key") or "")
+            if not entity_type or not entity_key:
+                continue
+            key = (entity_type, entity_key)
+            if key not in grouped:
+                grouped[key] = {
+                    "entity_type": entity_type,
+                    "entity_key": entity_key,
+                    "count": 0,
+                    "object_url": self._entity_url(project_id, entity_type, entity_key),
+                }
+            grouped[key]["count"] += 1
+        return sorted(grouped.values(), key=lambda item: (str(item["entity_type"]), str(item["entity_key"])))
+
     def _review_check(self, label: str, passed: bool, detail: object) -> dict[str, object]:
         return {
             "label": label,
@@ -949,6 +1323,7 @@ class ProjectQueryService:
             "score_pct": score_pct,
             "ready_count": ready_count,
             "total_checks": total,
+            "attention_count": total - ready_count,
             "provenance": self._format_provenance(payload),
             "checks": checks,
         }
@@ -1044,6 +1419,34 @@ class ProjectQueryService:
             "artifact_link_count": artifact_link_count,
         }
 
+    def _build_object_health_summary(
+        self,
+        *,
+        equipment_records: list[EquipmentRecord],
+        point_records: list[PointRecord],
+        controller_records: list[ControllerRecord],
+    ) -> dict[str, dict[str, int]]:
+        equipment_rows = [self._equipment_row(record) for record in equipment_records]
+        point_rows = [self._point_row(record) for record in point_records]
+        controller_rows = [self._controller_row(record) for record in controller_records]
+        return {
+            "equipment": {
+                "attention": sum(1 for row in equipment_rows if row["readiness"] == "attention"),
+                "missing_controller": sum(1 for row in equipment_rows if not row.get("controller")),
+                "missing_provenance": sum(1 for row in equipment_rows if not row.get("provenance_present")),
+            },
+            "points": {
+                "attention": sum(1 for row in point_rows if row["readiness"] == "attention"),
+                "missing_controller": sum(1 for row in point_rows if not row.get("controller")),
+                "missing_provenance": sum(1 for row in point_rows if not row.get("provenance_present")),
+            },
+            "controllers": {
+                "attention": sum(1 for row in controller_rows if row["readiness"] == "attention"),
+                "missing_addressing": sum(1 for row in controller_rows if not row.get("addresses")),
+                "missing_provenance": sum(1 for row in controller_rows if not row.get("provenance_present")),
+            },
+        }
+
     def _project_status_check(self, label: str, passed: bool, detail: str) -> dict[str, object]:
         return {"label": label, "status": "ready" if passed else "attention", "detail": detail}
 
@@ -1052,10 +1455,50 @@ class ProjectQueryService:
             return f"0 of 0 {noun}"
         return f"{complete} of {total} {noun}"
 
+    def _matches_object_filters(self, row: dict[str, object], *, entity_type: str, filters: dict[str, str]) -> bool:
+        status_filter = filters.get("status", "")
+        if status_filter and status_filter != "all" and str(row.get("readiness")) != status_filter:
+            return False
+        provenance_filter = filters.get("provenance_state", "")
+        if provenance_filter == "present" and not row.get("provenance_present"):
+            return False
+        if provenance_filter == "missing" and row.get("provenance_present"):
+            return False
+        if entity_type == "equipment":
+            controller_state = filters.get("controller_state", "")
+            if controller_state == "assigned" and not row.get("controller"):
+                return False
+            if controller_state == "missing" and row.get("controller"):
+                return False
+            equipment_type = filters.get("equipment_type", "")
+            if equipment_type and str(row.get("type")) != equipment_type:
+                return False
+        elif entity_type == "point":
+            controller_state = filters.get("controller_state", "")
+            if controller_state == "assigned" and not row.get("controller"):
+                return False
+            if controller_state == "missing" and row.get("controller"):
+                return False
+            point_kind = filters.get("point_kind", "")
+            if point_kind and str(row.get("kind")) != point_kind:
+                return False
+        else:
+            addressing_state = filters.get("addressing_state", "")
+            has_addresses = bool(row.get("addresses"))
+            if addressing_state == "addressed" and not has_addresses:
+                return False
+            if addressing_state == "missing" and has_addresses:
+                return False
+            protocol = filters.get("protocol", "")
+            if protocol and protocol not in list(row.get("protocols") or []):
+                return False
+        return True
+
     def _build_import_activity(self, tasks: list[TaskRecord]) -> dict[str, object]:
         relevant_types = {"equipment_import", "points_import", "controllers_import", "artifact_ingestion"}
         import_tasks = [task for task in tasks if task.task_type in relevant_types]
         warning_items: list[dict[str, object]] = []
+        task_summaries: list[dict[str, object]] = []
         completed_imports = 0
 
         for task in import_tasks:
@@ -1069,9 +1512,20 @@ class ProjectQueryService:
             import_warnings = list(import_result.get("warnings") or [])
             import_errors = list(import_result.get("errors") or [])
             parser_warnings = list(parser_result.get("warnings") or [])
+            parser_summary = dict(result.get("parser_summary") or {})
 
             if task.status == "completed":
                 completed_imports += 1
+
+            task_summaries.append(
+                {
+                    "task_type": task.task_type,
+                    "filename": filename,
+                    "status": task.status,
+                    "updated_at": task.updated_at,
+                    "parser_summary": parser_summary,
+                }
+            )
 
             for warning in import_warnings + parser_warnings:
                 warning_items.append(
@@ -1100,6 +1554,7 @@ class ProjectQueryService:
             "warning_count": sum(1 for item in warning_items if item.get("severity") != "error"),
             "error_count": sum(1 for item in warning_items if item.get("severity") == "error"),
             "items": warning_items[:8],
+            "task_summaries": sorted(task_summaries, key=lambda item: item["updated_at"], reverse=True)[:6],
         }
 
     def _task_outcome_summary(
@@ -1113,6 +1568,7 @@ class ProjectQueryService:
         filename = str(payload.get("filename") or "")
         metrics: list[dict[str, object]] = []
         summary_text = filename or task_type
+        parser_summary = dict(result.get("parser_summary") or {})
 
         if import_result:
             count = import_result.get("count")
@@ -1120,12 +1576,19 @@ class ProjectQueryService:
             metrics.append({"label": "Imported", "value": count if count not in (None, "") else "-"})
             metrics.append({"label": "Warnings", "value": len(import_result.get("warnings") or [])})
             metrics.append({"label": "Errors", "value": len(import_result.get("errors") or [])})
+            if parser_summary:
+                metrics.append({"label": "Links+", "value": parser_summary.get("added_count", 0)})
+                metrics.append({"label": "Links=", "value": parser_summary.get("unchanged_count", 0)})
         elif parser_result:
             summary_text = filename or "Parsed supporting artifact"
             metrics.append({"label": "Equipment", "value": parser_result.get("equipment_added", 0)})
             metrics.append({"label": "Points", "value": parser_result.get("points_added", 0)})
             metrics.append({"label": "Controllers", "value": parser_result.get("controllers_added", 0)})
             metrics.append({"label": "Warnings", "value": len(parser_result.get("warnings") or [])})
+            if parser_summary:
+                summary_text = str(parser_summary.get("summary_text") or summary_text)
+                metrics.append({"label": "Links+", "value": parser_summary.get("added_count", 0)})
+                metrics.append({"label": "Links-", "value": parser_summary.get("removed_count", 0)})
         elif result.get("generated_documents"):
             summary_text = f"{len(result.get('generated_documents') or [])} generated documents"
             metrics.append({"label": "Generated", "value": len(result.get("generated_documents") or [])})
@@ -1147,18 +1610,20 @@ class ProjectQueryService:
             project = self._project_record(session, project_id)
             if project is None:
                 return []
-            return self._artifact_links_for_entity(session, project.id, entity_type, entity_key)
+            return self._artifact_links_for_entity(session, project.id, project_id, entity_type, entity_key)
 
     def _artifact_links_for_entity(
         self,
         session,
         project_db_id: int,
+        project_id: str,
         entity_type: str,
         entity_key: str,
     ) -> list[dict[str, object]]:
         rows = list(
             session.execute(
                 select(
+                    DocumentRecord.id,
                     ArtifactObjectLinkRecord.parser_name,
                     ArtifactObjectLinkRecord.relationship_type,
                     ArtifactObjectLinkRecord.metadata_json,
@@ -1181,8 +1646,9 @@ class ProjectQueryService:
                 "metadata": dict(metadata_json or {}),
                 "document_name": document_name,
                 "document_type": document_type,
+                "document_detail_url": f"/project/{project_id}/documents/{document_id}",
             }
-            for parser_name, relationship_type, metadata_json, document_name, document_type in rows
+            for document_id, parser_name, relationship_type, metadata_json, document_name, document_type in rows
         ]
 
     def _project_record(self, session, project_id: str) -> ProjectRecord | None:
@@ -1203,6 +1669,7 @@ class ProjectQueryService:
 
     def _equipment_row(self, record: EquipmentRecord) -> dict[str, object]:
         payload = dict(record.payload_json or {})
+        missing_fields = self._equipment_missing_fields(payload, linked_points_count=len(payload.get("point_names", [])))
         return {
             "id": record.equipment_key,
             "type": record.equipment_type,
@@ -1211,10 +1678,13 @@ class ProjectQueryService:
             "status": record.status,
             "parent": record.parent_equipment_key,
             "source_name": (payload.get("provenance") or {}).get("source_name"),
+            "readiness": "complete" if not missing_fields else "attention",
+            "provenance_present": bool((payload.get("provenance") or {}).get("source_name")),
         }
 
     def _point_row(self, record: PointRecord) -> dict[str, object]:
         payload = dict(record.payload_json or {})
+        missing_fields = self._point_missing_fields(payload)
         return {
             "name": record.point_name,
             "equipment": record.equipment_key,
@@ -1222,10 +1692,13 @@ class ProjectQueryService:
             "units": record.units,
             "controller": record.controller_key,
             "source_name": (payload.get("provenance") or {}).get("source_name"),
+            "readiness": "complete" if not missing_fields else "attention",
+            "provenance_present": bool((payload.get("provenance") or {}).get("source_name")),
         }
 
     def _controller_row(self, record: ControllerRecord) -> dict[str, object]:
         payload = dict(record.payload_json or {})
+        missing_fields = self._controller_missing_fields(payload)
         return {
             "id": record.controller_key,
             "type": record.controller_type,
@@ -1237,6 +1710,8 @@ class ProjectQueryService:
             "equipment": len(payload.get("serves_equipment_ids", [])),
             "points": len(payload.get("owned_point_names", [])),
             "source_name": (payload.get("provenance") or {}).get("source_name"),
+            "readiness": "complete" if not missing_fields else "attention",
+            "provenance_present": bool((payload.get("provenance") or {}).get("source_name")),
         }
 
     def _knowledge_row(self, record: KnowledgeRecord) -> dict[str, object]:

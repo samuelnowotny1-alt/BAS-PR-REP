@@ -58,6 +58,83 @@
         </div>
     </div>
 
+    {% if project_view.object_health %}
+    <div class="mb-8 grid gap-4 xl:grid-cols-3">
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Equipment Review</p>
+                    <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.object_health.equipment.attention }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">equipment need attention</p>
+                </div>
+                <a href="/project/{{ project_view.project_id }}/equipment?status=attention" class="text-xs font-semibold text-blue-700 dark:text-blue-300">Open filtered list</a>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="/project/{{ project_view.project_id }}/equipment?controller_state=missing" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">{{ project_view.object_health.equipment.missing_controller }} missing controller</a>
+                <a href="/project/{{ project_view.project_id }}/equipment?provenance_state=missing" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{{ project_view.object_health.equipment.missing_provenance }} missing provenance</a>
+            </div>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Point Review</p>
+                    <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.object_health.points.attention }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">points need attention</p>
+                </div>
+                <a href="/project/{{ project_view.project_id }}/points?status=attention" class="text-xs font-semibold text-blue-700 dark:text-blue-300">Open filtered list</a>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="/project/{{ project_view.project_id }}/points?controller_state=missing" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">{{ project_view.object_health.points.missing_controller }} missing controller</a>
+                <a href="/project/{{ project_view.project_id }}/points?provenance_state=missing" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{{ project_view.object_health.points.missing_provenance }} missing provenance</a>
+            </div>
+        </div>
+        <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Controller Review</p>
+                    <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ project_view.object_health.controllers.attention }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">controllers need attention</p>
+                </div>
+                <a href="/project/{{ project_view.project_id }}/controllers?status=attention" class="text-xs font-semibold text-blue-700 dark:text-blue-300">Open filtered list</a>
+            </div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="/project/{{ project_view.project_id }}/controllers?addressing_state=missing" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">{{ project_view.object_health.controllers.missing_addressing }} missing addressing</a>
+                <a href="/project/{{ project_view.project_id }}/controllers?provenance_state=missing" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{{ project_view.object_health.controllers.missing_provenance }} missing provenance</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if project_view.validation_triage %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Validation Triage</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Jump directly from validation problem families into filtered object review lists.</p>
+            </div>
+            <a href="/project/{{ project_view.project_id }}/validate" class="text-sm font-semibold text-blue-700 dark:text-blue-300">Open full validation</a>
+        </div>
+        <div class="mt-5 grid gap-6 xl:grid-cols-2">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">By Fix Group</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for item in project_view.validation_triage.fix_groups[:10] %}
+                    <a href="{{ item.url }}" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">{{ item.entity_type }} · {{ item.fix_group }} · {{ item.count }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">By Category</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                    {% for item in project_view.validation_triage.categories[:10] %}
+                    <a href="{{ item.url }}" class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-900/20 dark:text-rose-300">{{ item.entity_type }} · {{ item.category }} · {{ item.count }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if project_view.engineering_status %}
     <div class="mb-8 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -145,6 +222,26 @@
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ project_view.development_status.generation_readiness.cautions|length }} cautions remain</p>
                 </div>
             </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if project_view.next_actions %}
+    <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-8">
+        <div class="flex items-start justify-between gap-4">
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Next Actions</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Highest-priority engineering and data-workflow actions based on current validation, sequence, knowledge, and parser state.</p>
+            </div>
+            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:bg-gray-900 dark:text-gray-300">{{ project_view.next_actions|length }} queued</span>
+        </div>
+        <div class="mt-5 grid gap-3 lg:grid-cols-2">
+            {% for action in project_view.next_actions %}
+            <a href="{{ action.url }}" class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 transition hover:border-orange-300 hover:bg-orange-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-orange-800 dark:hover:bg-orange-900/10">
+                <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ action.title }}</p>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ action.detail }}</p>
+            </a>
+            {% endfor %}
         </div>
     </div>
     {% endif %}
@@ -426,6 +523,31 @@
                     <p class="mt-2 text-xl font-bold text-rose-900 dark:text-rose-100">{{ project_view.import_activity.error_count }}</p>
                 </div>
             </div>
+            {% if project_view.import_activity.task_summaries %}
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+                {% for task in project_view.import_activity.task_summaries[:4] %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ task.filename }}</p>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ task.task_type }} · {{ task.status }}</p>
+                        </div>
+                        <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">{{ task.parser_summary.parser_name or 'n/a' }}</span>
+                    </div>
+                    {% if task.parser_summary %}
+                    <p class="mt-3 text-sm text-gray-700 dark:text-gray-300">{{ task.parser_summary.summary_text }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                        <span class="rounded-full bg-white px-2.5 py-1 dark:bg-gray-800">{{ task.parser_summary.added_count }} links added</span>
+                        <span class="rounded-full bg-white px-2.5 py-1 dark:bg-gray-800">{{ task.parser_summary.warning_count }} warnings</span>
+                        {% if task.parser_summary.chunk_count %}
+                        <span class="rounded-full bg-white px-2.5 py-1 dark:bg-gray-800">{{ task.parser_summary.chunk_count }} chunks</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
             <div class="mt-4 space-y-3">
                 {% for item in project_view.import_activity["items"] %}
                 <div class="rounded-xl border {% if item.severity == 'error' %}border-rose-200 bg-rose-50 dark:border-rose-900/40 dark:bg-rose-900/20{% else %}border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/20{% endif %} px-4 py-3">

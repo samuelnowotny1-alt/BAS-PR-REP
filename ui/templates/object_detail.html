@@ -35,6 +35,65 @@
     </div>
     {% endif %}
 
+    {% if detail.completeness or detail.provenance_summary %}
+    <div class="grid gap-4 xl:grid-cols-2">
+        {% if detail.completeness %}
+        <div class="card p-5">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Completeness</p>
+                    <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ detail.completeness.score_pct }}%</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ detail.completeness.populated_field_count }} of {{ detail.completeness.total_field_count }} structured fields populated</p>
+                </div>
+                <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if detail.completeness.missing_count == 0 %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ detail.completeness.missing_count }} missing</span>
+            </div>
+            {% if detail.completeness.missing_fields %}
+            <div class="mt-4 flex flex-wrap gap-2">
+                {% for field_name in detail.completeness.missing_fields %}
+                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-300">{{ field_name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% if detail.provenance_summary %}
+        <div class="card p-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Provenance Summary</p>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <p class="text-xs uppercase tracking-[0.16em] text-gray-400">Sources</p>
+                    <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">{{ detail.provenance_summary.source_document_count }}</p>
+                </div>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <p class="text-xs uppercase tracking-[0.16em] text-gray-400">Artifact Links</p>
+                    <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">{{ detail.provenance_summary.artifact_link_count }}</p>
+                </div>
+            </div>
+            {% if detail.provenance_summary.parser_names %}
+            <div class="mt-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Parsers</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    {% for parser_name in detail.provenance_summary.parser_names %}
+                    <span class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ parser_name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if detail.provenance_summary.source_names %}
+            <div class="mt-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Source Documents</p>
+                <div class="mt-2 flex flex-wrap gap-2">
+                    {% for source_name in detail.provenance_summary.source_names %}
+                    <span class="rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ source_name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% if detail.validation %}
     <div class="rounded-2xl border px-5 py-5 {% if detail.validation.status == 'blocked' %}border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20{% elif detail.validation.status == 'attention' %}border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-900/20{% else %}border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-900/20{% endif %}">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -125,11 +184,11 @@
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Engineering Review</h2>
                 <div class="mt-4 space-y-3">
                     {% for check in detail.review.checks %}
-                    <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
-                        <div class="flex items-center justify-between gap-3">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ check.label }}</p>
-                            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
-                        </div>
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between gap-3">
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ check.label }}</p>
+                        <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
+                    </div>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ check.detail }}</p>
                     </div>
                     {% endfor %}
@@ -186,7 +245,11 @@
                 {% for link in detail.artifact_links %}
                 <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
                     <div class="flex items-center justify-between gap-3">
+                        {% if link.document_detail_url %}
+                        <a href="{{ link.document_detail_url }}" class="text-sm font-semibold text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-200">{{ link.document_name }}</a>
+                        {% else %}
                         <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ link.document_name }}</p>
+                        {% endif %}
                         <span class="text-[11px] uppercase tracking-[0.18em] text-gray-400">{{ link.relationship_type }}</span>
                     </div>
                     <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ link.document_type }} · {{ link.parser_name }}</p>
