@@ -10,7 +10,7 @@ from fastapi import UploadFile
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
-from bas_assistant.exporters import BACnetExporter, NiagaraExporter, TridiumExporter
+from bas_assistant.exporters import BACnetExporter, HoneywellExporter, JCIExporter, NiagaraExporter, SiemensExporter, TridiumExporter
 from bas_assistant.importers import CSVImporter
 from bas_assistant.models import Controller, ControllerNetworkAddress, Equipment, EquipmentType, Project, ProjectMetadata, Protocol, UnitSystem
 from bas_assistant.models import SourceDocument
@@ -388,6 +388,65 @@ def test_generation_post_is_blocked_when_validation_errors_exist() -> None:
     assert "Generation Readiness" in text
     assert "validation errors must be resolved before generation" in text
     assert "No Checkout Sheets Generated" in text
+
+
+def test_checkout_and_logic_pages_surface_sequence_review_context_after_generation() -> None:
+    project_id = create_project("generated-sequence-context-project")
+    project = main.get_project(project_id)
+    sequence_path = main.OUTPUT_DIR / project_id / "sequence.txt"
+    sequence_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    checkout_response = run_async(main.checkout_page(request(f"/project/{project_id}/checkout/generate", method="POST"), project_id))
+    logic_response = run_async(main.logic_page(request(f"/project/{project_id}/logic/generate", method="POST"), project_id))
+
+    checkout_text = response_text(checkout_response)
+    logic_text = response_text(logic_response)
+    assert checkout_response.status_code == 200
+    assert logic_response.status_code == 200
+    assert "Sequence Review: attention" in checkout_text
+    assert "AHU-1 SF-STS" in checkout_text
+    assert "Status/proof point" in checkout_text
+    assert "Sequence Review: attention" in logic_text
+    assert "AHU-1 SF-STS" in logic_text
+    assert "Status/proof point" in logic_text
 
 
 def test_generation_readiness_surfaces_sequence_coverage_debt() -> None:
@@ -1200,6 +1259,7 @@ def test_export_project_renders_partial_and_writes_vendor_output() -> None:
     text = response_text(response)
     assert "Niagara Export" in text
     assert "SUCCESS" in text
+    assert f'/output/{project_id}/exports/niagara/' in text
     assert (main.OUTPUT_DIR / project_id / "exports" / "niagara").exists()
 
 
@@ -1802,6 +1862,306 @@ def test_tridium_export_includes_review_and_lineage_metadata(tmp_path: Path) -> 
     binding = next(component for component in graphic["components"] if component["type"] == "binding")
     assert binding["source"] == "sequence"
     assert binding["validationStatus"] == "valid"
+
+
+def test_jci_siemens_and_honeywell_exports_include_lineage_metadata(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="VENDOR-LINEAGE", name="Vendor Lineage"))
+    project.validation_status = "warning"
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+            provenance={"parser": "equipment_schedule", "source_doc_id": "equip-doc"},
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-2",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.11", network_number=1002)],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            source=main.PointSource.SEQUENCE,
+            source_reference="seq-doc:req-1",
+            validation_status="valid",
+            provenance={"parser": "sequence_parser", "source_doc_id": "seq-doc"},
+        )
+    )
+    project.review_state.mapping_decisions.append(
+        main.MappingReviewDecision(
+            mapping_key="point-controller:AHU-1 SAT",
+            mapped_to="MPC-2",
+            status="accepted",
+            notes="Use field-verified controller.",
+        )
+    )
+    project.review_state.approvals.append(
+        main.ApprovalReviewDecision(
+            approval_key="outputs-ready",
+            status="approved",
+            notes="Approved for export.",
+        )
+    )
+
+    jci_result = JCIExporter(project).export(tmp_path / "jci")
+    siemens_result = SiemensExporter(project).export(tmp_path / "siemens")
+    honeywell_result = HoneywellExporter(project).export(tmp_path / "honeywell")
+
+    assert jci_result.success
+    assert siemens_result.success
+    assert honeywell_result.success
+
+    jci_points = (tmp_path / "jci" / "VENDOR-LINEAGE_jci" / "points.xml").read_text(encoding="utf-8")
+    jci_nae = (tmp_path / "jci" / "VENDOR-LINEAGE_jci" / "nae_config.xml").read_text(encoding="utf-8")
+    jci_graphic = json.loads((tmp_path / "jci" / "VENDOR-LINEAGE_jci" / "graphics" / "g_AHU-1.json").read_text())
+    assert 'source="sequence"' in jci_points
+    assert 'mappedController="true"' in jci_points
+    assert 'sequenceReference="AHU-1 sequence.txt"' in jci_points
+    assert 'validationStatus="warning"' in jci_nae
+    assert jci_graphic["metadata"]["sequenceReference"] == "AHU-1 sequence.txt"
+    assert jci_graphic["objects"][1]["source"] == "sequence"
+
+    siemens_points = pd.read_csv(tmp_path / "siemens" / "VENDOR-LINEAGE_siemens" / "desigo_points.csv")
+    siemens_equipment = pd.read_csv(tmp_path / "siemens" / "VENDOR-LINEAGE_siemens" / "equipment.csv")
+    siemens_graphic = json.loads((tmp_path / "siemens" / "VENDOR-LINEAGE_siemens" / "graphics" / "g_AHU-1.json").read_text())
+    assert siemens_points.loc[0, "Source"] == "sequence"
+    assert siemens_points.loc[0, "MappedController"] == "yes"
+    assert siemens_points.loc[0, "SequenceReference"] == "AHU-1 sequence.txt"
+    assert siemens_equipment.loc[0, "SequenceReference"] == "AHU-1 sequence.txt"
+    assert siemens_graphic["metadata"]["sequenceReference"] == "AHU-1 sequence.txt"
+    assert siemens_graphic["objects"][2]["validationStatus"] == "valid"
+
+    honeywell_points = pd.read_csv(tmp_path / "honeywell" / "VENDOR-LINEAGE_honeywell" / "points.csv")
+    honeywell_equipment = pd.read_csv(tmp_path / "honeywell" / "VENDOR-LINEAGE_honeywell" / "equipment.csv")
+    honeywell_graphic = json.loads((tmp_path / "honeywell" / "VENDOR-LINEAGE_honeywell" / "graphics" / "g_AHU-1.json").read_text())
+    assert honeywell_points.loc[0, "Source"] == "sequence"
+    assert honeywell_points.loc[0, "Mapped Controller"] == "yes"
+    assert honeywell_points.loc[0, "Sequence Reference"] == "AHU-1 sequence.txt"
+    assert honeywell_equipment.loc[0, "Sequence Reference"] == "AHU-1 sequence.txt"
+    assert honeywell_graphic["metadata"]["sequenceReference"] == "AHU-1 sequence.txt"
+    assert honeywell_graphic["objects"][1]["source"] == "sequence"
+
+
+def test_logic_generation_includes_sequence_review_metadata(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="LOGIC-SEQ", name="Logic Sequence"))
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    result = main.generate_logic(project, tmp_path / "logic")
+
+    assert result["json"]
+    logic_json = json.loads(result["json"][0].read_text(encoding="utf-8"))
+    assert logic_json["metadata"]["sequence_reference"] == "AHU-1 sequence.txt"
+    assert logic_json["metadata"]["sequence_review_status"] == "attention"
+    assert "AHU-1 SF-STS" in logic_json["metadata"]["sequence_missing_refs"]
+    assert "Status/proof point" in logic_json["metadata"]["sequence_missing_families"]
+
+
+def test_checkout_generation_includes_sequence_review_context(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="CHECKOUT-SEQ", name="Checkout Sequence"))
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    result = main.generate_checkout_sheets(project, tmp_path / "checkout")
+
+    markdown_text = result["markdown"][0].read_text(encoding="utf-8")
+    summary_df = pd.read_excel(result["excel"], sheet_name="Summary")
+
+    assert "**Sequence Reference:** AHU-1 sequence.txt" in markdown_text
+    assert "**Sequence Review Status:** attention" in markdown_text
+    assert "AHU-1 SF-STS" in markdown_text
+    assert "Status/proof point" in markdown_text
+    assert summary_df.loc[0, "Sequence Review Status"] == "attention"
+    assert "AHU-1 SF-STS" in str(summary_df.loc[0, "Sequence Missing Refs"])
+
+
+def test_graphics_generation_includes_sequence_review_context(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="GRAPHICS-SEQ", name="Graphics Sequence"))
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    result = main.generate_graphics(project, tmp_path / "graphics")
+
+    assert result["summaries"]
+    summary = result["summaries"][0]
+    assert summary["sequence_reference"] == "AHU-1 sequence.txt"
+    assert summary["sequence_review_status"] == "attention"
+    assert "AHU-1 SF-STS" in summary["sequence_missing_refs"]
+    assert "Status/proof point" in summary["sequence_missing_families"]
+
+
+def test_graphics_page_surfaces_sequence_review_context_after_generation() -> None:
+    project_id = create_project("graphics-sequence-context-project")
+    project = main.get_project(project_id)
+    sequence_path = main.OUTPUT_DIR / project_id / "sequence.txt"
+    sequence_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(main.graphics_page(request(f"/project/{project_id}/graphics/generate", method="POST"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Sequence Review: attention" in text
+    assert "AHU-1 SF-STS" in text
+    assert "Status/proof point" in text
 
 
 def test_read_only_project_api_endpoints() -> None:

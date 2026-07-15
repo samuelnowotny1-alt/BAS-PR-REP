@@ -74,7 +74,9 @@ class SiemensExporter(BaseExporter):
             "Units", "RangeMin", "RangeMax", "Equipment", "Station",
             "BACnetDeviceID", "ReadWrite", "COVIncrement", "Reliability",
             "AlarmHighLimit", "AlarmLowLimit", "AlarmDeadband",
-            "TrendLog", "TrendInterval", "TrendRetention"
+            "TrendLog", "TrendInterval", "TrendRetention",
+            "Source", "SourceReference", "ValidationStatus", "ProvenanceParser",
+            "ProvenanceSourceDoc", "MappedController", "MappedEquipment", "SequenceReference",
         ]
 
         with open(path, "w", newline="") as f:
@@ -124,6 +126,14 @@ class SiemensExporter(BaseExporter):
                     "true" if point.kind == PointKind.TREND else "false",
                     "900" if point.kind == PointKind.TREND else "",  # 15 min
                     "2592000" if point.kind == PointKind.TREND else "",  # 30 days
+                    point.source.value,
+                    point.source_reference or "",
+                    point.validation_status,
+                    point.provenance.get("parser", ""),
+                    point.provenance.get("source_doc_id", ""),
+                    "yes" if (point.controller_id or "") != (effective_controller_id or "") else "no",
+                    "yes" if point.equipment_id != effective_equipment_id else "no",
+                    equip.sequence_ref if equip and equip.sequence_ref else "",
                 ]
                 writer.writerow(row)
 
@@ -136,7 +146,8 @@ class SiemensExporter(BaseExporter):
         headers = [
             "EquipmentID", "EquipmentType", "Description", "Building", "Floor", "Room",
             "ServedArea", "Station", "ParentEquipment", "DesignCFM", "DesignTonnage",
-            "DesignGPM", "DesignKW", "Voltage", "Phase", "Status"
+            "DesignGPM", "DesignKW", "Voltage", "Phase", "Status",
+            "SequenceReference", "ProvenanceParser", "ProvenanceSourceDoc",
         ]
 
         with open(path, "w", newline="") as f:
@@ -163,6 +174,9 @@ class SiemensExporter(BaseExporter):
                     equip.voltage or "",
                     equip.phase or "",
                     equip.status,
+                    equip.sequence_ref or "",
+                    equip.provenance.get("parser", ""),
+                    equip.provenance.get("source_doc_id", ""),
                 ]
                 writer.writerow(row)
 
@@ -231,6 +245,11 @@ class SiemensExporter(BaseExporter):
                 "type": "px",
                 "width": 1024,
                 "height": 768,
+                "metadata": {
+                    "equipmentId": equip.id,
+                    "sequenceReference": equip.sequence_ref or "",
+                    "provenanceParser": equip.provenance.get("parser", ""),
+                },
                 "objects": []
             }
 
@@ -254,6 +273,10 @@ class SiemensExporter(BaseExporter):
                     "label": point.name,
                     "x": x, "y": y,
                     "format": ".1f",
+                    "source": point.source.value,
+                    "sourceReference": point.source_reference or "",
+                    "validationStatus": point.validation_status,
+                    "provenanceParser": point.provenance.get("parser", ""),
                 })
                 y += 30
                 if y > 700:

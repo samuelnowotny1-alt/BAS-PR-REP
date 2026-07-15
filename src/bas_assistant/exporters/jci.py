@@ -62,12 +62,22 @@ class JCIExporter(BaseExporter):
     def _export_nae(self, output_dir: Path) -> Path:
         """Export NAE (Network Automation Engine) configuration."""
         path = output_dir / "nae_config.xml"
+        approved_outputs = any(
+            approval.approval_key == "outputs-ready" and approval.status == "approved"
+            for approval in self.project.review_state.approvals
+        )
 
         xml = ['<?xml version="1.0" encoding="UTF-8"?>']
         xml.append('<MetasysConfiguration xmlns="urn:jci:metasys:config:1.0">')
         xml.append(f'  <Site name="{self.project.metadata.name}" id="{self.project.metadata.project_id}">')
         xml.append(f'    <Client>{self.project.metadata.client or ""}</Client>')
         xml.append(f'    <Location>{self.project.metadata.location or ""}</Location>')
+        xml.append(
+            f'    <Review validationStatus="{self.project.validation_status}" '
+            f'outputsApproved="{str(approved_outputs).lower()}" '
+            f'mappingDecisions="{len(self.project.review_state.mapping_decisions)}" '
+            f'assumptions="{len(self.project.review_state.assumptions)}"/>'
+        )
 
         # NAEs (Network Automation Engines) - one per controller
         xml.append('    <NAEs>')
@@ -126,8 +136,20 @@ class JCIExporter(BaseExporter):
             jci_type = jci_type_map.get(point.kind, "AI")
 
             instance = point.bacnet_instance or (hash(point.name) % 4194303) + 1
+            source_reference = point.source_reference or ""
+            provenance_parser = point.provenance.get("parser", "")
+            provenance_source_doc = point.provenance.get("source_doc_id", "")
+            sequence_reference = equip.sequence_ref if equip and equip.sequence_ref else ""
+            mapped_controller = str((point.controller_id or "") != (effective_controller_id or "")).lower()
+            mapped_equipment = str(point.equipment_id != effective_equipment_id).lower()
 
-            xml.append(f'  <Point name="{point.name}" type="{jci_type}" instance="{instance}">')
+            xml.append(
+                f'  <Point name="{point.name}" type="{jci_type}" instance="{instance}" '
+                f'source="{point.source.value}" sourceReference="{source_reference}" '
+                f'validationStatus="{point.validation_status}" provenanceParser="{provenance_parser}" '
+                f'provenanceSourceDoc="{provenance_source_doc}" sequenceReference="{sequence_reference}" '
+                f'mappedController="{mapped_controller}" mappedEquipment="{mapped_equipment}">'
+            )
             xml.append(f'    <Description>{point.description or ""}</Description>')
             xml.append(f'    <Equipment>{equip.id if equip else effective_equipment_id}</Equipment>')
             xml.append(f'    <Controller>{ctrl.id if ctrl else ""}</Controller>')
@@ -160,7 +182,12 @@ class JCIExporter(BaseExporter):
         for equip in self.project.equipment:
             effective_controller_id = self.project.effective_equipment_controller_id(equip)
             ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
-            xml.append(f'  <Equipment id="{equip.id}" type="{equip.type.value}">')
+            xml.append(
+                f'  <Equipment id="{equip.id}" type="{equip.type.value}" '
+                f'sequenceReference="{equip.sequence_ref or ""}" '
+                f'provenanceParser="{equip.provenance.get("parser", "")}" '
+                f'provenanceSourceDoc="{equip.provenance.get("source_doc_id", "")}">'
+            )
             xml.append(f'    <Description>{equip.served_area or ""}</Description>')
             xml.append(f'    <Location building="{equip.building or ""}" floor="{equip.floor or ""}" room="{equip.room or ""}"/>')
             xml.append(f'    <Controller>{ctrl.id if ctrl else ""}</Controller>')
@@ -200,6 +227,11 @@ class JCIExporter(BaseExporter):
                 "type": "metasys",
                 "width": 1024,
                 "height": 768,
+                "metadata": {
+                    "equipmentId": equip.id,
+                    "sequenceReference": equip.sequence_ref or "",
+                    "provenanceParser": equip.provenance.get("parser", ""),
+                },
                 "objects": []
             }
 
@@ -220,6 +252,10 @@ class JCIExporter(BaseExporter):
                     "label": point.name,
                     "x": x, "y": y,
                     "format": ".1f",
+                    "source": point.source.value,
+                    "sourceReference": point.source_reference or "",
+                    "validationStatus": point.validation_status,
+                    "provenanceParser": point.provenance.get("parser", ""),
                 })
                 y += 30
                 if y > 700:

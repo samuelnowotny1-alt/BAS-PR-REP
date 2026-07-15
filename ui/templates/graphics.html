@@ -138,18 +138,36 @@
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
-                    {% for json_file in graphics_result.json %}
+                    {% for summary in graphics_result.summaries %}
+                    {% set json_file = graphics_result.json[loop.index0] %}
                     {% set graphic_name = json_file.stem %}
                     <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/50">
                             <div>
                                 <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ graphic_name }}</h3>
                                 <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ json_file.name }}</p>
+                                <p class="mt-2 text-xs uppercase tracking-[0.16em] {% if summary.sequence_review_status == 'covered' %}text-emerald-600 dark:text-emerald-300{% elif summary.sequence_review_status == 'attention' %}text-amber-600 dark:text-amber-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">
+                                    Sequence Review: {{ summary.sequence_review_status }}
+                                </p>
                             </div>
                             <div class="flex gap-2">
                                 <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">JSON</a>
                                 <a href="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}.svg" target="_blank" class="btn-secondary text-sm">SVG</a>
                             </div>
+                        </div>
+                        <div class="border-b border-gray-200 bg-white px-5 py-4 text-sm dark:border-gray-700 dark:bg-gray-800/70">
+                            {% if summary.sequence_reference %}
+                            <p class="text-gray-500 dark:text-gray-400">Sequence: {{ summary.sequence_reference }}</p>
+                            {% endif %}
+                            {% if summary.graphic_sections %}
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">Sections: {{ summary.graphic_sections|join(', ') }}</p>
+                            {% endif %}
+                            {% if summary.sequence_missing_refs %}
+                            <p class="mt-2 text-amber-700 dark:text-amber-300">Missing refs: {{ summary.sequence_missing_refs|join(', ') }}</p>
+                            {% endif %}
+                            {% if summary.sequence_missing_families %}
+                            <p class="mt-2 text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
+                            {% endif %}
                         </div>
                         <div class="bg-gray-950 p-4 text-[12px] leading-5 text-gray-200">
                             <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ json_file.read_text()[:1600] }}{% if json_file.read_text()|length > 1600 %}...{% endif %}</pre>

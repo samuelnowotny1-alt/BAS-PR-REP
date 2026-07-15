@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 
 from ..models import Equipment, EquipmentType, Point, PointKind, Project
+from ..validation import ValidationEngine
 
 
 class GraphicType(str, Enum):
@@ -1638,11 +1639,45 @@ def generate_graphics(project: Project, output_dir: Path) -> dict:
     """Convenience function to generate all graphics outputs."""
     generator = GraphicsGenerator(project)
     generator.generate_all()
+    engine = ValidationEngine()
+    engine.validate(project)
+
+    json_paths = generator.to_json(output_dir / "graphics_json")
+    svg_paths = generator.to_svg(output_dir / "graphics_svg")
+    niagara_path = generator.to_niagara_json(output_dir / "graphics_niagara.json")
+    summaries = []
+    for graphic in generator.graphics.values():
+        equipment_id = graphic.equipment_id or ""
+        equipment = project.get_equipment(equipment_id) if equipment_id else None
+        sequence_review = (
+            engine.sequence_coverage_for_equipment(project, equipment_id)
+            if equipment_id
+            else {
+                "status": "not_indexed",
+                "missing_refs": [],
+                "missing_families": [],
+                "summary": "",
+            }
+        )
+        summaries.append(
+            {
+                "graphic_id": graphic.graphic_id,
+                "equipment_id": equipment_id,
+                "graphic_type": graphic.graphic_type.value,
+                "sequence_reference": equipment.sequence_ref if equipment and equipment.sequence_ref else "",
+                "sequence_review_status": sequence_review.get("status", "not_indexed"),
+                "sequence_missing_refs": list(sequence_review.get("missing_refs") or []),
+                "sequence_missing_families": list(sequence_review.get("missing_families") or []),
+                "sequence_summary": sequence_review.get("summary", ""),
+                "graphic_sections": list(graphic.metadata.get("graphic_sections") or []),
+            }
+        )
 
     return {
-        "json": generator.to_json(output_dir / "graphics_json"),
-        "svg": generator.to_svg(output_dir / "graphics_svg"),
-        "niagara": generator.to_niagara_json(output_dir / "graphics_niagara.json"),
+        "json": json_paths,
+        "svg": svg_paths,
+        "niagara": niagara_path,
+        "summaries": summaries,
     }
 
 

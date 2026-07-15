@@ -2398,10 +2398,27 @@ async def export_project(
         if vendor in vendor_map:
             exporter = vendor_map[vendor](project)
             result = exporter.export(output_dir / vendor)
+            files = [str(f) for f in result.files]
+            file_entries = []
+            project_output_root = OUTPUT_DIR / project_id
+            for file_path in result.files:
+                path = Path(file_path)
+                url = None
+                try:
+                    relative_path = path.relative_to(project_output_root)
+                    url = f"/output/{project_id}/{relative_path.as_posix()}"
+                except ValueError:
+                    url = None
+                file_entries.append({
+                    "path": str(path),
+                    "name": path.name,
+                    "url": url,
+                })
             results[vendor] = {
                 "success": result.success,
                 "message": result.message,
-                "files": [str(f) for f in result.files],
+                "files": files,
+                "file_entries": file_entries,
                 "errors": result.errors,
                 "warnings": result.warnings,
             }

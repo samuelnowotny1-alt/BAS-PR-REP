@@ -15,6 +15,7 @@ from ..models import (
     PointKind,
     Project,
 )
+from ..validation import ValidationEngine
 
 
 class LogicGenerator:
@@ -23,6 +24,8 @@ class LogicGenerator:
     def __init__(self, project: Project):
         self.project = project
         self.diagrams: dict[str, LogicDiagram] = {}
+        self._validation_engine = ValidationEngine()
+        self._validation_engine.validate(project)
 
     def generate_all(self) -> dict[str, LogicDiagram]:
         """Generate logic for all equipment with sequences."""
@@ -47,6 +50,14 @@ class LogicGenerator:
             description=f"Control logic for {equip.type.value} {equip.id}",
             metadata={"equipment_type": equip.type.value},
         )
+        sequence_review = self._validation_engine.sequence_coverage_for_equipment(self.project, equip.id)
+        diagram.metadata.update({
+            "sequence_reference": equip.sequence_ref or "",
+            "sequence_review_status": sequence_review.get("status"),
+            "sequence_missing_refs": list(sequence_review.get("missing_refs") or []),
+            "sequence_missing_families": list(sequence_review.get("missing_families") or []),
+            "sequence_summary": sequence_review.get("summary", ""),
+        })
 
         if equip.type == EquipmentType.AHU:
             self._generate_ahu_logic(diagram, equip, points)
@@ -479,6 +490,7 @@ class LogicGenerator:
             "name": diagram.name,
             "type": "sequence",
             "equipment": diagram.equipment_id,
+            "metadata": dict(diagram.metadata),
             "blocks": [
                 {
                     "id": b.block_id,
@@ -501,10 +513,25 @@ def generate_logic(project: Project, output_dir: Path) -> dict:
     """Convenience function to generate all logic outputs."""
     generator = LogicGenerator(project)
     generator.generate_all()
+    json_paths = generator.to_json(output_dir / "logic_json")
+    niagara_paths = generator.to_niagara_sequences(output_dir / "logic_niagara")
+    summaries = [
+        {
+            "equipment_id": diagram.equipment_id,
+            "diagram_id": diagram.diagram_id,
+            "sequence_reference": diagram.metadata.get("sequence_reference", ""),
+            "sequence_review_status": diagram.metadata.get("sequence_review_status", "not_indexed"),
+            "sequence_missing_refs": list(diagram.metadata.get("sequence_missing_refs") or []),
+            "sequence_missing_families": list(diagram.metadata.get("sequence_missing_families") or []),
+            "sequence_summary": diagram.metadata.get("sequence_summary", ""),
+        }
+        for diagram in generator.diagrams.values()
+    ]
 
     return {
-        "json": generator.to_json(output_dir / "logic_json"),
-        "niagara": generator.to_niagara_sequences(output_dir / "logic_niagara"),
+        "json": json_paths,
+        "niagara": niagara_paths,
+        "summaries": summaries,
     }
 
 

@@ -16,8 +16,14 @@
             <div>
                 <h4 class="font-medium text-gray-800 dark:text-white mb-2">Generated Files</h4>
                 <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                    {% for file in result.files %}
-                    <li class="font-mono break-all">{{ file }}</li>
+                    {% for file in result.file_entries %}
+                    <li class="font-mono break-all">
+                        {% if file.url %}
+                        <a href="{{ file.url }}" target="_blank" class="text-blue-600 hover:underline dark:text-blue-300">{{ file.path }}</a>
+                        {% else %}
+                        {{ file.path }}
+                        {% endif %}
+                    </li>
                     {% endfor %}
                 </ul>
             </div>

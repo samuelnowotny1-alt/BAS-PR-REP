@@ -75,7 +75,9 @@ class HoneywellExporter(BaseExporter):
             "Range Low", "Range High", "Default Value", "Writable",
             "Alarm High", "Alarm Low", "Alarm Deadband", "Alarm Delay",
             "Trend Enable", "Trend Interval", "Trend Retention",
-            "COV Increment", "Scan Rate", "Reliability"
+            "COV Increment", "Scan Rate", "Reliability",
+            "Source", "Source Reference", "Validation Status", "Provenance Parser",
+            "Provenance Source Doc", "Mapped Controller", "Mapped Equipment", "Sequence Reference"
         ]
 
         with open(path, "w", newline="") as f:
@@ -130,6 +132,14 @@ class HoneywellExporter(BaseExporter):
                     "1.0",  # COV increment
                     "5",  # scan rate (seconds)
                     "No Fault",
+                    point.source.value,
+                    point.source_reference or "",
+                    point.validation_status,
+                    point.provenance.get("parser", ""),
+                    point.provenance.get("source_doc_id", ""),
+                    "yes" if (point.controller_id or "") != (effective_controller_id or "") else "no",
+                    "yes" if point.equipment_id != effective_equipment_id else "no",
+                    equip.sequence_ref if equip and equip.sequence_ref else "",
                 ]
                 writer.writerow(row)
 
@@ -143,7 +153,8 @@ class HoneywellExporter(BaseExporter):
             "Equipment Name", "Equipment Type", "Description", "Area",
             "Building", "Floor", "Room", "Controller", "Parent Equipment",
             "Design CFM", "Design Tonnage", "Design GPM", "Design KW",
-            "Voltage", "Phase", "Status"
+            "Voltage", "Phase", "Status", "Sequence Reference",
+            "Provenance Parser", "Provenance Source Doc"
         ]
 
         with open(path, "w", newline="") as f:
@@ -170,6 +181,9 @@ class HoneywellExporter(BaseExporter):
                     equip.voltage or "",
                     equip.phase or "",
                     equip.status,
+                    equip.sequence_ref or "",
+                    equip.provenance.get("parser", ""),
+                    equip.provenance.get("source_doc_id", ""),
                 ]
                 writer.writerow(row)
 
@@ -238,6 +252,11 @@ class HoneywellExporter(BaseExporter):
                 "type": "ebi",
                 "width": 1024,
                 "height": 768,
+                "metadata": {
+                    "equipmentId": equip.id,
+                    "sequenceReference": equip.sequence_ref or "",
+                    "provenanceParser": equip.provenance.get("parser", ""),
+                },
                 "objects": []
             }
 
@@ -259,6 +278,10 @@ class HoneywellExporter(BaseExporter):
                     "x": x, "y": y,
                     "format": ".1f",
                     "editable": point.direction.value in ("output", "bidirectional"),
+                    "source": point.source.value,
+                    "sourceReference": point.source_reference or "",
+                    "validationStatus": point.validation_status,
+                    "provenanceParser": point.provenance.get("parser", ""),
                 })
                 y += 30
                 if y > 700:
