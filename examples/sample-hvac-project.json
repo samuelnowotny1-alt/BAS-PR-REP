@@ -3067,6 +3067,7 @@
       "firmware_version": "7.5",
       "type": "VAV",
       "protocols": [
+        "BACnet/IP",
         "BACnet/MSTP"
       ],
       "network_addresses": [
@@ -3117,6 +3118,7 @@
       "firmware_version": "7.5",
       "type": "VAV",
       "protocols": [
+        "BACnet/IP",
         "BACnet/MSTP"
       ],
       "network_addresses": [
@@ -3167,6 +3169,7 @@
       "firmware_version": "7.5",
       "type": "VAV",
       "protocols": [
+        "BACnet/IP",
         "BACnet/MSTP"
       ],
       "network_addresses": [

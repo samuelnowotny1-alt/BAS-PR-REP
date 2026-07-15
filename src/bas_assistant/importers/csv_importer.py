@@ -562,7 +562,7 @@ def create_sample_csvs(output_dir: Path) -> None:
         "Panel Location": "Mechanical Room",
         "Electrical Panel": "MP-1",
         "Circuit": "12",
-        "Serves Equipment": "AHU-1,CHWP-1",
+        "Serves Equipment": "AHU-1",
         "Owned Points": "AHU-1 SAT,AHU-1 MAT,AHU-1 RAT,AHU-1 SF CMD",
         "Universal Inputs": 16,
         "Digital Inputs": 8,

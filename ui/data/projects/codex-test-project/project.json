@@ -132,8 +132,7 @@
         "total_points": 36
       },
       "serves_equipment_ids": [
-        "AHU-1",
-        "CHWP-1"
+        "AHU-1"
       ],
       "owned_point_names": [
         "AHU-1 SAT",
