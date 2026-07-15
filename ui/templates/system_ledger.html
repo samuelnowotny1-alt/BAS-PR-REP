@@ -10,7 +10,7 @@
     </div>
 
     <div class="card p-6">
-        <form method="get" action="/activity/ledger" class="grid gap-3 lg:grid-cols-4">
+        <form method="get" action="/activity/ledger" class="grid gap-3 lg:grid-cols-6">
             <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Project
                 <select name="project_id" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
@@ -38,10 +38,58 @@
                     {% endfor %}
                 </select>
             </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                From
+                <input type="date" name="date_from" value="{{ ledger_view.filters.date_from }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
+            </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                To
+                <input type="date" name="date_to" value="{{ ledger_view.filters.date_to }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
+            </label>
             <div class="flex items-end">
                 <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">Filter Ledger</button>
             </div>
         </form>
+        <div class="mt-4 flex flex-wrap gap-3">
+            <a href="/activity/ledger/export.json?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export JSON</a>
+            <a href="/activity/ledger/export.csv?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export CSV</a>
+        </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 xl:grid-cols-3">
+        <div class="card p-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Event Families</p>
+            <div class="mt-4 space-y-3">
+                {% for card in ledger_view.summary.family_cards[:6] %}
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ card.family }}</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ card.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card p-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Entity Mix</p>
+            <div class="mt-4 space-y-3">
+                {% for card in ledger_view.summary.entity_cards[:6] %}
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ card.entity_type }}</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ card.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card p-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Project Activity</p>
+            <div class="mt-4 space-y-3">
+                {% for card in ledger_view.summary.project_cards %}
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-medium text-gray-800 dark:text-gray-200">{{ card.project_id }}</span>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ card.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 
     <div class="mt-6 space-y-4">
@@ -156,6 +204,19 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">No ledger entries match the selected filters.</p>
         </div>
         {% endfor %}
+    </div>
+    <div class="mt-6 card p-6">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Showing page {{ ledger_view.pagination.page }} of {{ ledger_view.pagination.total_pages }} · {{ ledger_view.summary.total_count }} total events</p>
+            <div class="flex gap-3">
+                {% if ledger_view.pagination.has_previous %}
+                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.previous_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Previous</a>
+                {% endif %}
+                {% if ledger_view.pagination.has_next %}
+                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.next_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900">Next</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

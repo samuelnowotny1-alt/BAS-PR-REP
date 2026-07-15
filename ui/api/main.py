@@ -2601,11 +2601,21 @@ async def system_ledger_page(
     project_id: str = "",
     event_type: str = "",
     entity_type: str = "",
+    severity: str = "",
+    saved_view: str = "",
+    date_from: str = "",
+    date_to: str = "",
+    page: int = 1,
 ):
     ledger_view = container.project_queries.system_ledger_view(
         project_id=project_id,
         event_type=event_type,
         entity_type=entity_type,
+        severity=severity,
+        saved_view=saved_view,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
     )
     return templates.TemplateResponse(
         request=request,
@@ -2614,6 +2624,100 @@ async def system_ledger_page(
             "ledger_view": ledger_view,
             "current_user": get_current_user(request),
         },
+    )
+
+
+@app.get("/activity/ledger/export.json")
+async def system_ledger_export_json(
+    project_id: str = "",
+    event_type: str = "",
+    entity_type: str = "",
+    severity: str = "",
+    saved_view: str = "",
+    date_from: str = "",
+    date_to: str = "",
+):
+    rows = container.project_queries.system_ledger_export_rows(
+        project_id=project_id,
+        event_type=event_type,
+        entity_type=entity_type,
+        severity=severity,
+        saved_view=saved_view,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    return JSONResponse(
+        content={
+            "filters": {
+                "project_id": project_id,
+                "event_type": event_type,
+                "entity_type": entity_type,
+                "severity": severity,
+                "saved_view": saved_view,
+                "date_from": date_from,
+                "date_to": date_to,
+            },
+            "row_count": len(rows),
+            "rows": rows,
+        },
+        headers={"Content-Disposition": 'attachment; filename="system-ledger.json"'},
+    )
+
+
+@app.get("/activity/ledger/export.csv")
+async def system_ledger_export_csv(
+    project_id: str = "",
+    event_type: str = "",
+    entity_type: str = "",
+    severity: str = "",
+    saved_view: str = "",
+    date_from: str = "",
+    date_to: str = "",
+):
+    rows = container.project_queries.system_ledger_export_rows(
+        project_id=project_id,
+        event_type=event_type,
+        entity_type=entity_type,
+        severity=severity,
+        saved_view=saved_view,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    output = StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=[
+            "id",
+            "created_at",
+            "project_id",
+            "project_name",
+            "event_type",
+            "event_family",
+            "severity",
+            "entity_type",
+            "entity_key",
+            "summary",
+            "targeted_count",
+            "change_count",
+            "imported_count",
+            "replacement_count",
+            "warning_count",
+            "error_count",
+            "payload_json",
+        ],
+    )
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {
+                **row,
+                "payload_json": json.dumps(row.get("payload_json") or {}, sort_keys=True),
+            }
+        )
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="system-ledger.csv"'},
     )
 
 

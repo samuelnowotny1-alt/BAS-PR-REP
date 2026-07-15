@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 import re
 
 from sqlalchemy import func, select
@@ -399,12 +400,33 @@ class ProjectQueryService:
         project_id: str = "",
         event_type: str = "",
         entity_type: str = "",
+        severity: str = "",
+        saved_view: str = "",
+        date_from: str = "",
+        date_to: str = "",
+        page: int = 1,
+        per_page: int = 40,
         limit: int = 120,
     ) -> dict[str, object]:
         """Return a global ledger view spanning every tracked system update."""
-        normalized_project_id = project_id.strip()
-        normalized_event_type = event_type.strip()
-        normalized_entity_type = entity_type.strip()
+        resolved_filters = self._resolve_ledger_saved_view(
+            project_id=project_id,
+            event_type=event_type,
+            entity_type=entity_type,
+            severity=severity,
+            saved_view=saved_view,
+        )
+        normalized_project_id = resolved_filters["project_id"]
+        normalized_event_type = resolved_filters["event_type"]
+        normalized_entity_type = resolved_filters["entity_type"]
+        normalized_severity = resolved_filters["severity"]
+        normalized_saved_view = resolved_filters["saved_view"]
+        normalized_event_prefix = str(resolved_filters.get("event_prefix") or "")
+        normalized_date_from = date_from.strip()
+        normalized_date_to = date_to.strip()
+        resolved_page = max(page, 1)
+        resolved_per_page = max(1, min(per_page, limit))
+        offset = (resolved_page - 1) * resolved_per_page
         with self.db.session() as session:
             project_options = list(
                 session.execute(select(ProjectRecord.project_id, ProjectRecord.name).order_by(ProjectRecord.name, ProjectRecord.project_id))
@@ -423,37 +445,283 @@ class ProjectQueryService:
                 )
                 if row[0]
             ]
+            filters = self._ledger_filter_clauses(
+                project_id=normalized_project_id,
+                event_type=normalized_event_type,
+                event_prefix=normalized_event_prefix,
+                entity_type=normalized_entity_type,
+                severity=normalized_severity,
+                date_from=normalized_date_from,
+                date_to=normalized_date_to,
+            )
+            total_count = session.scalar(
+                select(func.count())
+                .select_from(SystemLedgerRecord)
+                .outerjoin(ProjectRecord, ProjectRecord.id == SystemLedgerRecord.project_id)
+                .where(*filters)
+            ) or 0
             statement = (
                 select(SystemLedgerRecord, ProjectRecord.project_id, ProjectRecord.name)
                 .select_from(SystemLedgerRecord)
                 .outerjoin(ProjectRecord, ProjectRecord.id == SystemLedgerRecord.project_id)
                 .order_by(SystemLedgerRecord.created_at.desc(), SystemLedgerRecord.id.desc())
-                .limit(limit)
+                .offset(offset)
+                .limit(resolved_per_page)
             )
-            if normalized_project_id:
-                statement = statement.where(ProjectRecord.project_id == normalized_project_id)
-            if normalized_event_type:
-                statement = statement.where(SystemLedgerRecord.event_type == normalized_event_type)
-            if normalized_entity_type:
-                statement = statement.where(SystemLedgerRecord.entity_type == normalized_entity_type)
+            statement = statement.where(*filters)
             rows = list(session.execute(statement))
         events = [
             self._ledger_event_to_view(record, project_id=public_project_id, project_name=project_name)
             for record, public_project_id, project_name in rows
         ]
+        family_counts: dict[str, int] = defaultdict(int)
+        entity_counts: dict[str, int] = defaultdict(int)
+        project_counts: dict[str, int] = defaultdict(int)
+        severity_counts: dict[str, int] = defaultdict(int)
+        for event in events:
+            family = str(event["event_type"]).split(".", 1)[0]
+            family_counts[family] += 1
+            entity_value = str(event.get("entity_type") or "unknown")
+            entity_counts[entity_value] += 1
+            project_value = str(event.get("project_id") or "system")
+            project_counts[project_value] += 1
+            severity_value = str(event.get("severity") or "info")
+            severity_counts[severity_value] += 1
         return {
             "events": events,
+            "summary": {
+                "event_count": len(events),
+                "total_count": int(total_count),
+                "severity_cards": [
+                    {"severity": severity_name, "count": count}
+                    for severity_name, count in sorted(
+                        severity_counts.items(),
+                        key=lambda item: (self._severity_sort_key(item[0]), -item[1], item[0]),
+                    )
+                ],
+                "family_cards": [
+                    {"family": family, "count": count}
+                    for family, count in sorted(family_counts.items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "entity_cards": [
+                    {"entity_type": entity_name, "count": count}
+                    for entity_name, count in sorted(entity_counts.items(), key=lambda item: (-item[1], item[0]))
+                ],
+                "project_cards": [
+                    {"project_id": project_name, "count": count}
+                    for project_name, count in sorted(project_counts.items(), key=lambda item: (-item[1], item[0]))[:6]
+                ],
+            },
             "filters": {
                 "project_id": normalized_project_id,
                 "event_type": normalized_event_type,
                 "entity_type": normalized_entity_type,
+                "severity": normalized_severity,
+                "saved_view": normalized_saved_view,
+                "date_from": normalized_date_from,
+                "date_to": normalized_date_to,
             },
             "filter_options": {
                 "projects": [{"value": value, "label": f"{name} ({value})"} for value, name in project_options],
                 "event_types": list(event_type_options),
                 "entity_types": list(entity_type_options),
+                "severities": ["critical", "warning", "info"],
+                "saved_views": self._ledger_saved_views(),
+            },
+            "pagination": {
+                "page": resolved_page,
+                "per_page": resolved_per_page,
+                "total_count": int(total_count),
+                "total_pages": max(1, (int(total_count) + resolved_per_page - 1) // resolved_per_page),
+                "has_previous": resolved_page > 1,
+                "has_next": offset + len(events) < int(total_count),
+                "previous_page": resolved_page - 1 if resolved_page > 1 else 1,
+                "next_page": resolved_page + 1 if offset + len(events) < int(total_count) else resolved_page,
             },
         }
+
+    def system_ledger_export_rows(
+        self,
+        *,
+        project_id: str = "",
+        event_type: str = "",
+        entity_type: str = "",
+        severity: str = "",
+        saved_view: str = "",
+        date_from: str = "",
+        date_to: str = "",
+        limit: int = 500,
+    ) -> list[dict[str, object]]:
+        """Return flattened ledger rows suitable for JSON or CSV export."""
+        ledger_view = self.system_ledger_view(
+            project_id=project_id,
+            event_type=event_type,
+            entity_type=entity_type,
+            severity=severity,
+            saved_view=saved_view,
+            date_from=date_from,
+            date_to=date_to,
+            page=1,
+            per_page=limit,
+            limit=limit,
+        )
+        rows: list[dict[str, object]] = []
+        for event in ledger_view["events"]:
+            payload = dict(event.get("payload") or {})
+            rows.append(
+                {
+                    "id": event["id"],
+                    "created_at": event["created_at"].isoformat() if hasattr(event["created_at"], "isoformat") else str(event["created_at"]),
+                    "project_id": event.get("project_id") or "",
+                    "project_name": event.get("project_name") or "",
+                    "event_type": event.get("event_type") or "",
+                    "event_family": str(event.get("event_type") or "").split(".", 1)[0],
+                    "severity": event.get("severity") or "info",
+                    "entity_type": event.get("entity_type") or "",
+                    "entity_key": event.get("entity_key") or "",
+                    "summary": event.get("summary") or "",
+                    "targeted_count": event.get("targeted_count") or 0,
+                    "change_count": event.get("change_count") or 0,
+                    "imported_count": payload.get("imported_count", 0),
+                    "replacement_count": payload.get("replacement_count", 0),
+                    "warning_count": payload.get("warning_count", 0),
+                    "error_count": payload.get("error_count", 0),
+                    "payload_json": payload,
+                }
+            )
+        return rows
+
+    def _ledger_filter_clauses(
+        self,
+        *,
+        project_id: str,
+        event_type: str,
+        event_prefix: str,
+        entity_type: str,
+        severity: str,
+        date_from: str,
+        date_to: str,
+    ) -> list[object]:
+        filters: list[object] = []
+        if project_id:
+            filters.append(ProjectRecord.project_id == project_id)
+        if event_type:
+            filters.append(SystemLedgerRecord.event_type == event_type)
+        if event_prefix:
+            filters.append(SystemLedgerRecord.event_type.like(f"{event_prefix}%"))
+        if entity_type:
+            filters.append(SystemLedgerRecord.entity_type == entity_type)
+        if severity:
+            matching_event_types = self._ledger_event_types_for_severity(severity)
+            if matching_event_types:
+                filters.append(SystemLedgerRecord.event_type.in_(matching_event_types))
+        if date_from:
+            start = self._parse_date_filter(date_from)
+            if start is not None:
+                filters.append(SystemLedgerRecord.created_at >= start)
+        if date_to:
+            end = self._parse_date_filter(date_to)
+            if end is not None:
+                filters.append(SystemLedgerRecord.created_at < end + timedelta(days=1))
+        return filters
+
+    def _parse_date_filter(self, value: str) -> datetime | None:
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+
+    def _resolve_ledger_saved_view(
+        self,
+        *,
+        project_id: str,
+        event_type: str,
+        entity_type: str,
+        severity: str,
+        saved_view: str,
+    ) -> dict[str, str]:
+        normalized = {
+            "project_id": project_id.strip(),
+            "event_type": event_type.strip(),
+            "entity_type": entity_type.strip(),
+            "severity": severity.strip().lower(),
+            "saved_view": saved_view.strip(),
+            "event_prefix": "",
+        }
+        if not normalized["saved_view"]:
+            return normalized
+        presets = {view["value"]: view for view in self._ledger_saved_views()}
+        preset = presets.get(normalized["saved_view"])
+        if preset is None:
+            normalized["saved_view"] = ""
+            return normalized
+        preset_filters = dict(preset.get("filters") or {})
+        for key in ("event_type", "entity_type", "severity"):
+            if not normalized[key]:
+                normalized[key] = str(preset_filters.get(key, "") or "")
+        normalized["event_prefix"] = str(preset_filters.get("event_prefix", "") or "")
+        return normalized
+
+    def _ledger_saved_views(self) -> list[dict[str, object]]:
+        return [
+            {
+                "value": "failures",
+                "label": "Failures",
+                "filters": {"severity": "critical"},
+            },
+            {
+                "value": "admin",
+                "label": "Admin Changes",
+                "filters": {"event_prefix": "admin.", "severity": "warning"},
+            },
+            {
+                "value": "imports",
+                "label": "Imports",
+                "filters": {"event_prefix": "import.", "severity": "warning"},
+            },
+            {
+                "value": "config",
+                "label": "Config Changes",
+                "filters": {"event_prefix": "station_sync.", "entity_type": "station_sync", "severity": "warning"},
+            },
+        ]
+
+    def _ledger_event_severity(self, *, event_type: str, payload: dict[str, object]) -> str:
+        if event_type.endswith(".failed") or event_type == "gap.auto_fixed":
+            return "critical"
+        if int(payload.get("error_count", 0) or 0) > 0:
+            return "critical"
+        if (
+            event_type.startswith("review.")
+            or event_type.startswith("admin.")
+            or event_type.startswith("station_sync.")
+            or event_type.startswith("bulk_remediation.")
+            or event_type.startswith("import.")
+        ):
+            return "warning"
+        if int(payload.get("warning_count", 0) or 0) > 0 or int(payload.get("replacement_count", 0) or 0) > 0:
+            return "warning"
+        return "info"
+
+    def _ledger_event_types_for_severity(self, severity: str) -> list[str]:
+        with self.db.session() as session:
+            event_types = [
+                row[0]
+                for row in session.execute(
+                    select(SystemLedgerRecord.event_type).distinct().order_by(SystemLedgerRecord.event_type)
+                )
+                if row[0]
+            ]
+        matching: list[str] = []
+        for event_type in event_types:
+            derived = self._ledger_event_severity(event_type=event_type, payload={})
+            if derived == severity:
+                matching.append(event_type)
+        return matching
+
+    def _severity_sort_key(self, severity: str) -> int:
+        order = {"critical": 0, "warning": 1, "info": 2}
+        return order.get(severity, 9)
 
     def import_status_view(self, project_id: str) -> dict[str, object] | None:
         """Return recent import and artifact-ingestion status for the import workspace."""
@@ -1150,6 +1418,7 @@ class ProjectQueryService:
     ) -> dict[str, object]:
         payload = dict(event.payload_json or {})
         changes = list(payload.get("changes") or [])
+        severity = self._ledger_event_severity(event_type=event.event_type, payload=payload)
         return {
             "id": event.id,
             "project_id": project_id,
@@ -1160,6 +1429,7 @@ class ProjectQueryService:
             "entity_key": event.entity_key,
             "summary": event.summary,
             "created_at": event.created_at,
+            "severity": severity,
             "payload": payload,
             "change_count": int(payload.get("change_count", len(changes)) or 0),
             "targeted_count": int(payload.get("targeted_count", 0) or 0),

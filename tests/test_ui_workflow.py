@@ -1851,6 +1851,123 @@ def test_gap_auto_fix_writes_ledger_entry() -> None:
     assert 'controller_id: "" → "MPC-1"' in ledger_text
 
 
+def test_system_ledger_page_renders_summary_cards_and_exports() -> None:
+    project_id = create_project("ledger-export-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    run_async(
+        main.bulk_remediate_object_list(
+            project_id=project_id,
+            entity_plural="equipment",
+            action="fill_missing_provenance",
+            status="",
+            controller_state="",
+            addressing_state="",
+            provenance_state="missing",
+            equipment_type="",
+            point_kind="",
+            protocol="",
+            validation_category="",
+            fix_group="",
+        )
+    )
+
+    page_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+        )
+    )
+    json_response = run_async(main.system_ledger_export_json(project_id=project_id))
+    csv_response = run_async(main.system_ledger_export_csv(project_id=project_id))
+
+    page_text = response_text(page_response)
+    assert page_response.status_code == 200
+    assert "Event Families" in page_text
+    assert "bulk_remediation" in page_text
+    assert "Export JSON" in page_text
+    assert "Export CSV" in page_text
+
+    assert json_response.status_code == 200
+    assert json_response.headers["content-disposition"] == 'attachment; filename="system-ledger.json"'
+    json_payload = json.loads(json_response.body.decode())
+    assert json_payload["row_count"] >= 1
+    assert json_payload["rows"][0]["event_family"] == "bulk_remediation"
+
+    assert csv_response.status_code == 200
+    assert csv_response.headers["content-disposition"] == 'attachment; filename="system-ledger.csv"'
+    csv_text = csv_response.body.decode()
+    assert "event_family" in csv_text
+    assert "bulk_remediation.applied" in csv_text
+
+
+def test_system_ledger_supports_pagination_and_date_filters() -> None:
+    project_id = create_project("ledger-paging-project")
+    for index in range(45):
+        main.container.ledger.record_event(
+            event_type="test.synthetic",
+            summary=f"Synthetic event {index}",
+            project_id=project_id,
+            entity_type="test",
+            entity_key=str(index),
+            payload={"index": index},
+        )
+
+    first_page = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="test.synthetic",
+            entity_type="test",
+            page=1,
+        )
+    )
+    second_page = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="test.synthetic",
+            entity_type="test",
+            page=2,
+        )
+    )
+    filtered_page = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="test.synthetic",
+            entity_type="test",
+            date_from="9999-01-01",
+        )
+    )
+    filtered_export = run_async(
+        main.system_ledger_export_json(
+            project_id=project_id,
+            event_type="test.synthetic",
+            entity_type="test",
+            date_from="9999-01-01",
+        )
+    )
+
+    first_text = response_text(first_page)
+    second_text = response_text(second_page)
+    filtered_text = response_text(filtered_page)
+    filtered_payload = json.loads(filtered_export.body.decode())
+
+    assert first_page.status_code == 200
+    assert second_page.status_code == 200
+    assert "Showing page 1 of 2" in first_text
+    assert "Synthetic event 44" in first_text
+    assert "Synthetic event 0" not in first_text
+    assert "Showing page 2 of 2" in second_text
+    assert "Synthetic event 0" in second_text
+    assert "No ledger entries match the selected filters." in filtered_text
+    assert filtered_payload["row_count"] == 0
+    assert filtered_payload["filters"]["date_from"] == "9999-01-01"
+
+
 def test_export_project_renders_partial_and_writes_vendor_output() -> None:
     project_id = create_project()
     project = main.get_project(project_id)
