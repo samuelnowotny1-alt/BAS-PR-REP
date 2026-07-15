@@ -11,14 +11,16 @@ def test_extract_point_refs_keeps_full_bas_refs_without_standalone_suffix_noise(
     assert refs == ["AHU-1 SF-CMD", "AHU-1 SF-STS"]
 
 
-def test_extract_point_refs_does_not_treat_generic_status_words_as_points() -> None:
+def test_extract_point_refs_does_not_treat_generic_status_words_as_raw_points() -> None:
     parser = SequenceParser()
 
     refs = parser._extract_point_refs(
         "Supply fan command shall start on occupancy and status shall prove."
     )
 
-    assert refs == []
+    assert "STATUS" not in refs
+    assert "STS" not in refs
+    assert "SF-CMD" in refs
 
 
 def test_extract_point_refs_keeps_useful_process_abbreviations() -> None:
@@ -52,3 +54,18 @@ def test_extract_point_refs_infers_reheat_economizer_and_staging_semantics() -> 
     assert "AHU-1 DMP-CMD" in refs
     assert "AHU-1 LEAD-LAG" in refs or "VAV-101 LEAD-LAG" in refs
     assert "AHU-1 STAGE-CMD" in refs or "VAV-101 STAGE-CMD" in refs
+
+
+def test_extract_point_refs_drops_low_value_equipment_fragments_when_semantics_exist() -> None:
+    parser = SequenceParser()
+
+    refs = parser._extract_point_refs(
+        "AHU-1 supply fan command shall start on occupancy. VAV-101 zone temperature shall maintain setpoint. VAV-101 damper position shall prove airflow."
+    )
+
+    assert "AHU-1 SUPPLY" not in refs
+    assert "VAV-101 ZONE" not in refs
+    assert "VAV-101 DAMPER" not in refs
+    assert "AHU-1 SF-CMD" in refs
+    assert "VAV-101 ZN-T" in refs
+    assert "VAV-101 DMP-POS" in refs

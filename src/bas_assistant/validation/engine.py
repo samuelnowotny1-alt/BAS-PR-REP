@@ -596,6 +596,35 @@ class ValidationEngine:
             candidates.add(project.equipment[0].id)
         return candidates
 
+    def _equipment_ids_in_text(self, text: str) -> set[str]:
+        return {
+            match.group(0).upper()
+            for match in re.finditer(r"\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+\b", text, re.IGNORECASE)
+        }
+
+    def _requirement_equipment_candidates(
+        self,
+        project: Project,
+        document: SourceDocument,
+        requirement,
+        document_text: str,
+    ) -> set[str]:
+        candidates = set()
+        requirement_text = f"{requirement.description} {requirement.source_text}"
+        mentioned_ids = self._equipment_ids_in_text(requirement_text)
+        project_equipment_ids = {equipment.id for equipment in project.equipment}
+
+        candidates.update(equipment_id for equipment_id in mentioned_ids if equipment_id in project_equipment_ids)
+
+        for reference in requirement.points_referenced:
+            ref_equipment_id, _ = self._split_equipment_ref(reference)
+            if ref_equipment_id and ref_equipment_id in project_equipment_ids:
+                candidates.add(ref_equipment_id)
+
+        if candidates:
+            return candidates
+        return self._sequence_equipment_candidates(project, document, document_text)
+
     def _build_sequence_index(self, project: Project) -> dict[str, dict[str, object]]:
         from ..reasoning.sequence_parser import SequenceParser
 
@@ -614,17 +643,43 @@ class ValidationEngine:
             except OSError:
                 continue
             parsed = sequence_parser.parse(text)
-            point_refs = {
-                self._normalize_point_ref(reference)
-                for requirement in parsed.requirements
-                for reference in requirement.points_referenced
-                if reference
-            }
-            requirement_types = {
-                requirement.requirement_type
-                for requirement in parsed.requirements
-            }
-            for equipment_id in self._sequence_equipment_candidates(project, document, text):
+            document_level_candidates = self._sequence_equipment_candidates(project, document, text)
+            if not parsed.requirements:
+                for equipment_id in document_level_candidates:
+                    entry = index.setdefault(
+                        equipment_id,
+                        {
+                            "documents": [],
+                            "point_refs": set(),
+                            "requirement_types": set(),
+                        },
+                    )
+                    entry["documents"].append(document.name)
+                continue
+
+            for requirement in parsed.requirements:
+                point_refs = {
+                    self._normalize_point_ref(reference)
+                    for reference in requirement.points_referenced
+                    if reference
+                }
+                requirement_types = {requirement.requirement_type}
+                for equipment_id in self._requirement_equipment_candidates(project, document, requirement, text):
+                    entry = index.setdefault(
+                        equipment_id,
+                        {
+                            "documents": [],
+                            "point_refs": set(),
+                            "requirement_types": set(),
+                        },
+                    )
+                    entry["documents"].append(document.name)
+                    entry["point_refs"].update(point_refs)
+                    entry["requirement_types"].update(requirement_types)
+
+            for equipment_id in document_level_candidates:
+                if equipment_id in index:
+                    continue
                 entry = index.setdefault(
                     equipment_id,
                     {
@@ -634,8 +689,6 @@ class ValidationEngine:
                     },
                 )
                 entry["documents"].append(document.name)
-                entry["point_refs"].update(point_refs)
-                entry["requirement_types"].update(requirement_types)
         return index
 
     def sequence_coverage_for_equipment(
@@ -668,11 +721,11 @@ class ValidationEngine:
                 str(requirement_type.value)
                 for requirement_type in sequence_data["requirement_types"]
             }
-            documents = [str(document) for document in sequence_data["documents"]]
+            documents = sorted({str(document) for document in sequence_data["documents"]})
         else:
             point_refs = {self._normalize_point_ref(reference) for reference in point_refs if reference}
             requirement_type_values = {str(value) for value in requirement_type_values if value}
-            documents = [str(document) for document in (documents or [])]
+            documents = sorted({str(document) for document in (documents or [])})
 
         equipment_refs = self._equipment_point_refs(project, equipment_id)
         matched_refs = sorted(

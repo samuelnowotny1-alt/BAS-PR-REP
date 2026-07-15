@@ -85,6 +85,10 @@ class SequenceParser:
     STANDALONE_POINT_TOKEN_BLOCKLIST = {
         "SP", "STS", "STATUS", "CMD", "ALM", "FLT", "PRF",
     }
+    RAW_EQUIPMENT_SUFFIX_ALLOWLIST = {
+        "SAT", "MAT", "RAT", "OAT", "DAT", "ZAT", "SAP", "RAP", "ZSP", "CSP", "HSP",
+        "AIRFLOW", "FLOW", "PRESS", "STATIC", "TEMP",
+    }
     OCCUPANCY_TERMS = (
         "occupied hours",
         "unoccupied hours",
@@ -95,6 +99,8 @@ class SequenceParser:
     )
     SCHEDULE_TERMS = ("schedule", "occupied hours", "unoccupied hours", "holiday", "weekend", "weekday", "time clock")
     SEMANTIC_REF_PATTERNS = (
+        (re.compile(r"\bSUPPLY FAN COMMAND\b|\bSUPPLY FAN ENABLE\b|\bSUPPLY FAN START COMMAND\b", re.IGNORECASE), "SF-CMD"),
+        (re.compile(r"\bSUPPLY FAN STATUS\b|\bSUPPLY FAN PROOF\b|\bSUPPLY FAN RUN STATUS\b|\bSUPPLY FAN RUN PROOF\b", re.IGNORECASE), "SF-STS"),
         (re.compile(r"\bREHEAT VALVE COMMAND\b|\bREHEAT COMMAND\b|\bHEATING VALVE COMMAND\b", re.IGNORECASE), "HTG-CMD"),
         (re.compile(r"\bREHEAT VALVE POSITION\b|\bHEATING VALVE POSITION\b", re.IGNORECASE), "HTG-POS"),
         (re.compile(r"\bECONOMIZER DAMPERS\b|\bECONOMIZER DAMPER\b|\bOUTSIDE AIR DAMPER COMMAND\b|\bOA DAMPER COMMAND\b", re.IGNORECASE), "DMP-CMD"),
@@ -310,6 +316,8 @@ class SequenceParser:
         for pattern in patterns:
             for match in re.finditer(pattern, normalized_text, re.IGNORECASE):
                 candidate = match.group(0).strip().upper()
+                if not self._is_meaningful_raw_ref(candidate):
+                    continue
                 if candidate in self.STANDALONE_POINT_TOKEN_BLOCKLIST:
                     continue
                 if candidate in self.STANDALONE_POINT_TOKEN_ALLOWLIST:
@@ -318,6 +326,14 @@ class SequenceParser:
                 refs.add(candidate)
         refs.update(self._infer_semantic_point_refs(text))
         return sorted(refs)
+
+    def _is_meaningful_raw_ref(self, candidate: str) -> bool:
+        if " " not in candidate:
+            return True
+        _, suffix = candidate.split(" ", 1)
+        if "-" in suffix or any(char.isdigit() for char in suffix):
+            return True
+        return suffix in self.RAW_EQUIPMENT_SUFFIX_ALLOWLIST
 
     def _infer_semantic_point_refs(self, text: str) -> set[str]:
         text_lower = text.lower()

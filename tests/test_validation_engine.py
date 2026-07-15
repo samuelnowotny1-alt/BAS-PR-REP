@@ -765,6 +765,102 @@ def test_reheat_economizer_and_staging_aliases_match_structured_variants(tmp_pat
     assert any(check["label"] == "Staging/rotation point" and check["passed"] is True for check in boiler_coverage["coverage_checks"])
 
 
+def test_mixed_sequence_document_attributes_requirements_to_correct_equipment(tmp_path: Path) -> None:
+    project = build_project("mixed-sequence-project")
+    sequence_path = tmp_path / "mixed_sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 supply fan command shall start on occupancy. "
+        "VAV-101 zone temperature shall maintain setpoint. "
+        "VAV-101 damper position shall prove airflow.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="mixed sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.extend(
+        [
+            Controller(
+                id="MPC-1",
+                type="MPC",
+                protocols=[Protocol.BACNET_IP],
+                network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+            ),
+            Controller(
+                id="VAV-1",
+                type="MPC",
+                protocols=[Protocol.BACNET_IP],
+                network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.20")],
+            ),
+        ]
+    )
+    project.equipment.extend(
+        [
+            Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1", sequence_ref="mixed sequence.txt"),
+            Equipment(id="VAV-101", type=EquipmentType.VAV, controller_id="VAV-1", sequence_ref="mixed sequence.txt"),
+        ]
+    )
+    project.points.extend(
+        [
+            Point(
+                name="AHU-1 SF-CMD",
+                equipment_id="AHU-1",
+                controller_id="MPC-1",
+                kind=PointKind.ACTUATOR,
+                direction=PointDirection.OUTPUT,
+            ),
+            Point(
+                name="VAV-101 ZN-T",
+                equipment_id="VAV-101",
+                controller_id="VAV-1",
+                kind=PointKind.SENSOR,
+                direction=PointDirection.INPUT,
+                units="degF",
+            ),
+            Point(
+                name="VAV-101 ZN-SP",
+                equipment_id="VAV-101",
+                controller_id="VAV-1",
+                kind=PointKind.SETPOINT,
+                direction=PointDirection.OUTPUT,
+                units="degF",
+            ),
+            Point(
+                name="VAV-101 DMP-POS",
+                equipment_id="VAV-101",
+                controller_id="VAV-1",
+                kind=PointKind.STATUS,
+                direction=PointDirection.INPUT,
+                units="pct",
+            ),
+            Point(
+                name="VAV-101 AIRFLOW",
+                equipment_id="VAV-101",
+                controller_id="VAV-1",
+                kind=PointKind.SENSOR,
+                direction=PointDirection.INPUT,
+                units="cfm",
+            ),
+        ]
+    )
+
+    engine = ValidationEngine()
+    engine.validate(project)
+    ahu_coverage = engine.sequence_coverage_for_equipment(project, "AHU-1")
+    vav_coverage = engine.sequence_coverage_for_equipment(project, "VAV-101")
+
+    assert "AHU-1 SF-CMD" in ahu_coverage["matched_refs"]
+    assert "VAV-101 ZN-T" not in ahu_coverage["matched_refs"]
+    assert "VAV-101 ZN-T" in vav_coverage["matched_refs"]
+    assert "AHU-1 SF-CMD" not in vav_coverage["matched_refs"]
+    assert "start_stop" in ahu_coverage["requirement_types"]
+    assert "pid" in vav_coverage["requirement_types"]
+
+
 def test_sequence_derived_points_require_source_reference() -> None:
     project = build_project("sequence-traceability-project")
     project.controllers.append(
