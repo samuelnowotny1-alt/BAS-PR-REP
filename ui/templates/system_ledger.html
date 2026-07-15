@@ -10,7 +10,16 @@
     </div>
 
     <div class="card p-6">
-        <form method="get" action="/activity/ledger" class="grid gap-3 lg:grid-cols-6">
+        <form method="get" action="/activity/ledger" class="grid gap-3 lg:grid-cols-8">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Saved View
+                <select name="saved_view" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">All activity</option>
+                    {% for option in ledger_view.filter_options.saved_views %}
+                    <option value="{{ option.value }}" {% if ledger_view.filters.saved_view == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
                 Project
                 <select name="project_id" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
@@ -39,6 +48,15 @@
                 </select>
             </label>
             <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Severity
+                <select name="severity" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">All severities</option>
+                    {% for value in ledger_view.filter_options.severities %}
+                    <option value="{{ value }}" {% if ledger_view.filters.severity == value %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
                 From
                 <input type="date" name="date_from" value="{{ ledger_view.filters.date_from }}" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900" />
             </label>
@@ -51,12 +69,28 @@
             </div>
         </form>
         <div class="mt-4 flex flex-wrap gap-3">
-            <a href="/activity/ledger/export.json?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export JSON</a>
-            <a href="/activity/ledger/export.csv?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export CSV</a>
+            {% for option in ledger_view.filter_options.saved_views %}
+            <a href="/activity/ledger?saved_view={{ option.value }}" class="inline-flex items-center rounded-full border px-4 py-2 text-sm font-semibold {% if ledger_view.filters.saved_view == option.value %}border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-900/30 dark:text-sky-200{% else %}border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200{% endif %}">{{ option.label }}</a>
+            {% endfor %}
+        </div>
+        <div class="mt-4 flex flex-wrap gap-3">
+            <a href="/activity/ledger/export.json?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&severity={{ ledger_view.filters.severity }}&saved_view={{ ledger_view.filters.saved_view }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export JSON</a>
+            <a href="/activity/ledger/export.csv?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&severity={{ ledger_view.filters.severity }}&saved_view={{ ledger_view.filters.saved_view }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Export CSV</a>
         </div>
     </div>
 
-    <div class="mt-6 grid gap-4 xl:grid-cols-3">
+    <div class="mt-6 grid gap-4 xl:grid-cols-4">
+        <div class="card p-6">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Severity</p>
+            <div class="mt-4 space-y-3">
+                {% for card in ledger_view.summary.severity_cards %}
+                <div class="flex items-center justify-between gap-3">
+                    <span class="text-sm font-medium {% if card.severity == 'critical' %}text-rose-700 dark:text-rose-300{% elif card.severity == 'warning' %}text-amber-700 dark:text-amber-300{% else %}text-sky-700 dark:text-sky-300{% endif %}">{{ card.severity }}</span>
+                    <span class="rounded-full px-3 py-1 text-xs font-semibold {% if card.severity == 'critical' %}bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300{% elif card.severity == 'warning' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300{% endif %}">{{ card.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
         <div class="card p-6">
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Event Families</p>
             <div class="mt-4 space-y-3">
@@ -110,7 +144,10 @@
                         {% if event.entity_key %}<span> · {{ event.entity_key }}</span>{% endif %}
                     </p>
                 </div>
-                <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ event.created_at }}</span>
+                <div class="flex flex-col items-start gap-2 md:items-end">
+                    <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] {% if event.severity == 'critical' %}bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300{% elif event.severity == 'warning' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300{% endif %}">{{ event.severity }}</span>
+                    <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ event.created_at }}</span>
+                </div>
             </div>
             {% if event.targeted_count or event.change_count %}
             <div class="mt-4 flex flex-wrap gap-2">
@@ -210,10 +247,10 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Showing page {{ ledger_view.pagination.page }} of {{ ledger_view.pagination.total_pages }} · {{ ledger_view.summary.total_count }} total events</p>
             <div class="flex gap-3">
                 {% if ledger_view.pagination.has_previous %}
-                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.previous_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Previous</a>
+                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&severity={{ ledger_view.filters.severity }}&saved_view={{ ledger_view.filters.saved_view }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.previous_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">Previous</a>
                 {% endif %}
                 {% if ledger_view.pagination.has_next %}
-                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.next_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900">Next</a>
+                <a href="/activity/ledger?project_id={{ ledger_view.filters.project_id }}&event_type={{ ledger_view.filters.event_type }}&entity_type={{ ledger_view.filters.entity_type }}&severity={{ ledger_view.filters.severity }}&saved_view={{ ledger_view.filters.saved_view }}&date_from={{ ledger_view.filters.date_from }}&date_to={{ ledger_view.filters.date_to }}&page={{ ledger_view.pagination.next_page }}" class="inline-flex items-center rounded-full border border-gray-200 bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900">Next</a>
                 {% endif %}
             </div>
         </div>

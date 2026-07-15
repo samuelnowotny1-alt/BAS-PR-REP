@@ -1968,6 +1968,65 @@ def test_system_ledger_supports_pagination_and_date_filters() -> None:
     assert filtered_payload["filters"]["date_from"] == "9999-01-01"
 
 
+def test_system_ledger_supports_severity_filters_and_saved_views() -> None:
+    project_id = create_project("ledger-severity-project")
+    main.container.ledger.record_event(
+        event_type="task.failed",
+        summary="Synthetic failure",
+        project_id=project_id,
+        entity_type="task",
+        entity_key="1",
+        payload={"error_count": 1},
+    )
+    main.container.ledger.record_event(
+        event_type="admin.user_created",
+        summary="Synthetic admin update",
+        project_id=None,
+        entity_type="user",
+        entity_key="ops-user",
+        payload={"username": "ops-user"},
+    )
+
+    critical_page = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            severity="critical",
+        )
+    )
+    admin_saved_view = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            saved_view="admin",
+        )
+    )
+    export_json = run_async(
+        main.system_ledger_export_json(
+            project_id=project_id,
+            severity="critical",
+        )
+    )
+
+    critical_text = response_text(critical_page)
+    admin_text = response_text(admin_saved_view)
+    export_payload = json.loads(export_json.body.decode())
+
+    assert critical_page.status_code == 200
+    assert "Severity" in critical_text
+    assert "Synthetic failure" in critical_text
+    assert "critical" in critical_text
+    assert "Synthetic admin update" not in critical_text
+
+    assert admin_saved_view.status_code == 200
+    assert "Admin Changes" in admin_text
+    assert "Synthetic admin update" in admin_text
+    assert "warning" in admin_text
+
+    assert export_payload["row_count"] >= 1
+    assert export_payload["filters"]["severity"] == "critical"
+    assert export_payload["rows"][0]["severity"] == "critical"
+
+
 def test_export_project_renders_partial_and_writes_vendor_output() -> None:
     project_id = create_project()
     project = main.get_project(project_id)

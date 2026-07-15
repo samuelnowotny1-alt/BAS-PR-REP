@@ -11,6 +11,9 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        display: ['"Avenir Next"', '"Segoe UI"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
                     colors: {
                         primary: {
                             50: '#f0f9ff',
@@ -72,20 +75,29 @@
         .sidebar-nav {
             @apply flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-4;
         }
+        .sidebar-section {
+            @apply mt-2 space-y-2;
+        }
+        .sidebar-section:first-child {
+            @apply mt-0;
+        }
+        .sidebar-section-title {
+            @apply px-3 font-display text-[11px] font-semibold uppercase tracking-[0.22em] text-primary-500 dark:text-primary-300;
+        }
         .sidebar-link {
-            @apply flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-sm font-medium leading-5 text-gray-600 transition-all hover:border-gray-200 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white;
+            @apply flex min-h-[3.5rem] items-center gap-3 rounded-2xl border border-transparent px-3 py-3 font-display text-[15px] font-semibold leading-5 text-slate-700 transition-all hover:border-primary-100 hover:bg-gradient-to-r hover:from-primary-50 hover:to-white hover:text-primary-800 dark:text-slate-200 dark:hover:border-primary-800/60 dark:hover:bg-gradient-to-r dark:hover:from-primary-900/30 dark:hover:to-gray-900 dark:hover:text-primary-100;
         }
         .sidebar-link.active {
-            @apply border-primary-200 bg-primary-50 text-primary-700 shadow-sm dark:border-primary-800 dark:bg-primary-900/30 dark:text-primary-300;
+            @apply border-primary-200 bg-gradient-to-r from-primary-100 to-white text-primary-800 shadow-sm dark:border-primary-700 dark:bg-gradient-to-r dark:from-primary-900/50 dark:to-gray-900 dark:text-primary-200;
         }
         .sidebar-link-icon {
-            @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-sm text-gray-500 dark:bg-gray-800 dark:text-gray-300;
+            @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-sm text-slate-500 dark:bg-gray-800 dark:text-slate-300;
         }
         .sidebar-link.active .sidebar-link-icon {
             @apply bg-primary-100 text-primary-700 dark:bg-primary-800/60 dark:text-primary-200;
         }
         .sidebar-link-label {
-            @apply truncate text-sm;
+            @apply truncate;
         }
         .content-shell {
             @apply flex min-w-0 flex-1 flex-col;
@@ -94,7 +106,13 @@
             @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white;
         }
         .new-project-link {
-            @apply inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-sm font-medium text-gray-600 transition hover:border-gray-200 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white;
+            @apply inline-flex items-center gap-2 rounded-xl border border-primary-100 bg-gradient-to-r from-primary-50 to-white px-3 py-2 text-sm font-semibold text-primary-700 shadow-sm transition hover:border-primary-200 hover:from-primary-100 hover:to-primary-50 hover:text-primary-800 dark:border-primary-800/60 dark:from-primary-900/30 dark:to-gray-900 dark:text-primary-200 dark:hover:border-primary-700 dark:hover:from-primary-900/50 dark:hover:to-gray-800 dark:hover:text-primary-100;
+        }
+        .topbar-user-badge {
+            @apply hidden items-center gap-2 rounded-xl border border-gray-200 bg-gradient-to-r from-white to-gray-50 px-3 py-2 text-sm font-medium text-gray-600 shadow-sm dark:border-gray-700 dark:from-gray-800 dark:to-gray-900 dark:text-gray-300 md:inline-flex;
+        }
+        .topbar-user-role {
+            @apply rounded-full bg-primary-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-700 dark:bg-primary-900/50 dark:text-primary-200;
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -131,97 +149,116 @@
                 </div>
             </div>
             <nav class="sidebar-nav">
-                <a href="/project/{{ project.metadata.project_id }}" class="sidebar-link {% if request.url.path == '/project/' ~ project.metadata.project_id %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
-                    <span class="sidebar-link-label">Dashboard</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/equipment" class="sidebar-link {% if '/equipment' in request.url.path and '/graphics' not in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-fan"></i></span>
-                    <span class="sidebar-link-label">Equipment</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/points" class="sidebar-link {% if '/points' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-gauge-high"></i></span>
-                    <span class="sidebar-link-label">Points</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/controllers" class="sidebar-link {% if '/controllers' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-microchip"></i></span>
-                    <span class="sidebar-link-label">Controllers</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/documents" class="sidebar-link {% if '/documents' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-folder-open"></i></span>
-                    <span class="sidebar-link-label">Documents</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/knowledge" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-book-open"></i></span>
-                    <span class="sidebar-link-label">Knowledge</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/import" class="sidebar-link {% if '/import' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-file-import"></i></span>
-                    <span class="sidebar-link-label">Import Data</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/validate" class="sidebar-link {% if '/validate' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-check-circle"></i></span>
-                    <span class="sidebar-link-label">Validate</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/gaps" class="sidebar-link {% if '/gaps' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-search"></i></span>
-                    <span class="sidebar-link-label">Gap Analysis</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/mappings" class="sidebar-link {% if '/mappings' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-link"></i></span>
-                    <span class="sidebar-link-label">Mappings</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/review" class="sidebar-link {% if '/review' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-clipboard-list"></i></span>
-                    <span class="sidebar-link-label">Review Release</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/checkout" class="sidebar-link {% if '/checkout' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="sidebar-link-label">Checkout Sheets</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/reports" class="sidebar-link {% if '/reports' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-file-alt"></i></span>
-                    <span class="sidebar-link-label">Reports</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/graphics" class="sidebar-link {% if '/graphics' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-image"></i></span>
-                    <span class="sidebar-link-label">Graphics</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/logic" class="sidebar-link {% if '/logic' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-sitemap"></i></span>
-                    <span class="sidebar-link-label">Logic Diagrams</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/export" class="sidebar-link {% if '/export' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-download"></i></span>
-                    <span class="sidebar-link-label">Export</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/station-sync" class="sidebar-link {% if '/station-sync' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-plug"></i></span>
-                    <span class="sidebar-link-label">Station Sync</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/activity" class="sidebar-link {% if '/activity' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-clock-rotate-left"></i></span>
-                    <span class="sidebar-link-label">Activity</span>
-                </a>
-                {% set session_user = request.scope.get('session', {}).get('user') if request is defined else none %}
-                {% if session_user and session_user.role == 'admin' %}
-                <a href="/project/{{ project.metadata.project_id }}/memberships" class="sidebar-link {% if '/memberships' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-user-lock"></i></span>
-                    <span class="sidebar-link-label">Access</span>
-                </a>
-                {% endif %}
-                <a href="/project/{{ project.metadata.project_id }}/sequence" class="sidebar-link {% if '/sequence' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-code"></i></span>
-                    <span class="sidebar-link-label">Sequence Parser</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/troubleshoot" class="sidebar-link {% if '/troubleshoot' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-tools"></i></span>
-                    <span class="sidebar-link-label">Troubleshooting</span>
-                </a>
-                <a href="/project/{{ project.metadata.project_id }}/assumptions" class="sidebar-link {% if '/assumptions' in request.url.path %}active{% endif %}">
-                    <span class="sidebar-link-icon"><i class="fas fa-list-alt"></i></span>
-                    <span class="sidebar-link-label">Assumptions</span>
-                </a>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Workspace</div>
+                    <a href="/project/{{ project.metadata.project_id }}" class="sidebar-link {% if request.url.path == '/project/' ~ project.metadata.project_id %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-tachometer-alt"></i></span>
+                        <span class="sidebar-link-label">Dashboard</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/activity" class="sidebar-link {% if '/activity' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-clock-rotate-left"></i></span>
+                        <span class="sidebar-link-label">Activity</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/documents" class="sidebar-link {% if '/documents' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-folder-open"></i></span>
+                        <span class="sidebar-link-label">Documents</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/knowledge" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-book-open"></i></span>
+                        <span class="sidebar-link-label">Knowledge</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/import" class="sidebar-link {% if '/import' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-file-import"></i></span>
+                        <span class="sidebar-link-label">Import Data</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">System Model</div>
+                    <a href="/project/{{ project.metadata.project_id }}/equipment" class="sidebar-link {% if '/equipment' in request.url.path and '/graphics' not in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-fan"></i></span>
+                        <span class="sidebar-link-label">Equipment</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/points" class="sidebar-link {% if '/points' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-gauge-high"></i></span>
+                        <span class="sidebar-link-label">Points</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/controllers" class="sidebar-link {% if '/controllers' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-microchip"></i></span>
+                        <span class="sidebar-link-label">Controllers</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/mappings" class="sidebar-link {% if '/mappings' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-link"></i></span>
+                        <span class="sidebar-link-label">Mappings</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/assumptions" class="sidebar-link {% if '/assumptions' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-list-alt"></i></span>
+                        <span class="sidebar-link-label">Assumptions</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Engineering Review</div>
+                    <a href="/project/{{ project.metadata.project_id }}/validate" class="sidebar-link {% if '/validate' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-check-circle"></i></span>
+                        <span class="sidebar-link-label">Validate</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/gaps" class="sidebar-link {% if '/gaps' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-search"></i></span>
+                        <span class="sidebar-link-label">Gap Analysis</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/review" class="sidebar-link {% if '/review' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-clipboard-list"></i></span>
+                        <span class="sidebar-link-label">Review Release</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/sequence" class="sidebar-link {% if '/sequence' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-code"></i></span>
+                        <span class="sidebar-link-label">Sequence Parser</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/troubleshoot" class="sidebar-link {% if '/troubleshoot' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-tools"></i></span>
+                        <span class="sidebar-link-label">Troubleshooting</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Outputs</div>
+                    <a href="/project/{{ project.metadata.project_id }}/checkout" class="sidebar-link {% if '/checkout' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-clipboard-check"></i></span>
+                        <span class="sidebar-link-label">Checkout Sheets</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/reports" class="sidebar-link {% if '/reports' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-file-alt"></i></span>
+                        <span class="sidebar-link-label">Reports</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/graphics" class="sidebar-link {% if '/graphics' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-image"></i></span>
+                        <span class="sidebar-link-label">Graphics</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/logic" class="sidebar-link {% if '/logic' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-sitemap"></i></span>
+                        <span class="sidebar-link-label">Logic Diagrams</span>
+                    </a>
+                    <a href="/project/{{ project.metadata.project_id }}/export" class="sidebar-link {% if '/export' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-download"></i></span>
+                        <span class="sidebar-link-label">Export</span>
+                    </a>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">Deployment</div>
+                    <a href="/project/{{ project.metadata.project_id }}/station-sync" class="sidebar-link {% if '/station-sync' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-plug"></i></span>
+                        <span class="sidebar-link-label">Station Sync</span>
+                    </a>
+                    {% set session_user = request.scope.get('session', {}).get('user') if request is defined else none %}
+                    {% if session_user and session_user.role == 'admin' %}
+                    <a href="/project/{{ project.metadata.project_id }}/memberships" class="sidebar-link {% if '/memberships' in request.url.path %}active{% endif %}">
+                        <span class="sidebar-link-icon"><i class="fas fa-user-lock"></i></span>
+                        <span class="sidebar-link-label">Access</span>
+                    </a>
+                    {% endif %}
+                </div>
             </nav>
             <div class="border-t border-gray-200 px-4 py-4 dark:border-gray-700">
                 <div class="text-center text-xs text-gray-400 dark:text-gray-500">
@@ -265,8 +302,10 @@
                             <span>Users</span>
                         </a>
                         {% endif %}
-                        <div class="hidden text-sm text-gray-500 dark:text-gray-300 md:block">
-                            {{ session_user.username }} · {{ session_user.role }}
+                        <div class="topbar-user-badge">
+                            <i class="fas fa-user-circle text-primary-500 dark:text-primary-300"></i>
+                            <span>{{ session_user.username }}</span>
+                            <span class="topbar-user-role">{{ session_user.role }}</span>
                         </div>
                         <form method="post" action="/logout">
                             <button type="submit" class="topbar-button" title="Log out">
