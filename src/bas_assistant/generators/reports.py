@@ -7,6 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 from ..models import Project, Protocol
+from ..validation import ValidationEngine, ValidationReport, ValidationResult
 
 
 @dataclass
@@ -49,6 +50,58 @@ class ReportGenerator:
             lines.append(f"- Assumptions {status}: {count}")
         if approved_outputs and approved_outputs.notes:
             lines.append(f"- Output approval notes: {approved_outputs.notes}")
+        return lines
+
+    def _sequence_workspace(self, engine: ValidationEngine) -> dict[str, object]:
+        reviews = []
+        for equipment in self.project.equipment:
+            if not equipment.sequence_ref:
+                continue
+            review = engine.sequence_coverage_for_equipment(self.project, equipment.id)
+            review["sequence_ref"] = equipment.sequence_ref or ""
+            review["required_check_count"] = sum(1 for check in review["coverage_checks"] if check["required"])
+            review["missing_check_count"] = sum(
+                1 for check in review["coverage_checks"] if check["required"] and not check["passed"]
+            )
+            review["matched_ref_count"] = len(review["matched_refs"])
+            review["missing_ref_count"] = len(review["missing_refs"])
+            reviews.append(review)
+
+        status_order = {"attention": 0, "not_indexed": 1, "covered": 2}
+        reviews.sort(
+            key=lambda review: (
+                status_order.get(str(review["status"]), 3),
+                -int(review["missing_ref_count"]),
+                str(review["equipment_id"]),
+            )
+        )
+        summary = {
+            "equipment_count": len(reviews),
+            "covered": sum(1 for review in reviews if review["status"] == "covered"),
+            "attention": sum(1 for review in reviews if review["status"] == "attention"),
+            "not_indexed": sum(1 for review in reviews if review["status"] == "not_indexed"),
+            "missing_refs": sum(int(review["missing_ref_count"]) for review in reviews),
+            "missing_checks": sum(int(review["missing_check_count"]) for review in reviews),
+            "required_families": sorted({family for review in reviews for family in review["required_families"]}),
+            "missing_families": sorted({family for review in reviews for family in review["missing_families"]}),
+        }
+        return {
+            "summary": summary,
+            "reviews": reviews,
+        }
+
+    def _validation_finding_lines(self, title: str, results: list[ValidationResult]) -> list[str]:
+        if not results:
+            return [f"## {title}", "- None", ""]
+
+        lines = [f"## {title}"]
+        for result in results[:10]:
+            lines.append(
+                f"- `{result.rule_id}` {result.object_type} `{result.object_id}`: {result.message}"
+            )
+        if len(results) > 10:
+            lines.append(f"- ... and {len(results) - 10} more")
+        lines.append("")
         return lines
 
     def generate_equipment_schedule(self, output_path: Path) -> Path:
@@ -342,19 +395,27 @@ class ReportGenerator:
         return output_path
 
     def generate_validation_report_md(self, output_path: Path) -> Path:
-        """Generate markdown validation report (placeholder)."""
+        """Generate markdown validation report."""
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        engine = ValidationEngine()
+        report = engine.validate(self.project)
+        summary = report.summary
+        sequence_workspace = self._sequence_workspace(engine)
+        sequence_summary = sequence_workspace["summary"]
 
         lines = [
             "# Validation Report",
             f"**Project:** {self.project.metadata.name} ({self.project.metadata.project_id})",
-            f"**Last Validated:** {self.project.last_validated.strftime('%Y-%m-%d %H:%M') if self.project.last_validated else 'Never'}",
-            f"**Status:** {self.project.validation_status}",
+            f"**Last Validated:** {report.validated_at.strftime('%Y-%m-%d %H:%M')}",
+            f"**Status:** {summary['status']}",
             "",
             "## Summary",
             f"- Total Equipment: {len(self.project.equipment)}",
             f"- Total Points: {len(self.project.points)}",
             f"- Total Controllers: {len(self.project.controllers)}",
+            f"- Rules Run: {summary['total_rules']}",
+            f"- Findings: {summary['errors']} errors, {summary['warnings']} warnings, {summary['infos']} infos",
+            f"- Passed Checks: {summary['passed']}",
             "",
             "## Checks Performed",
             "- Naming convention compliance",
@@ -363,14 +424,64 @@ class ReportGenerator:
             "- Engineering rules (ranges, units)",
             "- Protocol rules (BACnet instances, Modbus registers)",
             "",
-            "## Recommendations",
-            "1. Run `bas validate` to generate detailed report",
-            "2. Address all ERROR severity issues before submittal",
-            "3. Review WARNING items for engineering judgment",
-            "",
-            "---",
-            f"*Generated by BAS Assistant on {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
         ]
+        lines.extend(self._validation_finding_lines("Errors", report.errors))
+        lines.extend(self._validation_finding_lines("Warnings", report.warnings))
+
+        if sequence_summary["equipment_count"]:
+            lines.extend(
+                [
+                    "## Sequence Coverage Review",
+                    f"- Equipment with sequence context: {sequence_summary['equipment_count']}",
+                    f"- Covered: {sequence_summary['covered']}",
+                    f"- Needs attention: {sequence_summary['attention']}",
+                    f"- Not indexed: {sequence_summary['not_indexed']}",
+                    f"- Missing referenced points: {sequence_summary['missing_refs']}",
+                    f"- Missing control-family checks: {sequence_summary['missing_checks']}",
+                ]
+            )
+            if sequence_summary["required_families"]:
+                lines.append(
+                    f"- Required control families: {', '.join(sequence_summary['required_families'])}"
+                )
+            if sequence_summary["missing_families"]:
+                lines.append(
+                    f"- Missing control families: {', '.join(sequence_summary['missing_families'])}"
+                )
+            lines.append("")
+
+            for review in sequence_workspace["reviews"][:10]:
+                lines.extend(
+                    [
+                        f"### {review['equipment_id']}",
+                        f"- Status: {review['status']}",
+                        f"- Sequence source: {review['sequence_ref'] or 'N/A'}",
+                        f"- Summary: {review['summary']}",
+                        f"- Matched refs: {review['matched_ref_count']}",
+                        f"- Missing refs: {review['missing_ref_count']}",
+                    ]
+                )
+                if review["missing_refs"]:
+                    lines.append(f"- Missing point refs: {', '.join(review['missing_refs'])}")
+                if review["missing_families"]:
+                    lines.append(f"- Missing control families: {', '.join(review['missing_families'])}")
+                lines.append("")
+
+        lines.extend(
+            [
+                "## Recommendations",
+                "1. Address all ERROR severity issues before submittal." if report.errors else "1. No ERROR findings are currently open.",
+                (
+                    f"2. Close sequence coverage gaps for {sequence_summary['attention']} equipment items before release."
+                    if sequence_summary["attention"]
+                    else "2. Sequence coverage is aligned for the currently indexed equipment."
+                ),
+                "3. Review WARNING items and unresolved control-family gaps with engineering judgment.",
+                "",
+                "---",
+                f"*Generated by BAS Assistant on {datetime.now().strftime('%Y-%m-%d %H:%M')}*",
+            ]
+        )
 
         with open(output_path, "w") as f:
             f.write("\n".join(lines))

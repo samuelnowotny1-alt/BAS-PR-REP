@@ -164,13 +164,21 @@ class PXBinding:
     @classmethod
     def from_xml(cls, elem: ET.Element) -> "PXBinding":
         """Create binding from XML element."""
+        spectrum_stops: list[dict[str, str]] | None = None
+        spectrum_elem = elem.find("spectrum")
+        if spectrum_elem is not None:
+            stops = []
+            for stop_elem in spectrum_elem.findall("stop"):
+                stops.append(dict(stop_elem.attrib))
+            if stops:
+                spectrum_stops = stops
         return cls(
             property_name=elem.get("name", ""),
             binding_type=PXBindingType(elem.get("type", "value")),
             ord=PXOrd(elem.get("ord", "")),
             format_string=elem.get("format"),
             degrade_behavior=elem.get("degradeBehavior"),
-            spectrum_stops=None  # TODO: parse spectrum stops
+            spectrum_stops=spectrum_stops,
         )
 
 

@@ -742,6 +742,55 @@ class GapAnalyzer:
                     metadata={"generator": gen_name, "error": str(e)},
                 ))
 
+    def _sequence_generation_reviews(self) -> list[dict[str, object]]:
+        engine = ValidationEngine()
+        engine.validate(self.project)
+        reviews: list[dict[str, object]] = []
+        for equipment in self.project.equipment:
+            if not equipment.sequence_ref:
+                continue
+            review = engine.sequence_coverage_for_equipment(self.project, equipment.id)
+            if review["status"] in {"attention", "not_indexed"}:
+                reviews.append(review)
+        return reviews
+
+    def _add_sequence_generation_gap(
+        self,
+        *,
+        generator_label: str,
+        review: dict[str, object],
+        severity: GapSeverity,
+    ) -> None:
+        missing_refs = list(review.get("missing_refs") or [])
+        missing_families = list(review.get("missing_families") or [])
+        detail_parts = []
+        if missing_refs:
+            detail_parts.append(f"missing point refs: {', '.join(missing_refs[:4])}")
+        if len(missing_refs) > 4:
+            detail_parts.append(f"{len(missing_refs) - 4} more refs")
+        if missing_families:
+            detail_parts.append(f"missing control families: {', '.join(missing_families)}")
+        detail = "; ".join(detail_parts) if detail_parts else str(review.get("summary") or "")
+        self._add_gap(Gap(
+            gap_id=self._new_gap_id(),
+            category=GapCategory.GENERATION_BLOCKER,
+            severity=severity,
+            title=f"{generator_label} for {review['equipment_id']} is missing sequence-backed coverage",
+            description=(
+                f"Sequence review for '{review['equipment_id']}' indicates downstream {generator_label.lower()} output may omit control intent or bindings"
+                + (f": {detail}" if detail else ".")
+            ),
+            affected_object_type="equipment",
+            affected_object_id=str(review["equipment_id"]),
+            recommendation="Add the missing structured points or control-family coverage identified by sequence review before generating deliverables.",
+            metadata={
+                "generator": generator_label.lower(),
+                "missing_refs": missing_refs,
+                "missing_families": missing_families,
+                "sequence_status": review.get("status"),
+            },
+        ))
+
     def _check_checkout_readiness(self, gen_name: str) -> None:
         """Check if checkout generation is ready."""
         if not self.project.equipment:
@@ -799,6 +848,12 @@ class GapAnalyzer:
                     affected_object_id=equip.id,
                     recommendation="Add points to equipment",
                 ))
+        for review in self._sequence_generation_reviews():
+            self._add_sequence_generation_gap(
+                generator_label="Graphics",
+                review=review,
+                severity=GapSeverity.MEDIUM,
+            )
 
     def _check_logic_readiness(self, gen_name: str) -> None:
         """Check if logic generation is ready."""
@@ -819,6 +874,12 @@ class GapAnalyzer:
                         affected_object_id=equip.id,
                         recommendation="Add points to equipment",
                     ))
+        for review in self._sequence_generation_reviews():
+            self._add_sequence_generation_gap(
+                generator_label="Logic",
+                review=review,
+                severity=GapSeverity.MEDIUM,
+            )
 
     def _check_exports_readiness(self, gen_name: str) -> None:
         """Check if vendor exports are ready."""
@@ -846,6 +907,12 @@ class GapAnalyzer:
                     affected_object_id=ctrl.id,
                     recommendation="Add protocols to controller",
                 ))
+        for review in self._sequence_generation_reviews():
+            self._add_sequence_generation_gap(
+                generator_label="Export",
+                review=review,
+                severity=GapSeverity.MEDIUM,
+            )
 
 
 def analyze_gaps(project: Project) -> GapAnalysisReport:

@@ -236,6 +236,8 @@ class BACnetExporter(BaseExporter):
         # Objects
         xml.append('    <Objects>')
         for point in self.project.points:
+            effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
+            effective_controller_id = self.project.effective_point_controller_id(point) or ""
             obj_type_map = {
                 PointKind.SENSOR: "analogInput",
                 PointKind.ACTUATOR: "analogOutput",
@@ -250,8 +252,23 @@ class BACnetExporter(BaseExporter):
             }
             obj_type = obj_type_map.get(point.kind, "analogInput")
             instance = point.bacnet_instance or (hash(point.name) % 4194303) + 1
+            provenance_parser = point.provenance.get("parser", "")
+            source_reference = point.source_reference or ""
+            source_type = point.source.value
+            validation_status = point.validation_status
+            equipment_attr = effective_equipment_id or ""
+            controller_attr = effective_controller_id
+            sequence_ref = ""
+            equipment = self.project.get_equipment(effective_equipment_id)
+            if equipment:
+                sequence_ref = equipment.sequence_ref or ""
 
-            xml.append(f'      <Object name="{point.name}" type="{obj_type}" instance="{instance}" units="{point.units or ""}" description="{point.description or ""}"/>')
+            xml.append(
+                f'      <Object name="{point.name}" type="{obj_type}" instance="{instance}" units="{point.units or ""}" '
+                f'description="{point.description or ""}" equipment="{equipment_attr}" controller="{controller_attr}" '
+                f'source="{source_type}" sourceReference="{source_reference}" validationStatus="{validation_status}" '
+                f'provenanceParser="{provenance_parser}" sequenceReference="{sequence_ref}"/>'
+            )
         xml.append('    </Objects>')
 
         xml.append('  </Project>')
@@ -272,12 +289,22 @@ class BACnetExporter(BaseExporter):
             writer.writerow([
                 "Point Name", "Equipment", "Controller", "Object Type", "Instance",
                 "Units", "Description", "Range Min", "Range Max",
-                "BACnet Object Type", "BACnet Instance", "Modbus Register", "Modbus Type"
+                "BACnet Object Type", "BACnet Instance", "Modbus Register", "Modbus Type",
+                "Source", "Source Reference", "Validation Status", "Provenance Parser",
+                "Provenance Source Doc", "Effective Controller Mapping", "Effective Equipment Mapping",
+                "Equipment Sequence Reference",
             ])
             for point in self.project.points:
                 effective_equipment_id = self.project.effective_point_equipment_id(point) or point.equipment_id
                 effective_controller_id = self.project.effective_point_controller_id(point)
                 ctrl = self.project.get_controller(effective_controller_id) if effective_controller_id else None
+                equipment = self.project.get_equipment(effective_equipment_id)
+                mapped_controller = (
+                    point.controller_id is not None and effective_controller_id != point.controller_id
+                ) or (
+                    point.controller_id is None and bool(effective_controller_id)
+                )
+                mapped_equipment = effective_equipment_id != point.equipment_id
                 writer.writerow([
                     point.name,
                     effective_equipment_id,
@@ -292,6 +319,14 @@ class BACnetExporter(BaseExporter):
                     point.bacnet_instance or "",
                     point.modbus_register or "",
                     point.modbus_type or "",
+                    point.source.value,
+                    point.source_reference or "",
+                    point.validation_status,
+                    point.provenance.get("parser", ""),
+                    point.provenance.get("source_doc_id", ""),
+                    "yes" if mapped_controller else "no",
+                    "yes" if mapped_equipment else "no",
+                    equipment.sequence_ref if equipment and equipment.sequence_ref else "",
                 ])
 
         # Equipment CSV
@@ -300,7 +335,8 @@ class BACnetExporter(BaseExporter):
             writer = csv.writer(f)
             writer.writerow([
                 "Equipment ID", "Type", "Building", "Floor", "Room", "Served Area",
-                "Controller", "Design CFM", "Design Tonnage", "Design GPM", "Status"
+                "Controller", "Design CFM", "Design Tonnage", "Design GPM", "Status",
+                "Sequence Reference", "Provenance Parser", "Provenance Source Doc",
             ])
             for equip in self.project.equipment:
                 effective_controller_id = self.project.effective_equipment_controller_id(equip)
@@ -316,6 +352,9 @@ class BACnetExporter(BaseExporter):
                     equip.design_tonnage or "",
                     equip.design_gpm or "",
                     equip.status,
+                    equip.sequence_ref or "",
+                    equip.provenance.get("parser", ""),
+                    equip.provenance.get("source_doc_id", ""),
                 ])
 
         # Controllers CSV

@@ -60,6 +60,10 @@ class TridiumExporter(BaseExporter):
 
     def _export_station(self, output_dir: Path) -> Path:
         """Export station.json - root station configuration."""
+        approved_outputs = any(
+            approval.approval_key == "outputs-ready" and approval.status == "approved"
+            for approval in self.project.review_state.approvals
+        )
         station = {
             "station": {
                 "name": self.project.metadata.name,
@@ -69,6 +73,13 @@ class TridiumExporter(BaseExporter):
                 "description": self.project.metadata.client or "",
                 "timezone": self.project.metadata.timezone or "UTC",
                 "created": datetime.now().isoformat(),
+                "review": {
+                    "validationStatus": self.project.validation_status,
+                    "lastValidated": self.project.last_validated.isoformat() if self.project.last_validated else None,
+                    "outputsApproved": approved_outputs,
+                    "mappingDecisionCount": len(self.project.review_state.mapping_decisions),
+                    "assumptionCount": len(self.project.review_state.assumptions),
+                },
                 "modules": [
                     "bacnet", "fox", "history", "alarm", "schedule", "px"
                 ]
@@ -119,6 +130,9 @@ class TridiumExporter(BaseExporter):
                     "building": equip.building or "",
                     "floor": equip.floor or "",
                     "room": equip.room or "",
+                    "sequenceReference": equip.sequence_ref or "",
+                    "provenanceParser": equip.provenance.get("parser", ""),
+                    "provenanceSourceDoc": equip.provenance.get("source_doc_id", ""),
                 }
             }
             components["components"].append(comp)
@@ -153,6 +167,13 @@ class TridiumExporter(BaseExporter):
                 "properties": {
                     "units": point.units or "",
                     "description": point.description or "",
+                    "source": point.source.value,
+                    "sourceReference": point.source_reference or "",
+                    "validationStatus": point.validation_status,
+                    "provenanceParser": point.provenance.get("parser", ""),
+                    "provenanceSourceDoc": point.provenance.get("source_doc_id", ""),
+                    "mappedController": str((point.controller_id or "") != (effective_controller_id or "")).lower(),
+                    "mappedEquipment": str(point.equipment_id != effective_equipment_id).lower(),
                 }
             }
 
@@ -233,6 +254,11 @@ class TridiumExporter(BaseExporter):
                 "type": "px",
                 "width": 1200,
                 "height": 800,
+                "metadata": {
+                    "equipmentId": equip.id,
+                    "sequenceReference": equip.sequence_ref or "",
+                    "provenanceParser": equip.provenance.get("parser", ""),
+                },
                 "components": []
             }
 
@@ -258,6 +284,9 @@ class TridiumExporter(BaseExporter):
                     "label": point.name,
                     "format": ".1f",
                     "bindingType": "value" if point.kind == PointKind.SENSOR else "setpoint",
+                    "source": point.source.value,
+                    "sourceReference": point.source_reference or "",
+                    "validationStatus": point.validation_status,
                 })
                 y_pos += 40
                 if y_pos > 700:

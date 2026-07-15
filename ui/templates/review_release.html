@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-4 mb-8">
+    <div class="grid gap-4 md:grid-cols-5 mb-8">
         <div class="card p-6">
             <p class="text-sm text-gray-500 dark:text-gray-400">Blocking Gaps</p>
             <p class="mt-2 text-3xl font-bold text-red-500">{{ review_state.blocking_gaps|length }}</p>
@@ -28,6 +28,10 @@
         <div class="card p-6">
             <p class="text-sm text-gray-500 dark:text-gray-400">Pending Assumptions</p>
             <p class="mt-2 text-3xl font-bold text-yellow-500">{{ review_state.pending_assumptions|length }}</p>
+        </div>
+        <div class="card p-6">
+            <p class="text-sm text-gray-500 dark:text-gray-400">Sequence Debt</p>
+            <p class="mt-2 text-3xl font-bold text-amber-500">{{ review_state.sequence_attention|length }}</p>
         </div>
         <div class="card p-6">
             <p class="text-sm text-gray-500 dark:text-gray-400">Output Approval</p>
@@ -73,6 +77,10 @@
         <a href="/project/{{ project.metadata.project_id }}/assumptions" class="card p-6 block">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Assumptions</h3>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ review_state.pending_assumptions|length }} assumptions are still pending or deferred.</p>
+        </a>
+        <a href="/project/{{ project.metadata.project_id }}/sequence" class="card p-6 block">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Sequence Review</h3>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ review_state.sequence_attention|length }} equipment items still need sequence coverage review.</p>
         </a>
     </div>
 </div>

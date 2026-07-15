@@ -853,6 +853,89 @@ def test_generated_graphics_are_registered_as_artifacts(tmp_path: Path) -> None:
     assert task.result_json["result"]["generated_documents"]
 
 
+def test_generated_exports_are_registered_as_artifacts(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'generated_exports.db'}",
+    )
+    project_id = "generated-export-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="Generated Export Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+    project = main.get_project(project_id)
+    project.add_controller(
+        main.Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[main.Protocol.BACNET_IP],
+            network_addresses=[
+                main.ControllerNetworkAddress(
+                    protocol=main.Protocol.BACNET_IP,
+                    address="192.168.10.10",
+                    network_number=1001,
+                )
+            ],
+            owned_point_names=["AHU-1 SAT"],
+        )
+    )
+    project.add_equipment(main.Equipment(id="AHU-1", type=main.EquipmentType.AHU, controller_id="MPC-1"))
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    response = asyncio.run(
+        main.export_project(
+            request(f"/project/{project_id}/export", method="POST"),
+            project_id=project_id,
+            vendors=["bacnet", "tridium"],
+        )
+    )
+
+    assert response.status_code == 200
+    with main.container.db.session() as session:
+        docs = list(
+            session.scalars(
+                select(DocumentRecord).where(DocumentRecord.document_type.in_(["generated_export_bacnet", "generated_export_tridium"]))
+            )
+        )
+        links = list(
+            session.scalars(
+                select(ArtifactObjectLinkRecord).where(ArtifactObjectLinkRecord.relationship_type == "generated_output")
+            )
+        )
+        task = session.scalar(select(TaskRecord).where(TaskRecord.task_type == "export_generation").order_by(TaskRecord.id.desc()))
+
+    assert docs
+    assert any(doc.metadata_json.get("vendor") == "bacnet" for doc in docs)
+    assert any(doc.metadata_json.get("vendor") == "tridium" for doc in docs)
+    assert any(doc.metadata_json.get("format") == "csv" for doc in docs)
+    assert any(doc.metadata_json.get("format") == "json" for doc in docs)
+    assert any(link.entity_type == "equipment" and link.entity_key == "AHU-1" for link in links)
+    assert task is not None
+    assert task.result_json["result"]["generated_documents"]
+
+
 def test_pdf_ingestion_extracts_text_with_pypdf_adapter(tmp_path: Path, monkeypatch) -> None:
     pdf_path = tmp_path / "sequence.pdf"
     pdf_path.write_bytes(b"%PDF-test")

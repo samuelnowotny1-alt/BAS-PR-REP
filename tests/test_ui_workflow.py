@@ -10,13 +10,13 @@ from fastapi import UploadFile
 from starlette.requests import Request
 
 from bas_assistant.generators import generate_reports
-from bas_assistant.exporters import BACnetExporter, NiagaraExporter
+from bas_assistant.exporters import BACnetExporter, NiagaraExporter, TridiumExporter
 from bas_assistant.importers import CSVImporter
 from bas_assistant.models import Controller, ControllerNetworkAddress, Equipment, EquipmentType, Project, ProjectMetadata, Protocol, UnitSystem
 from bas_assistant.models import SourceDocument
 from bas_assistant.models.station_sync import StationProbeResult
 from bas_assistant.models.types import ValidationCategory, ValidationSeverity
-from bas_assistant.validation import ValidationReport, ValidationResult
+from bas_assistant.validation import ValidationEngine, ValidationReport, ValidationResult
 from ui.api import main
 
 
@@ -388,6 +388,58 @@ def test_generation_post_is_blocked_when_validation_errors_exist() -> None:
     assert "Generation Readiness" in text
     assert "validation errors must be resolved before generation" in text
     assert "No Checkout Sheets Generated" in text
+
+
+def test_generation_readiness_surfaces_sequence_coverage_debt() -> None:
+    project_id = create_project("sequence-readiness-project")
+    project = main.get_project(project_id)
+    sequence_path = main.OUTPUT_DIR / project_id / "sequence.txt"
+    sequence_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(main.reports_page(request(f"/project/{project_id}/reports"), project_id))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Generation Readiness" in text
+    assert "sequence-reviewed equipment items still have missing point coverage or control-family gaps" in text
 
 
 def test_export_page_blocks_submission_when_project_not_ready() -> None:
@@ -1269,6 +1321,59 @@ def test_review_decisions_persist_reload_and_drive_report_summary() -> None:
     assert "Ready for downstream report generation." in summary_text
 
 
+def test_gap_analysis_adds_sequence_generation_gaps() -> None:
+    project_id = create_project("gap-sequence-project")
+    project = main.get_project(project_id)
+    sequence_path = main.OUTPUT_DIR / project_id / "sequence.txt"
+    sequence_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=2001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    gap_report = main.analyze_gaps(project)
+    sequence_gap_titles = {gap.title for gap in gap_report.gaps if "sequence-backed coverage" in gap.title}
+    sequence_gap_descriptions = [gap.description for gap in gap_report.gaps if gap.metadata.get("generator") == "graphics"]
+
+    assert "Graphics for AHU-1 is missing sequence-backed coverage" in sequence_gap_titles
+    assert "Logic for AHU-1 is missing sequence-backed coverage" in sequence_gap_titles
+    assert "Export for AHU-1 is missing sequence-backed coverage" in sequence_gap_titles
+    assert any("AHU-1 SF-STS" in description for description in sequence_gap_descriptions)
+    assert any("Status/proof point" in description for description in sequence_gap_descriptions)
+
+
 def test_mapping_decision_persists_and_changes_generated_relationships() -> None:
     project_id = create_project("mapping-project")
     project = main.get_project(project_id)
@@ -1407,6 +1512,82 @@ def test_review_release_page_blocks_then_allows_approval() -> None:
     assert reloaded.review_state.approvals[0].approval_key == "outputs-ready"
 
 
+def test_review_release_requires_sequence_coverage_resolution() -> None:
+    project_id = create_project("review-sequence-project")
+    project = main.get_project(project_id)
+    sequence_path = main.OUTPUT_DIR / project_id / "sequence.txt"
+    sequence_path.parent.mkdir(parents=True, exist_ok=True)
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.metadata.client = "Client"
+    project.metadata.location = "Site"
+    project.metadata.engineer_of_record = "Engineer"
+    project.metadata.programmer = "Programmer"
+    project.metadata.commissioning_agent = "CxA"
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=2001)],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            point_names=["AHU-1 SF-CMD"],
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+    run_async(
+        main.add_assumption(
+            request=request(f"/project/{project_id}/assumptions", method="POST"),
+            project_id=project_id,
+            category="design",
+            title="Basis",
+            description="Accepted design basis.",
+            status="accepted",
+        )
+    )
+    main.save_project(project)
+
+    page = run_async(main.review_release_page(request(f"/project/{project_id}/review"), project_id))
+    text = response_text(page)
+    assert page.status_code == 200
+    assert "Sequence Debt" in text
+    assert "Sequence coverage reviewed" in text
+    assert "equipment items still have sequence coverage debt to resolve" in text
+
+    blocked = run_async(
+        main.approve_release_readiness(
+            project_id=project_id,
+            notes="Should fail until sequence coverage is resolved.",
+        )
+    )
+    assert blocked.status_code == 303
+    assert blocked.headers["location"] == f"/project/{project_id}/review?ready=0"
+
+
 def test_reimport_replaces_conflicting_rows_with_warning(tmp_path: Path) -> None:
     project = Project(metadata=ProjectMetadata(project_id="REIMPORT-1", name="Reimport Project"))
     importer = CSVImporter(project)
@@ -1449,7 +1630,15 @@ def test_reimport_replaces_conflicting_rows_with_warning(tmp_path: Path) -> None
 
 def test_mapping_decision_flows_into_niagara_and_bacnet_exports(tmp_path: Path) -> None:
     project = Project(metadata=ProjectMetadata(project_id="EXPORT-MAP", name="Export Mapping"))
-    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1"))
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+            provenance={"parser": "equipment_schedule", "source_doc_id": "equip-doc"},
+        )
+    )
     project.add_controller(
         Controller(
             id="MPC-1",
@@ -1472,6 +1661,10 @@ def test_mapping_decision_flows_into_niagara_and_bacnet_exports(tmp_path: Path) 
             kind=main.PointKind.SENSOR,
             direction=main.PointDirection.INPUT,
             units="degF",
+            source=main.PointSource.SEQUENCE,
+            source_reference="point-doc:row-1",
+            validation_status="valid",
+            provenance={"parser": "sequence_parser", "source_doc_id": "point-doc"},
         )
     )
     project.review_state.mapping_decisions.append(
@@ -1494,6 +1687,121 @@ def test_mapping_decision_flows_into_niagara_and_bacnet_exports(tmp_path: Path) 
 
     bacnet_points = pd.read_csv(tmp_path / "bacnet" / "csv" / "points.csv")
     assert bacnet_points.loc[0, "Controller"] == "MPC-2"
+    assert bacnet_points.loc[0, "Source"] == "sequence"
+    assert bacnet_points.loc[0, "Source Reference"] == "point-doc:row-1"
+    assert bacnet_points.loc[0, "Provenance Parser"] == "sequence_parser"
+    assert bacnet_points.loc[0, "Effective Controller Mapping"] == "yes"
+    assert bacnet_points.loc[0, "Equipment Sequence Reference"] == "AHU-1 sequence.txt"
+
+    bacnet_equipment = pd.read_csv(tmp_path / "bacnet" / "csv" / "equipment.csv")
+    assert bacnet_equipment.loc[0, "Sequence Reference"] == "AHU-1 sequence.txt"
+    assert bacnet_equipment.loc[0, "Provenance Parser"] == "equipment_schedule"
+
+
+def test_bacnet_ede_export_includes_lineage_attributes(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="BACNET-LINEAGE", name="BACnet Lineage"))
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+            source=main.PointSource.SEQUENCE,
+            source_reference="seq-doc:req-1",
+            validation_status="valid",
+            provenance={"parser": "sequence_parser"},
+        )
+    )
+
+    result = BACnetExporter(project).export(tmp_path / "bacnet")
+
+    assert result.success
+    ede_text = (tmp_path / "bacnet" / "project.ede").read_text(encoding="utf-8")
+    assert 'source="sequence"' in ede_text
+    assert 'sourceReference="seq-doc:req-1"' in ede_text
+    assert 'validationStatus="valid"' in ede_text
+    assert 'provenanceParser="sequence_parser"' in ede_text
+    assert 'sequenceReference="AHU-1 sequence.txt"' in ede_text
+
+
+def test_tridium_export_includes_review_and_lineage_metadata(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="TRIDIUM-LINEAGE", name="Tridium Lineage"))
+    project.validation_status = "warning"
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+            provenance={"parser": "equipment_schedule", "source_doc_id": "equip-doc"},
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10", network_number=1001)],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            source=main.PointSource.SEQUENCE,
+            source_reference="seq-doc:req-1",
+            validation_status="valid",
+            provenance={"parser": "sequence_parser", "source_doc_id": "seq-doc"},
+        )
+    )
+    project.review_state.approvals.append(
+        main.ApprovalReviewDecision(
+            approval_key="outputs-ready",
+            status="approved",
+            notes="Approved for export.",
+        )
+    )
+
+    result = TridiumExporter(project).export(tmp_path / "tridium")
+
+    assert result.success
+    station = json.loads((tmp_path / "tridium" / "TRIDIUM-LINEAGE_fox" / "station.json").read_text())
+    components = json.loads((tmp_path / "tridium" / "TRIDIUM-LINEAGE_fox" / "components.json").read_text())
+    graphic = json.loads((tmp_path / "tridium" / "TRIDIUM-LINEAGE_fox" / "graphics" / "g_AHU-1.json").read_text())
+
+    assert station["station"]["review"]["validationStatus"] == "warning"
+    assert station["station"]["review"]["outputsApproved"] is True
+
+    equipment_component = next(component for component in components["components"] if component["type"] == "equipment")
+    point_component = next(component for component in components["components"] if component["name"] == "AHU-1 SAT")
+    assert equipment_component["properties"]["sequenceReference"] == "AHU-1 sequence.txt"
+    assert equipment_component["properties"]["provenanceParser"] == "equipment_schedule"
+    assert point_component["properties"]["source"] == "sequence"
+    assert point_component["properties"]["sourceReference"] == "seq-doc:req-1"
+    assert point_component["properties"]["provenanceParser"] == "sequence_parser"
+
+    assert graphic["metadata"]["sequenceReference"] == "AHU-1 sequence.txt"
+    binding = next(component for component in graphic["components"] if component["type"] == "binding")
+    assert binding["source"] == "sequence"
+    assert binding["validationStatus"] == "valid"
 
 
 def test_read_only_project_api_endpoints() -> None:
@@ -1658,3 +1966,61 @@ def test_controller_schedule_report_includes_network_address_columns(tmp_path: P
     assert str(controller_schedule.loc[0, "MS/TP MACs"]) == "11"
     assert str(controller_schedule.loc[0, "Network Numbers"]) == "2001"
     assert set(network_summary["Protocol"]) == {"BACnet/IP", "BACnet/MSTP"}
+
+
+def test_validation_report_markdown_includes_sequence_coverage_summary(tmp_path: Path) -> None:
+    project = Project(
+        metadata=ProjectMetadata(
+            project_id="validation-report-project",
+            name="Validation Report Project",
+        )
+    )
+    sequence_path = tmp_path / "ahu-sequence.txt"
+    sequence_path.write_text(
+        "AHU-1 SF-CMD shall start on occupancy. AHU-1 SF-STS shall prove status.",
+        encoding="utf-8",
+    )
+    project.source_documents.append(
+        SourceDocument(
+            id="seq-1",
+            name="AHU-1 sequence.txt",
+            type="sequence",
+            path=str(sequence_path),
+        )
+    )
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.add_equipment(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+            sequence_ref="AHU-1 sequence.txt",
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SF-CMD",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.ACTUATOR,
+            direction=main.PointDirection.OUTPUT,
+        )
+    )
+
+    ValidationEngine().validate(project)
+    report_paths = generate_reports(project, tmp_path / "reports")
+    validation_text = report_paths["validation"].read_text(encoding="utf-8")
+
+    assert "## Sequence Coverage Review" in validation_text
+    assert "- Missing referenced points: 1" in validation_text
+    assert "- Missing control families: Status/proof point" in validation_text
+    assert "### AHU-1" in validation_text
+    assert "- Missing point refs: AHU-1 SF-STS" in validation_text
+    assert "`COMP-007` equipment `AHU-1`" in validation_text

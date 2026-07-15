@@ -470,6 +470,8 @@ def build_export_output_descriptors(project: Project, results: dict[str, dict[st
     for vendor, result in results.items():
         for file_path in result.get("files") or []:
             path = Path(file_path)
+            suffix = path.suffix.lower().lstrip(".") or "artifact"
+            role = path.parent.name if path.parent != path.parent.parent else ""
             outputs.append(
                 {
                     "path": path,
@@ -479,9 +481,9 @@ def build_export_output_descriptors(project: Project, results: dict[str, dict[st
                         entity_type="equipment",
                         entity_keys=[equipment.id for equipment in project.equipment],
                         parser_name=f"{vendor}_exporter",
-                        metadata={"vendor": vendor},
+                        metadata={"vendor": vendor, "format": suffix, "role": role},
                     ),
-                    "metadata": {"generator": "export", "vendor": vendor},
+                    "metadata": {"generator": "export", "vendor": vendor, "format": suffix, "role": role},
                 }
             )
     return outputs
@@ -752,8 +754,14 @@ def mapping_candidates_for_project(project: Project) -> list[dict[str, object]]:
 def review_release_state(project: Project) -> dict[str, object]:
     gap_report = analyze_gaps(project)
     mapping_candidates = mapping_candidates_for_project(project)
+    sequence_workspace = build_sequence_workspace(project)
     assumption_records = list(project.review_state.assumptions)
     unresolved_mappings = [candidate for candidate in mapping_candidates if not candidate.get("resolved_value")]
+    sequence_attention = [
+        review
+        for review in sequence_workspace["reviews"]
+        if review["status"] in {"attention", "not_indexed"}
+    ]
     blocking_gaps = [
         gap
         for gap in gap_report.gaps
@@ -776,7 +784,7 @@ def review_release_state(project: Project) -> dict[str, object]:
         ),
         None,
     )
-    release_ready = not blocking_gaps and not unresolved_mappings and not pending_assumptions
+    release_ready = not blocking_gaps and not unresolved_mappings and not pending_assumptions and not sequence_attention
     checks = [
         {
             "label": "Blocking gaps resolved",
@@ -792,6 +800,15 @@ def review_release_state(project: Project) -> dict[str, object]:
             "label": "Assumptions closed",
             "status": "ready" if not pending_assumptions else "attention",
             "detail": "All assumptions are verified, accepted, or invalidated." if not pending_assumptions else f"{len(pending_assumptions)} assumptions are still pending or deferred.",
+        },
+        {
+            "label": "Sequence coverage reviewed",
+            "status": "ready" if not sequence_attention else "attention",
+            "detail": (
+                "All sequence-reviewed equipment is covered by structured points and control-family checks."
+                if not sequence_attention
+                else f"{len(sequence_attention)} equipment items still have sequence coverage debt to resolve."
+            ),
         },
         {
             "label": "Output approval",
@@ -810,6 +827,8 @@ def review_release_state(project: Project) -> dict[str, object]:
         "unresolved_mappings": unresolved_mappings,
         "assumptions": assumption_records,
         "pending_assumptions": pending_assumptions,
+        "sequence_workspace": sequence_workspace,
+        "sequence_attention": sequence_attention,
         "output_approval": output_approval,
     }
 
@@ -1123,6 +1142,8 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
     report = engine.validate(project)
     findings = serialize_validation_findings(report, project.metadata.project_id)
     release = review_release_state(project)
+    sequence_workspace = build_sequence_workspace(project)
+    sequence_summary = sequence_workspace["summary"]
     blockers: list[str] = []
     cautions: list[str] = []
 
@@ -1136,6 +1157,14 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
         cautions.append(f"{len(report.warnings)} validation warnings remain.")
     if release["pending_assumptions"]:
         cautions.append(f"{len(release['pending_assumptions'])} assumptions are still pending or deferred.")
+    if sequence_summary["attention"]:
+        cautions.append(
+            f"{sequence_summary['attention']} sequence-reviewed equipment items still have missing point coverage or control-family gaps."
+        )
+    if sequence_summary["not_indexed"]:
+        cautions.append(
+            f"{sequence_summary['not_indexed']} sequence-reviewed equipment items do not have indexed sequence context yet."
+        )
 
     can_generate = not blockers
     status = "blocked" if blockers else ("caution" if cautions else "ready")
@@ -1147,6 +1176,7 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
         "validation_summary": report.summary,
         "release_review": release,
         "validation_findings": findings,
+        "sequence_summary": sequence_summary,
     }
 
 
