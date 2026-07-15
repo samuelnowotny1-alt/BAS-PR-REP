@@ -1,5 +1,6 @@
 import asyncio
 import json
+from urllib.parse import urlencode
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -39,6 +40,32 @@ def request(path: str = "/", method: str = "GET", headers: list[tuple[bytes, byt
             "root_path": "",
             "app": main.app,
         }
+    )
+
+
+def form_request(path: str, data: dict[str, str], method: str = "POST") -> Request:
+    body = urlencode(data).encode()
+
+    async def receive() -> dict[str, Any]:
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    return Request(
+        {
+            "type": "http",
+            "method": method,
+            "path": path,
+            "headers": [
+                (b"content-type", b"application/x-www-form-urlencoded"),
+                (b"content-length", str(len(body)).encode()),
+            ],
+            "query_string": b"",
+            "server": ("testserver", 80),
+            "client": ("testclient", 50000),
+            "scheme": "http",
+            "root_path": "",
+            "app": main.app,
+        },
+        receive,
     )
 
 
@@ -119,6 +146,18 @@ def test_create_project_persists_form_fields_and_detail_loads() -> None:
     detail = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
     assert detail.status_code == 200
     assert "Pytest Project" in response_text(detail)
+
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="project.created",
+            entity_type="project",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "Project created: Pytest Project" in ledger_text
+    assert "Test Client" in ledger_text
 
 
 def test_project_detail_page_renders_engineering_status_summary() -> None:
@@ -1391,6 +1430,18 @@ def test_station_sync_save_persists_configuration() -> None:
     assert main.station_sync_passwords[project_id] == "secret"
     assert "Station sync configuration saved." in response_text(response)
 
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="station_sync.config_saved",
+            entity_type="station_sync",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "Station sync configuration saved" in ledger_text
+    assert "JACE-1" in ledger_text
+
 
 def test_station_sync_probe_updates_last_probe_status(monkeypatch: pytest.MonkeyPatch) -> None:
     project_id = create_project()
@@ -1625,6 +1676,180 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
     assert response.headers["HX-Redirect"] == "/project/demo-hvac-project"
     assert "demo-hvac-project" in main.projects
 
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id="demo-hvac-project",
+            event_type="project.demo_loaded",
+            entity_type="project",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "Demo project loaded with generated outputs" in ledger_text
+    assert "demo-hvac-project" in ledger_text
+
+
+def test_admin_user_and_membership_changes_write_ledger_entries() -> None:
+    project_id = create_project("admin-ledger-project")
+    admin_request = request("/admin/users", method="POST")
+    admin_request.scope["session"] = {
+        "user": {
+            "id": 1,
+            "username": "admin",
+            "email": "admin@example.com",
+            "role": "admin",
+            "assigned_project_ids": [],
+        }
+    }
+
+    create_response = run_async(
+        main.admin_create_user(
+            admin_request,
+            username="fieldtech",
+            email="fieldtech@example.com",
+            password="secret123",
+            role="technician",
+            project_ids=[project_id],
+            access_level="viewer",
+        )
+    )
+    assert create_response.status_code == 303
+
+    created_user = next(user for user in main.container.auth.list_users() if user.username == "fieldtech")
+    update_response = run_async(
+        main.admin_update_user(
+            admin_request,
+            user_id=created_user.id,
+            role="engineer",
+            is_active="true",
+            project_ids=[project_id],
+            access_level="editor",
+        )
+    )
+    assert update_response.status_code == 303
+
+    membership_request = form_request(
+        f"/project/{project_id}/memberships",
+        {f"user_access_{created_user.id}": "owner"},
+    )
+    membership_request.scope["session"] = admin_request.scope["session"]
+    membership_response = run_async(main.project_memberships_update(membership_request, project_id))
+    assert membership_response.status_code == 303
+
+    create_ledger = response_text(
+        run_async(
+            main.system_ledger_page(
+                request("/activity/ledger"),
+                event_type="admin.user_created",
+                entity_type="user",
+            )
+        )
+    )
+    update_ledger = response_text(
+        run_async(
+            main.system_ledger_page(
+                request("/activity/ledger"),
+                event_type="admin.user_updated",
+                entity_type="user",
+            )
+        )
+    )
+    membership_ledger = response_text(
+        run_async(
+            main.system_ledger_page(
+                request("/activity/ledger"),
+                project_id=project_id,
+                event_type="admin.project_memberships_updated",
+                entity_type="membership",
+            )
+        )
+    )
+
+    assert "User created: fieldtech" in create_ledger
+    assert "fieldtech@example.com" in create_ledger
+    assert "User updated: fieldtech" in update_ledger
+    assert "engineer" in update_ledger
+    assert "Project memberships updated for admin-ledger-project" in membership_ledger
+    assert "owner" in membership_ledger
+
+
+def test_tabular_reimport_writes_ledger_replacement_entry() -> None:
+    project_id = create_project("reimport-ledger-project")
+    first_upload = UploadFile(
+        filename="equipment.csv",
+        file=BytesIO(b"Equipment ID,Equipment Type,Served Area\nAHU-1,AHU,North Wing\n"),
+    )
+    second_upload = UploadFile(
+        filename="equipment.csv",
+        file=BytesIO(b"Equipment ID,Equipment Type,Served Area\nAHU-1,AHU,South Wing\n"),
+    )
+
+    first_response = run_async(
+        main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
+            project_id,
+            equipment_file=first_upload,
+        )
+    )
+    second_response = run_async(
+        main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
+            project_id,
+            equipment_file=second_upload,
+        )
+    )
+
+    assert first_response.status_code == 303
+    assert second_response.status_code == 303
+    assert main.get_project(project_id).get_equipment("AHU-1").served_area == "South Wing"
+
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="import.tabular_applied",
+            entity_type="equipment",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "equipment.csv updated project equipment" in ledger_text
+    assert "Re-import detected" in ledger_text
+    assert "1 replacements" in ledger_text
+
+
+def test_gap_auto_fix_writes_ledger_entry() -> None:
+    project_id = create_project("gap-fix-ledger-project")
+    project = main.get_project(project_id)
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="10.1.1.10")],
+        )
+    )
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id=None))
+    main.save_project(project)
+
+    gap_report = main.analyze_gaps(project)
+    controller_gap = next(gap for gap in gap_report.gaps if gap.affected_object_type == "equipment" and gap.affected_object_id == "AHU-1" and gap.title.endswith("has no controller"))
+
+    response = run_async(main.fix_gap(controller_gap.gap_id))
+
+    assert response.status_code == 200
+    assert main.get_project(project_id).get_equipment("AHU-1").controller_id == "MPC-1"
+
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="gap.auto_fixed",
+            entity_type="gap",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert f"Auto-fix applied for gap {controller_gap.gap_id}" in ledger_text
+    assert 'controller_id: "" → "MPC-1"' in ledger_text
+
 
 def test_export_project_renders_partial_and_writes_vendor_output() -> None:
     project_id = create_project()
@@ -1722,6 +1947,18 @@ def test_add_assumption_redirects_with_valid_category() -> None:
     assert response.status_code == 303
     assert response.headers["location"] == f"/project/{project_id}/assumptions"
 
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="assumption.added",
+            entity_type="assumption",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "Assumption added: Design Weather" in ledger_text
+    assert "Use local design weather assumptions." in ledger_text
+
 
 def test_review_decisions_persist_reload_and_drive_report_summary() -> None:
     project_id = create_project("review-persistence-project")
@@ -1783,6 +2020,18 @@ def test_review_decisions_persist_reload_and_drive_report_summary() -> None:
     assert "- Gap resolutions recorded: **1**" in summary_text
     assert "- Output approval: **approved**" in summary_text
     assert "Ready for downstream report generation." in summary_text
+
+    ledger_response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="review.output_approved",
+            entity_type="approval",
+        )
+    )
+    ledger_text = response_text(ledger_response)
+    assert "Review outputs approved" in ledger_text
+    assert "Ready for downstream report generation." in ledger_text
 
 
 def test_gap_analysis_adds_sequence_generation_gaps() -> None:

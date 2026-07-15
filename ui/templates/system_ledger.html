@@ -74,6 +74,68 @@
                 {% endif %}
             </div>
             {% endif %}
+            {% if event.payload %}
+            <div class="mt-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+                {% if event.payload.description %}
+                <p>{{ event.payload.description }}</p>
+                {% endif %}
+                {% if event.payload.client %}
+                <p>{{ event.payload.client }}</p>
+                {% endif %}
+                {% if event.payload.source_name %}
+                <p>{{ event.payload.source_name }}</p>
+                {% endif %}
+                {% if event.payload.email %}
+                <p>{{ event.payload.email }}</p>
+                {% endif %}
+                {% if event.payload.role %}
+                <p>{{ event.payload.role }}</p>
+                {% endif %}
+                {% if event.payload.access_level %}
+                <p>{{ event.payload.access_level }}</p>
+                {% endif %}
+                {% if event.payload.assignment_count %}
+                <p>{{ event.payload.assignment_count }} assignments</p>
+                {% endif %}
+                {% if event.payload.imported_count %}
+                <p>{{ event.payload.imported_count }} imported</p>
+                {% endif %}
+                {% if event.payload.replacement_count %}
+                <p>{{ event.payload.replacement_count }} replacements</p>
+                {% endif %}
+                {% if event.payload.is_reimport %}
+                <p>Re-import detected</p>
+                {% endif %}
+                {% if event.payload.field %}
+                <p>{{ event.payload.field }}: "{{ event.payload.from }}" → "{{ event.payload.to }}"</p>
+                {% endif %}
+                {% if event.payload.notes %}
+                <p>{{ event.payload.notes }}</p>
+                {% endif %}
+                {% if event.payload.resolution_notes %}
+                <p>{{ event.payload.resolution_notes }}</p>
+                {% endif %}
+                {% if event.payload.host %}
+                <p>{{ event.payload.host }}:{{ event.payload.port }}</p>
+                {% endif %}
+                {% if event.payload.station_name %}
+                <p>{{ event.payload.station_name }}</p>
+                {% endif %}
+                {% if event.payload.probe_message %}
+                <p>{{ event.payload.probe_message }}</p>
+                {% endif %}
+                {% if event.payload.vendors %}
+                <p>{{ event.payload.vendors|join(', ') }}</p>
+                {% endif %}
+                {% if event.payload.assignments %}
+                <p>
+                    {% for assignment in event.payload.assignments %}
+                    {{ assignment.user_id }}={{ assignment.access_level }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
             {% if event.changes %}
             <div class="mt-4 space-y-2">
                 {% for change in event.changes[:6] %}

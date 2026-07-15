@@ -149,6 +149,104 @@ def save_project(project: Project) -> None:
     projects[project.metadata.project_id] = project
 
 
+def record_project_ledger_event(
+    *,
+    project_id: str | None,
+    event_type: str,
+    summary: str,
+    entity_type: str | None = None,
+    entity_key: str | None = None,
+    payload: dict[str, object] | None = None,
+) -> None:
+    """Persist a project-scoped ledger event."""
+    container.ledger.record_event(
+        event_type=event_type,
+        summary=summary,
+        project_id=project_id,
+        entity_type=entity_type,
+        entity_key=entity_key,
+        payload=payload or {},
+    )
+
+
+def station_connection_ledger_payload(config: StationConnectionConfig, *, password_updated: bool = False) -> dict[str, object]:
+    """Serialize station connection state for the ledger without sensitive secrets."""
+    return {
+        "enabled": config.enabled,
+        "target": config.target.value if hasattr(config.target, "value") else str(config.target),
+        "protocol": config.protocol.value if hasattr(config.protocol, "value") else str(config.protocol),
+        "host": config.host or "",
+        "port": config.port,
+        "use_tls": config.use_tls,
+        "verify_tls": config.verify_tls,
+        "station_name": config.station_name or "",
+        "username": config.username or "",
+        "obix_path": config.obix_path,
+        "timeout_seconds": config.timeout_seconds,
+        "last_test_status": config.last_test_status or "",
+        "last_test_message": config.last_test_message or "",
+        "password_updated": password_updated,
+    }
+
+
+def assignment_ledger_payload(assignments: list[tuple[int, str]]) -> list[dict[str, object]]:
+    """Normalize membership assignments for ledger storage."""
+    return [
+        {
+            "user_id": user_id,
+            "access_level": access_level,
+        }
+        for user_id, access_level in assignments
+    ]
+
+
+def replacement_warning_count(warnings: list[str] | None) -> int:
+    """Count re-import replacement warnings emitted by the CSV importers."""
+    return sum(1 for warning in (warnings or []) if "replaced existing definition during re-import" in warning.lower())
+
+
+def record_import_ledger_event(
+    *,
+    project_id: str,
+    event_type: str,
+    entity_type: str,
+    source_name: str,
+    import_result: dict[str, object] | None = None,
+    parser_result: dict[str, object] | None = None,
+    artifact_diff: dict[str, list[str]] | None = None,
+    upload_metadata: dict[str, object] | None = None,
+) -> None:
+    """Persist a semantic ledger entry for import and parse mutations."""
+    import_payload = dict(import_result or {})
+    parser_payload = dict(parser_result or {})
+    warnings = list(import_payload.get("warnings") or parser_payload.get("warnings") or [])
+    diff = artifact_diff or {"added": [], "removed": [], "unchanged": []}
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type=event_type,
+        summary=f"{source_name} updated project {entity_type}",
+        entity_type=entity_type,
+        entity_key=source_name,
+        payload={
+            "source_name": source_name,
+            "imported_count": int(import_payload.get("count", 0) or 0),
+            "replacement_count": replacement_warning_count(warnings),
+            "warning_count": len(warnings),
+            "error_count": len(import_payload.get("errors") or []),
+            "is_reimport": bool((upload_metadata or {}).get("is_reimport")),
+            "checksum_changed": bool((upload_metadata or {}).get("checksum_changed")),
+            "previous_document_id": (upload_metadata or {}).get("previous_document_id"),
+            "artifact_diff": diff,
+            "links_added": len(diff.get("added", [])),
+            "links_removed": len(diff.get("removed", [])),
+            "equipment_added": int(parser_payload.get("equipment_added", 0) or 0),
+            "points_added": int(parser_payload.get("points_added", 0) or 0),
+            "controllers_added": int(parser_payload.get("controllers_added", 0) or 0),
+            "knowledge_status": parser_payload.get("knowledge_status") or import_payload.get("knowledge_status"),
+        },
+    )
+
+
 def build_tabular_import_links(
     *,
     importer: CSVImporter,
@@ -633,6 +731,19 @@ def record_gap_resolution(
     )
     project.review_state.gap_decisions = decisions
     save_project(project)
+    record_project_ledger_event(
+        project_id=project.metadata.project_id,
+        event_type="review.gap_resolved",
+        summary=f"Gap {gap_id} marked {status}",
+        entity_type="gap",
+        entity_key=gap_id,
+        payload={
+            "gap_id": gap_id,
+            "status": status,
+            "resolution_notes": resolution_notes,
+            "decided_by": decided_by or "",
+        },
+    )
 
 
 def record_output_approval(
@@ -656,6 +767,19 @@ def record_output_approval(
     )
     project.review_state.approvals = approvals
     save_project(project)
+    record_project_ledger_event(
+        project_id=project.metadata.project_id,
+        event_type="review.output_approved",
+        summary="Review outputs approved",
+        entity_type="approval",
+        entity_key="outputs-ready",
+        payload={
+            "approval_key": "outputs-ready",
+            "status": "approved",
+            "notes": notes,
+            "approved_by": approved_by or "",
+        },
+    )
 
 
 def upsert_mapping_decision(
@@ -682,6 +806,19 @@ def upsert_mapping_decision(
     )
     project.review_state.mapping_decisions = decisions
     save_project(project)
+    record_project_ledger_event(
+        project_id=project.metadata.project_id,
+        event_type="review.mapping_saved",
+        summary=f"Mapping saved for {mapping_key}",
+        entity_type="mapping",
+        entity_key=mapping_key,
+        payload={
+            "mapping_key": mapping_key,
+            "mapped_to": mapped_to,
+            "notes": notes,
+            "decided_by": decided_by or "",
+        },
+    )
 
 
 def mapping_candidates_for_project(project: Project) -> list[dict[str, object]]:
@@ -2023,6 +2160,21 @@ async def create_project(
         cx_agent=cx_agent,
         naming_standard=naming_standard,
     )
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="project.created",
+        summary=f"Project created: {name}",
+        entity_type="project",
+        entity_key=project_id,
+        payload={
+            "project_id": project_id,
+            "name": name,
+            "client": client,
+            "location": location,
+            "unit_system": unit_system,
+            "design_phase": design_phase,
+        },
+    )
     return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
 
@@ -2050,6 +2202,21 @@ async def api_create_project(
         programmer=programmer,
         cx_agent=cx_agent,
         naming_standard=naming_standard,
+    )
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="project.created",
+        summary=f"Project created: {name}",
+        entity_type="project",
+        entity_key=project_id,
+        payload={
+            "project_id": project_id,
+            "name": name,
+            "client": client,
+            "location": location,
+            "unit_system": unit_system,
+            "design_phase": design_phase,
+        },
     )
     return HTMLResponse(
         f'<div data-redirect="/project/{project_id}" '
@@ -2678,6 +2845,15 @@ async def import_data(
                 artifact_diff=artifact_diff,
             ),
         )
+        record_import_ledger_event(
+            project_id=project_id,
+            event_type="import.tabular_applied",
+            entity_type="equipment",
+            source_name=stored_upload.source_document.name,
+            import_result=results["equipment"],
+            artifact_diff=artifact_diff,
+            upload_metadata=stored_upload.metadata,
+        )
 
     if points_file and getattr(points_file, "filename", None):
         task_id = container.tasks.create_task(
@@ -2725,6 +2901,15 @@ async def import_data(
                 artifact_diff=artifact_diff,
             ),
         )
+        record_import_ledger_event(
+            project_id=project_id,
+            event_type="import.tabular_applied",
+            entity_type="point",
+            source_name=stored_upload.source_document.name,
+            import_result=results["points"],
+            artifact_diff=artifact_diff,
+            upload_metadata=stored_upload.metadata,
+        )
 
     if controllers_file and getattr(controllers_file, "filename", None):
         task_id = container.tasks.create_task(
@@ -2771,6 +2956,15 @@ async def import_data(
                 import_result=results["controllers"],
                 artifact_diff=artifact_diff,
             ),
+        )
+        record_import_ledger_event(
+            project_id=project_id,
+            event_type="import.tabular_applied",
+            entity_type="controller",
+            source_name=stored_upload.source_document.name,
+            import_result=results["controllers"],
+            artifact_diff=artifact_diff,
+            upload_metadata=stored_upload.metadata,
         )
 
     normalized_supporting_files = supporting_files if isinstance(supporting_files, list) else []
@@ -2828,6 +3022,15 @@ async def import_data(
                 artifact_diff=artifact_diff,
             )
         container.tasks.complete_task(task_id, result=task_result)
+        record_import_ledger_event(
+            project_id=project_id,
+            event_type="artifact.ingested",
+            entity_type="artifact",
+            source_name=stored_upload.source_document.name,
+            parser_result=results.get(stored_upload.source_document.name),
+            artifact_diff=results.get(stored_upload.source_document.name, {}).get("artifact_diff") if isinstance(results.get(stored_upload.source_document.name), dict) else None,
+            upload_metadata=stored_upload.metadata,
+        )
 
     save_project(project)
     if request.headers.get("HX-Request") == "true":
@@ -3200,6 +3403,20 @@ async def export_project(
         outputs=build_export_output_descriptors(project, results),
     )
     container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="export.generated",
+        summary=f"Export generated for {len(vendors)} vendor targets",
+        entity_type="export",
+        entity_key=",".join(vendors),
+        payload={
+            "vendors": list(vendors),
+            "result_count": len(results),
+            "success_count": sum(1 for result in results.values() if result.get("success")),
+            "warning_count": sum(len(result.get("warnings") or []) for result in results.values()),
+            "error_count": sum(len(result.get("errors") or []) for result in results.values()),
+        },
+    )
 
     return templates.TemplateResponse(request=request, name="export_result.html", context={
         "project": project,
@@ -3250,9 +3467,19 @@ async def save_station_sync_config(
         obix_path=obix_path,
         timeout_seconds=timeout_seconds,
     )
+    password_updated = False
     if password.strip():
         station_sync_passwords[project_id] = password
+        password_updated = True
     save_project(project)
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="station_sync.config_saved",
+        summary="Station sync configuration saved",
+        entity_type="station_sync",
+        entity_key=config.station_name or config.host or project_id,
+        payload=station_connection_ledger_payload(config, password_updated=password_updated),
+    )
     plan = station_sync_service().build_plan(project, config)
     return templates.TemplateResponse(request=request, name="station_sync.html", context={
         "project": project,
@@ -3293,14 +3520,31 @@ async def probe_station_sync(
         obix_path=obix_path,
         timeout_seconds=timeout_seconds,
     )
+    password_updated = False
     if password.strip():
         station_sync_passwords[project_id] = password
+        password_updated = True
     password_value = station_sync_passwords.get(project_id)
     probe_result = station_sync_service().probe(config, password=password_value)
     config.last_tested_at = probe_result.checked_at
     config.last_test_status = "success" if probe_result.success else "failed"
     config.last_test_message = probe_result.message
     save_project(project)
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="station_sync.probe_ran",
+        summary=f"Station sync probe {'succeeded' if probe_result.success else 'failed'}",
+        entity_type="station_sync",
+        entity_key=config.station_name or config.host or project_id,
+        payload={
+            **station_connection_ledger_payload(config, password_updated=password_updated),
+            "probe_success": probe_result.success,
+            "probe_endpoint": probe_result.endpoint,
+            "probe_status_code": probe_result.status_code,
+            "probe_message": probe_result.message,
+            "checked_at": probe_result.checked_at.isoformat(),
+        },
+    )
     plan = station_sync_service().build_plan(project, config)
     return templates.TemplateResponse(request=request, name="station_sync.html", context={
         "project": project,
@@ -3509,6 +3753,21 @@ async def api_load_demo(request: Request):
         vendor_dir.mkdir(parents=True, exist_ok=True)
         exporter = exporter_class(project)
         exporter.export(vendor_dir)
+
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="project.demo_loaded",
+        summary="Demo project loaded with generated outputs",
+        entity_type="project",
+        entity_key=project_id,
+        payload={
+            "project_id": project_id,
+            "equipment_count": len(project.equipment),
+            "point_count": len(project.points),
+            "controller_count": len(project.controllers),
+            "generated_outputs": ["checkout", "reports", "graphics", "logic", "exports"],
+        },
+    )
     
     return redirect_response()
 
@@ -3532,8 +3791,24 @@ async def fix_gap(gap_id: str):
                     "commissioning_agent": "TBD CxA",
                     "design_phase": "CD",
                 }
+                previous_value = getattr(project.metadata, field_name, None)
                 setattr(project.metadata, field_name, default_values.get(field_name, "TBD"))
                 save_project(project)
+                record_project_ledger_event(
+                    project_id=project.metadata.project_id,
+                    event_type="gap.auto_fixed",
+                    summary=f"Auto-fix applied for gap {gap_id}",
+                    entity_type="gap",
+                    entity_key=gap_id,
+                    payload={
+                        "gap_id": gap_id,
+                        "affected_object_type": gap.affected_object_type,
+                        "affected_object_id": gap.affected_object_id,
+                        "field": field_name,
+                        "from": "" if previous_value is None else str(previous_value),
+                        "to": str(getattr(project.metadata, field_name)),
+                    },
+                )
                 return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Auto-fix applied</span>')
 
         if gap.affected_object_type == "equipment":
@@ -3541,13 +3816,45 @@ async def fix_gap(gap_id: str):
             if equipment is None:
                 break
             if gap.title.endswith("has no controller"):
+                previous_value = equipment.controller_id or ""
                 controller_id = project.controllers[0].id if project.controllers else "UNASSIGNED"
                 equipment.controller_id = controller_id
                 save_project(project)
+                record_project_ledger_event(
+                    project_id=project.metadata.project_id,
+                    event_type="gap.auto_fixed",
+                    summary=f"Auto-fix applied for gap {gap_id}",
+                    entity_type="gap",
+                    entity_key=gap_id,
+                    payload={
+                        "gap_id": gap_id,
+                        "affected_object_type": gap.affected_object_type,
+                        "affected_object_id": gap.affected_object_id,
+                        "field": "controller_id",
+                        "from": previous_value,
+                        "to": controller_id,
+                    },
+                )
                 return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Controller assigned</span>')
             if "served area" in gap.title.lower():
+                previous_value = equipment.served_area or ""
                 equipment.served_area = "TBD Served Area"
                 save_project(project)
+                record_project_ledger_event(
+                    project_id=project.metadata.project_id,
+                    event_type="gap.auto_fixed",
+                    summary=f"Auto-fix applied for gap {gap_id}",
+                    entity_type="gap",
+                    entity_key=gap_id,
+                    payload={
+                        "gap_id": gap_id,
+                        "affected_object_type": gap.affected_object_type,
+                        "affected_object_id": gap.affected_object_id,
+                        "field": "served_area",
+                        "from": previous_value,
+                        "to": "TBD Served Area",
+                    },
+                )
                 return HTMLResponse('<span class="text-sm font-medium text-green-600 dark:text-green-400">Served area added</span>')
 
         return HTMLResponse('<span class="text-sm text-gray-500 dark:text-gray-400">No safe auto-fix available</span>')
@@ -3650,6 +3957,21 @@ async def admin_create_user(
             },
             status_code=400,
         )
+    record_project_ledger_event(
+        project_id=project_ids[0] if project_ids else None,
+        event_type="admin.user_created",
+        summary=f"User created: {username.strip()}",
+        entity_type="user",
+        entity_key=username.strip(),
+        payload={
+            "username": username.strip(),
+            "email": email.strip(),
+            "role": role,
+            "project_ids": list(project_ids or []),
+            "access_level": access_level,
+            "performed_by": current_user.username,
+        },
+    )
     return RedirectResponse(url="/admin/users", status_code=303)
 
 
@@ -3685,6 +4007,23 @@ async def admin_update_user(
             },
             status_code=400,
         )
+    managed_user = next((user for user in container.auth.list_users() if int(user.id) == user_id), None)
+    record_project_ledger_event(
+        project_id=project_ids[0] if project_ids else None,
+        event_type="admin.user_updated",
+        summary=f"User updated: {managed_user.username if managed_user else user_id}",
+        entity_type="user",
+        entity_key=str(user_id),
+        payload={
+            "user_id": user_id,
+            "username": managed_user.username if managed_user else "",
+            "role": role,
+            "is_active": is_active.lower() == "true",
+            "project_ids": list(project_ids or []),
+            "access_level": access_level,
+            "performed_by": current_user.username,
+        },
+    )
     return RedirectResponse(url="/admin/users", status_code=303)
 
 
@@ -3706,6 +4045,19 @@ async def project_memberships_update(
         user_id = int(key.removeprefix("user_access_"))
         assignments.append((user_id, str(value)))
     container.auth.set_project_memberships(project_id=project_id, assignments=assignments)
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="admin.project_memberships_updated",
+        summary=f"Project memberships updated for {project_id}",
+        entity_type="membership",
+        entity_key=project_id,
+        payload={
+            "project_id": project_id,
+            "assignments": assignment_ledger_payload(assignments),
+            "assignment_count": len(assignments),
+            "performed_by": current_user.username,
+        },
+    )
     return RedirectResponse(url=f"/project/{project_id}/memberships", status_code=303)
 
 
@@ -3742,6 +4094,23 @@ async def add_assumption(
     elif status_enum == AssumptionStatus.ACCEPTED:
         assumption.accept()
     sync_assumptions_to_project(project, tracker)
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="assumption.added",
+        summary=f"Assumption added: {assumption.title}",
+        entity_type="assumption",
+        entity_key=assumption.assumption_id,
+        payload={
+            "assumption_id": assumption.assumption_id,
+            "title": assumption.title,
+            "category": assumption.category.value,
+            "status": assumption.status.value,
+            "description": assumption.description,
+            "rationale": assumption.rationale,
+            "verification_method": assumption.verification_method,
+            "impacts": list(assumption.impacts),
+        },
+    )
 
     if request.headers.get("HX-Request") == "true":
         return render_assumptions_list(request, project)
@@ -3753,7 +4122,23 @@ async def verify_assumption(request: Request, project_id: str, assumption_id: st
     project = get_project(project_id)
     tracker, _assumption_set = assumption_set_for_project(project_id)
     tracker.verify_assumption(assumption_id, "UI", "Verified from assumptions page")
+    assumption = tracker.get_assumption(assumption_id)
     sync_assumptions_to_project(project, tracker)
+    if assumption is not None:
+        record_project_ledger_event(
+            project_id=project_id,
+            event_type="assumption.verified",
+            summary=f"Assumption verified: {assumption.title}",
+            entity_type="assumption",
+            entity_key=assumption_id,
+            payload={
+                "assumption_id": assumption_id,
+                "title": assumption.title,
+                "status": assumption.status.value,
+                "verified_by": assumption.verified_by or "",
+                "verification_evidence": assumption.verification_evidence or "",
+            },
+        )
     return render_assumptions_list(request, project)
 
 
@@ -3762,7 +4147,22 @@ async def invalidate_assumption(request: Request, project_id: str, assumption_id
     project = get_project(project_id)
     tracker, _assumption_set = assumption_set_for_project(project_id)
     tracker.invalidate_assumption(assumption_id, "Invalidated from assumptions page")
+    assumption = tracker.get_assumption(assumption_id)
     sync_assumptions_to_project(project, tracker)
+    if assumption is not None:
+        record_project_ledger_event(
+            project_id=project_id,
+            event_type="assumption.invalidated",
+            summary=f"Assumption invalidated: {assumption.title}",
+            entity_type="assumption",
+            entity_key=assumption_id,
+            payload={
+                "assumption_id": assumption_id,
+                "title": assumption.title,
+                "status": assumption.status.value,
+                "notes": assumption.notes or "",
+            },
+        )
     return render_assumptions_list(request, project)
 
 
@@ -3771,6 +4171,20 @@ async def load_assumption_templates(request: Request, project_id: str):
     project = get_project(project_id)
     assumption_trackers[project_id] = create_bas_assumptions(project_id)
     sync_assumptions_to_project(project, assumption_trackers[project_id])
+    tracker = assumption_trackers[project_id]
+    design_basis = tracker.assumption_sets.get("design_basis")
+    template_count = len(design_basis.assumptions) if design_basis is not None else 0
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="assumption.templates_loaded",
+        summary=f"Loaded {template_count} assumption templates",
+        entity_type="assumption",
+        entity_key="design_basis",
+        payload={
+            "set_name": "design_basis",
+            "template_count": template_count,
+        },
+    )
     return render_assumptions_list(request, project)
 
 
