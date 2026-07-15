@@ -2993,6 +2993,101 @@ def test_graphics_page_surfaces_sequence_review_context_after_generation() -> No
     assert "Status/proof point" in text
 
 
+def test_graphics_page_loads_persisted_results_and_fullscreen_link() -> None:
+    project_id = create_project("graphics-persisted-project")
+    project = main.get_project(project_id)
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    run_async(main.graphics_page(request(f"/project/{project_id}/graphics/generate", method="POST"), project_id))
+    response = run_async(main.graphics_page(request(f"/project/{project_id}/graphics"), project_id))
+
+    persisted = main.load_generated_graphics_result(project)
+    assert persisted is not None
+    graphic_name = persisted["json"][0].stem
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Validated Delivery Snapshot" in text
+    assert "Fullscreen" in text
+    assert f"/project/{project_id}/graphics/{graphic_name}/fullscreen" in text
+
+
+def test_graphics_fullscreen_page_renders_graphic_context() -> None:
+    project_id = create_project("graphics-fullscreen-project")
+    project = main.get_project(project_id)
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    main.save_project(project)
+
+    run_async(main.graphics_page(request(f"/project/{project_id}/graphics/generate", method="POST"), project_id))
+    persisted = main.load_generated_graphics_result(project)
+    assert persisted is not None
+    graphic_name = persisted["json"][0].stem
+
+    response = run_async(
+        main.graphics_fullscreen_page(
+            request(f"/project/{project_id}/graphics/{graphic_name}/fullscreen"),
+            project_id,
+            graphic_name,
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Fullscreen Graphic" in text
+    assert "Graphic Payload" in text
+    assert "Object Context" in text
+    assert "AHU-1" in text
+
+
 def test_read_only_project_api_endpoints() -> None:
     project_id = create_project()
 

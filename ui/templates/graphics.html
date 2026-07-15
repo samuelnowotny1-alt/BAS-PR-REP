@@ -24,6 +24,57 @@
         {% endfor %}
     </section>
     {% endif %}
+    {% if station_delivery %}
+    <section class="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#fff7ed_52%,#f3fff7_100%)] p-8 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#162131_0%,#2b1f12_55%,#13241a_100%)]">
+        <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+            <div class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Ship To Station</p>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Validated Delivery Snapshot</h2>
+                    <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+                        This is the release-facing view of what will go to the station: validation state, approval gate, generated graphics, and station target readiness.
+                    </p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div class="rounded-2xl border border-sky-200 bg-white/85 p-4 backdrop-blur dark:border-sky-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Readiness</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ station_delivery.score_pct }}%</p>
+                </div>
+                <div class="rounded-2xl border border-emerald-200 bg-white/85 p-4 backdrop-blur dark:border-emerald-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Checks Ready</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ station_delivery.ready_count }}/{{ station_delivery.checks|length }}</p>
+                </div>
+                <div class="rounded-2xl border border-orange-200 bg-white/85 p-4 backdrop-blur dark:border-orange-800 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Plan Items</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ station_delivery.station_plan.items|length }}</p>
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-white/85 p-4 backdrop-blur dark:border-gray-700 dark:bg-gray-900/50">
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Probe</p>
+                    <p class="mt-2 text-sm font-semibold {% if station_delivery.station_connection.last_test_status == 'success' %}text-emerald-600 dark:text-emerald-300{% elif station_delivery.station_connection.last_test_status == 'failed' %}text-red-600 dark:text-red-300{% else %}text-gray-900 dark:text-white{% endif %}">
+                        {{ station_delivery.station_connection.last_test_status|capitalize if station_delivery.station_connection.last_test_status else "Not tested" }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 grid gap-3 lg:grid-cols-3">
+            {% for check in station_delivery.checks %}
+            <article class="rounded-2xl border border-white/70 bg-white/75 px-4 py-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/45">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ check.label }}</p>
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ check.detail }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="mt-6 flex flex-wrap gap-3">
+            <a href="/project/{{ project.metadata.project_id }}/review" class="btn-secondary">Release Review</a>
+            <a href="/project/{{ project.metadata.project_id }}/station-sync" class="btn-secondary">Station Sync</a>
+            <a href="/project/{{ project.metadata.project_id }}/status" class="btn-secondary">Project Status</a>
+        </div>
+    </section>
+    {% endif %}
     <section class="rounded-[28px] border border-orange-200 bg-[linear-gradient(135deg,#fff4e8_0%,#fffdf8_52%,#eef7ff_100%)] p-8 shadow-sm dark:border-orange-900 dark:bg-[linear-gradient(135deg,#2d1d12_0%,#1c1a18_55%,#16212b_100%)]">
         <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div class="space-y-3">
@@ -138,9 +189,10 @@
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
-                    {% for summary in graphics_result.summaries %}
-                    {% set json_file = graphics_result.json[loop.index0] %}
-                    {% set graphic_name = json_file.stem %}
+                    {% for record in graphic_detail_records %}
+                    {% set summary = record.summary %}
+                    {% set json_file = record.json_path %}
+                    {% set graphic_name = record.graphic_name %}
                     <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/50">
                             <div>
@@ -152,12 +204,19 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">JSON</a>
-                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}.svg" target="_blank" class="btn-secondary text-sm">SVG</a>
+                                {% if record.svg_path %}
+                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ record.svg_path.name }}" target="_blank" class="btn-secondary text-sm">SVG</a>
+                                {% endif %}
+                                <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}/fullscreen" class="btn-primary text-sm">Fullscreen</a>
                             </div>
                         </div>
                         <div class="border-b border-gray-200 bg-white px-5 py-4 text-sm dark:border-gray-700 dark:bg-gray-800/70">
+                            {% if record.equipment %}
+                            <p class="text-gray-500 dark:text-gray-400">Equipment: {{ record.equipment.id }}{% if record.controller %} · Controller: {{ record.controller.id }}{% endif %}</p>
+                            {% endif %}
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">{{ record.point_names|length }} linked points · {{ record.error_count }} errors · {{ record.warning_count }} warnings</p>
                             {% if summary.sequence_reference %}
-                            <p class="text-gray-500 dark:text-gray-400">Sequence: {{ summary.sequence_reference }}</p>
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">Sequence: {{ summary.sequence_reference }}</p>
                             {% endif %}
                             {% if summary.graphic_sections %}
                             <p class="mt-2 text-gray-500 dark:text-gray-400">Sections: {{ summary.graphic_sections|join(', ') }}</p>

@@ -1,0 +1,203 @@
+{
+  "metadata": {
+    "source_roadmaps": ["BAS_ASSISTANT_ROADMAP.md", "bas-assistant-vault/ROADMAP.md"],
+    "target_branch": "graphics-library-preview",
+    "repo_path": "/home/oem/.openclaw/workspace/bas-assistant",
+    "generated": "2026-07-15T18:50:00Z",
+    "phase": "Phase 1 - Demo Ready"
+  },
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Seed demo project with HVAC sample data on first run",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "Data",
+      "effort": "S",
+      "priority": 10,
+      "prompt": "In bas-assistant, modify the project initialization/startup code to automatically create a 'Codex Test Project' with realistic HVAC sample data (equipment, points, controllers) when no projects exist. Use the CSV files in examples/ as the data source. The project should be fully importable and generate all outputs (checkout, reports, graphics, logic, exports) without manual steps.",
+      "acceptance": [
+        "Fresh install → run → 'Codex Test Project' appears in project list",
+        "Project has equipment, points, controllers populated from examples/",
+        "All generators (checkout, reports, graphics, logic, export) produce non-empty output",
+        "No manual import step required"
+      ],
+      "files": [
+        "src/bas_assistant/services/projects.py",
+        "src/bas_assistant/runtime.py",
+        "examples/equipment_schedule.csv",
+        "examples/point_list.csv",
+        "examples/controller_schedule.csv"
+      ],
+      "depends_on": [],
+      "status": "done"
+    },
+    {
+      "id": "T002",
+      "title": "Add one-click Load Demo Project button to home page",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "UI",
+      "effort": "S",
+      "priority": 9,
+      "prompt": "Add a prominent 'Load Demo Project' button to the home page (/) that creates/seeds the demo project if it doesn't exist and redirects to the project dashboard. Button should be visible when no projects exist OR as a secondary action when projects exist. Use htmx for the interaction.",
+      "acceptance": [
+        "Button visible on home page",
+        "Click creates demo project if missing",
+        "Redirects to /project/{demo-project-id}",
+        "Works in both empty and populated states"
+      ],
+      "files": [
+        "ui/templates/index.html",
+        "ui/api/main.py",
+        "src/bas_assistant/services/projects.py"
+      ],
+      "depends_on": ["T001"],
+      "status": "pending"
+    },
+    {
+      "id": "T003",
+      "title": "Ensure pre-generated outputs visible immediately after demo load",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "Demo",
+      "effort": "S",
+      "priority": 9,
+      "prompt": "Modify the demo project creation to run all generators (checkout, reports, graphics, logic, export) immediately after data import so the Documents page shows pre-generated artifacts without user clicking 'Generate'. Ensure output files are written to the correct output directory and linked in the document library.",
+      "acceptance": [
+        "After demo load, /project/{id}/documents shows checkout sheets, reports, graphics, logic, exports",
+        "All artifact types have at least one generated file",
+        "Files are accessible via download links",
+        "No 'Generate' button clicks needed"
+      ],
+      "files": [
+        "src/bas_assistant/services/projects.py",
+        "src/bas_assistant/generators/checkout.py",
+        "src/bas_assistant/generators/reports.py",
+        "src/bas_assistant/generators/graphics.py",
+        "src/bas_assistant/generators/logic.py",
+        "src/bas_assistant/exporters/__init__.py"
+      ],
+      "depends_on": ["T001"],
+      "status": "pending"
+    },
+    {
+      "id": "T004",
+      "title": "Add project duplication/fork feature",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "Data",
+      "effort": "S",
+      "priority": 7,
+      "prompt": "Add a 'Duplicate Project' action on the project detail page and project list. Creates a new project with copied data (equipment, points, controllers, generated artifacts) but new ID and name suffix '- Copy'. Include a confirmation modal. Route: POST /project/{id}/duplicate",
+      "acceptance": [
+        "'Duplicate' button on project card and detail page",
+        "Confirmation modal with new name input",
+        "Creates new project with copied data",
+        "New project appears in list with '- Copy' suffix",
+        "Original project unchanged"
+      ],
+      "files": [
+        "ui/templates/project_detail.html",
+        "ui/templates/index.html",
+        "ui/api/main.py",
+        "src/bas_assistant/services/projects.py"
+      ],
+      "depends_on": [],
+      "status": "pending"
+    },
+    {
+      "id": "T005",
+      "title": "Write comprehensive README with Quickstart",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "Docs",
+      "effort": "S",
+      "priority": 8,
+      "prompt": "Rewrite README.md with a 30-second quickstart: Docker and local dev options, demo project loading, generating outputs, exporting to vendors. Include screenshots placeholders, troubleshooting, and links to vault docs. Make it impressive for a first-time visitor.",
+      "acceptance": [
+        "README.md exists at repo root",
+        "Docker quickstart (docker compose up -d --build)",
+        "Local dev quickstart (venv, pip install, uvicorn)",
+        "Demo project instructions (auto-load + manual button)",
+        "Generate outputs step",
+        "Export to 6 vendors step",
+        "Links to architecture/wiki docs"
+      ],
+      "files": [
+        "README.md"
+      ],
+      "depends_on": ["T001", "T002"],
+      "status": "pending"
+    },
+    {
+      "id": "T006",
+      "title": "Verify and fix static asset paths for generated outputs",
+      "phase": "Phase 1 - Demo Ready",
+      "category": "Infra",
+      "effort": "S",
+      "priority": 6,
+      "prompt": "Audit all template references to generated output files (SVG graphics, Excel reports, checkout sheets). Ensure they use /output/ not /static/output/. Update any remaining incorrect references. Test that graphics preview and document downloads work correctly.",
+      "acceptance": [
+        "No /static/output/ references in templates",
+        "Graphics SVG previews load on /project/{id}/graphics",
+        "Document downloads work from /project/{id}/documents",
+        "All generated file links resolve correctly"
+      ],
+      "files": [
+        "ui/templates/graphics.html",
+        "ui/templates/documents.html",
+        "ui/templates/reports.html",
+        "ui/templates/checkout.html",
+        "ui/templates/logic.html",
+        "ui/templates/export.html"
+      ],
+      "depends_on": [],
+      "status": "pending"
+    },
+    {
+      "id": "T007",
+      "title": "Inline CSV editor for equipment/points/controllers",
+      "phase": "Phase 2 - Real Projects Work",
+      "category": "Data",
+      "effort": "M",
+      "priority": 5,
+      "prompt": "Build an inline editable table for each import type (equipment, points, controllers) on the import page. Users can add rows, edit cells, delete rows without leaving the browser. Changes persist to the project JSON on save. Use htmx for row-level interactions.",
+      "acceptance": [
+        "Editable tables for all 3 import types",
+        "Add row button adds blank row",
+        "Cell editing with enter/blur save",
+        "Delete row with confirmation",
+        "Save button persists to project JSON",
+        "Validation runs on save"
+      ],
+      "files": [
+        "ui/templates/import.html",
+        "ui/api/main.py",
+        "src/bas_assistant/services/projects.py",
+        "static/js/inline-editor.js"
+      ],
+      "depends_on": [],
+      "status": "pending"
+    },
+    {
+      "id": "T008",
+      "title": "Drag-drop column mapping for CSV import",
+      "phase": "Phase 2 - Real Projects Work",
+      "category": "UI",
+      "effort": "M",
+      "priority": 5,
+      "prompt": "Add a column mapping step before CSV import. Show detected CSV headers on left, required model fields on right. Drag-drop to map. Save mapping profile per-project. Handle non-standard column names gracefully.",
+      "acceptance": [
+        "Mapping UI appears after file upload",
+        "Drag-drop from CSV headers to model fields",
+        "Required fields highlighted",
+        "Save mapping as project profile",
+        "Apply mapping on subsequent imports"
+      ],
+      "files": [
+        "ui/templates/import.html",
+        "ui/api/main.py",
+        "src/bas_assistant/importers/csv_importer.py",
+        "static/js/column-mapper.js"
+      ],
+      "depends_on": [],
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ graphic_detail.graphic_name }} - Graphic Detail{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-[1800px] space-y-8">
+    <section class="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#fff7ed_55%,#eefbf4_100%)] p-8 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#162131_0%,#2b1f12_55%,#13241a_100%)]">
+        <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Graphic Detail</p>
+                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.graphic_name }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    {% if graphic_detail.equipment %}{{ graphic_detail.equipment.id }}{% else %}Unassigned graphic{% endif %}
+                    {% if graphic_detail.controller %} · Controller {{ graphic_detail.controller.id }}{% endif %}
+                    · {{ graphic_detail.point_names|length }} linked points
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="/project/{{ project.metadata.project_id }}/graphics" class="btn-secondary">Back To Graphics</a>
+                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_detail.json_path.name }}" target="_blank" class="btn-secondary">Open JSON</a>
+                {% if graphic_detail.svg_path %}
+                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_detail.svg_path.name }}" target="_blank" class="btn-primary">Open SVG</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-8 xl:grid-cols-[minmax(0,1.6fr)_420px]">
+        <div class="space-y-6">
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Fullscreen Graphic</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Rendered output ready for station-facing review.</p>
+                </div>
+                <div class="bg-[radial-gradient(circle_at_top,#f8fafc_0%,#eef2f7_65%,#dce4ee_100%)] p-6 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_65%,#0b1220_100%)]">
+                    {% if graphic_detail.svg_path %}
+                    <div class="overflow-auto rounded-[20px] border border-gray-300 bg-white p-6 shadow-inner dark:border-gray-700 dark:bg-slate-50">
+                        <img src="/output/{{ project.metadata.project_id }}/graphics/{{ graphic_detail.svg_path.name }}" alt="{{ graphic_detail.graphic_name }}" class="mx-auto block min-w-[960px] max-w-none" />
+                    </div>
+                    {% else %}
+                    <div class="rounded-[20px] border border-dashed border-gray-300 px-6 py-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No SVG preview is available for this graphic.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphic Payload</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ graphic_detail.json_path.name }}</p>
+                </div>
+                <div class="bg-gray-950 p-5 text-[12px] leading-5 text-gray-200">
+                    <pre class="max-h-[420px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.json_path.read_text()[:3200] }}{% if graphic_detail.json_path.read_text()|length > 3200 %}...{% endif %}</pre>
+                </div>
+            </article>
+        </div>
+
+        <aside class="space-y-5">
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Graphic Data</p>
+                <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Graphic Type:</span> {{ graphic_detail.summary.graphic_type or "unknown" }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Review:</span> {{ graphic_detail.summary.sequence_review_status }}</div>
+                    {% if graphic_detail.summary.sequence_reference %}
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Reference:</span> {{ graphic_detail.summary.sequence_reference }}</div>
+                    {% endif %}
+                    {% if graphic_detail.summary.graphic_sections %}
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sections:</span> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Object Context</p>
+                <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Equipment:</span> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Not linked" }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Controller:</span> {{ graphic_detail.controller.id if graphic_detail.controller else "Not linked" }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Points:</span> {{ graphic_detail.point_names|length }}</div>
+                </div>
+                {% if graphic_detail.point_names %}
+                <div class="mt-4 flex flex-wrap gap-2">
+                    {% for point_name in graphic_detail.point_names[:18] %}
+                    <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ point_name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Validation Findings</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.validation_findings|length }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ graphic_detail.error_count }} errors · {{ graphic_detail.warning_count }} warnings</p>
+                <div class="mt-4 space-y-2">
+                    {% for finding in graphic_detail.validation_findings[:8] %}
+                    <a href="{{ finding.object_url }}" class="block rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }}</p>
+                            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if finding.severity == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% elif finding.severity == 'warning' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300{% endif %}">{{ finding.severity }}</span>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ finding.message }}</p>
+                    </a>
+                    {% endfor %}
+                    {% if not graphic_detail.validation_findings %}
+                    <div class="rounded-2xl border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No linked validation findings for this graphic.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Station Readiness</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ station_delivery.score_pct }}%</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ station_delivery.station_plan.items|length }} sync plan items · {{ station_delivery.station_connection.last_test_status or "not tested" }}</p>
+                {% if graphic_detail.preview_page %}
+                <div class="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-900 dark:text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
+                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Bindings:</span> {{ graphic_detail.preview_page.bindings|length }} · <span class="font-semibold text-gray-900 dark:text-white">Components:</span> {{ graphic_detail.preview_page.components.root.children|length if graphic_detail.preview_page.components and graphic_detail.preview_page.components.root else 0 }}</div>
+                </div>
+                {% endif %}
+            </article>
+        </aside>
+    </section>
+</div>
+{% endblock %}

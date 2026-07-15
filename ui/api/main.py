@@ -92,6 +92,14 @@ async def lifespan_factory(_container):
     )
     load_projects_from_disk()
     logger.info("Loaded %s projects into memory", len(projects))
+    
+    # Seed Codex demo project on first run (when no projects exist)
+    try:
+        from bas_assistant.runtime import seed_codex_demo_project
+        seed_codex_demo_project(container.projects, OUTPUT_DIR, logger)
+    except Exception:
+        logger.exception("Failed to seed Codex demo project")
+    
     yield
     logger.info("Shutting down BAS Assistant")
 
@@ -1778,6 +1786,191 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
     }
 
 
+def build_graphics_summaries(project: Project) -> list[dict[str, object]]:
+    generator = GraphicsGenerator(project)
+    generator.generate_all()
+    engine = ValidationEngine()
+    engine.validate(project)
+    summaries: list[dict[str, object]] = []
+    for graphic in generator.graphics.values():
+        equipment_id = graphic.equipment_id or ""
+        equipment = project.get_equipment(equipment_id) if equipment_id else None
+        sequence_review = (
+            engine.sequence_coverage_for_equipment(project, equipment_id)
+            if equipment_id
+            else {
+                "status": "not_indexed",
+                "missing_refs": [],
+                "missing_families": [],
+                "summary": "",
+            }
+        )
+        summaries.append(
+            {
+                "graphic_id": graphic.graphic_id,
+                "equipment_id": equipment_id,
+                "graphic_type": graphic.graphic_type.value,
+                "sequence_reference": equipment.sequence_ref if equipment and equipment.sequence_ref else "",
+                "sequence_review_status": sequence_review.get("status", "not_indexed"),
+                "sequence_missing_refs": list(sequence_review.get("missing_refs") or []),
+                "sequence_missing_families": list(sequence_review.get("missing_families") or []),
+                "sequence_summary": sequence_review.get("summary", ""),
+                "graphic_sections": list(graphic.metadata.get("graphic_sections") or []),
+            }
+        )
+    return summaries
+
+
+def load_generated_graphics_result(project: Project) -> dict[str, object] | None:
+    project_id = project.metadata.project_id
+    output_dir = OUTPUT_DIR / project_id / "graphics"
+    json_dir = output_dir / "graphics_json"
+    svg_dir = output_dir / "graphics_svg"
+    niagara_path = output_dir / "graphics_niagara.json"
+    json_paths = sorted(json_dir.glob("*.json")) if json_dir.exists() else []
+    svg_paths = sorted(svg_dir.glob("*.svg")) if svg_dir.exists() else []
+    if not json_paths and not svg_paths and not niagara_path.exists():
+        return None
+
+    summaries_by_id = {
+        str(summary.get("graphic_id") or ""): summary
+        for summary in build_graphics_summaries(project)
+    }
+    ordered_summaries = [
+        summaries_by_id.get(
+            json_path.stem,
+            {
+                "graphic_id": json_path.stem,
+                "equipment_id": "",
+                "graphic_type": "",
+                "sequence_reference": "",
+                "sequence_review_status": "not_indexed",
+                "sequence_missing_refs": [],
+                "sequence_missing_families": [],
+                "sequence_summary": "",
+                "graphic_sections": [],
+            },
+        )
+        for json_path in json_paths
+    ]
+    return {
+        "json": json_paths,
+        "svg": svg_paths,
+        "niagara": niagara_path,
+        "summaries": ordered_summaries,
+    }
+
+
+def build_station_delivery_readiness(
+    project: Project,
+    *,
+    graphics_result: dict[str, object] | None = None,
+) -> dict[str, object]:
+    release = review_release_state(project)
+    readiness = build_generation_readiness(project)
+    station_connection = get_station_connection(project)
+    station_plan = station_sync_service().build_plan(project, station_connection)
+    effective_graphics = graphics_result if graphics_result is not None else load_generated_graphics_result(project)
+    graphics_generated = bool(effective_graphics and effective_graphics.get("json"))
+    checks = [
+        {
+            "label": "Validation clean",
+            "status": "ready" if not readiness["validation_summary"]["errors"] else "attention",
+            "detail": f"{readiness['validation_summary']['errors']} errors · {readiness['validation_summary']['warnings']} warnings",
+        },
+        {
+            "label": "Release review",
+            "status": "ready" if release["release_ready"] else "attention",
+            "detail": "All release gates are clear." if release["release_ready"] else "Mappings, gaps, assumptions, or sequence debt still need action.",
+        },
+        {
+            "label": "Output approval",
+            "status": "ready" if release["output_approval"] else "attention",
+            "detail": release["output_approval"].notes if release["output_approval"] and release["output_approval"].notes else ("Outputs approved for release." if release["output_approval"] else "Outputs have not been approved."),
+        },
+        {
+            "label": "Graphics generated",
+            "status": "ready" if graphics_generated else "attention",
+            "detail": (
+                f"{len(effective_graphics['json']) if effective_graphics else 0} graphics ready for review."
+                if graphics_generated
+                else "Generate graphics to review what will ship to the station."
+            ),
+        },
+        {
+            "label": "Station target configured",
+            "status": "ready" if station_connection.enabled and bool(station_connection.host) else "attention",
+            "detail": (
+                f"{station_connection.protocol.value} · {station_connection.host}:{station_connection.port}"
+                if station_connection.host
+                else "Host and protocol still need configuration."
+            ),
+        },
+        {
+            "label": "Station probe",
+            "status": "ready" if station_connection.last_test_status == "success" else "attention",
+            "detail": station_connection.last_test_message or "No successful connectivity probe has been recorded yet.",
+        },
+    ]
+    ready_count = sum(1 for check in checks if check["status"] == "ready")
+    status = "ready" if ready_count == len(checks) else ("attention" if ready_count else "blocked")
+    score_pct = int(round((ready_count / len(checks)) * 100)) if checks else 0
+    return {
+        "status": status,
+        "score_pct": score_pct,
+        "checks": checks,
+        "ready_count": ready_count,
+        "graphics_generated": graphics_generated,
+        "station_connection": station_connection,
+        "station_plan": station_plan,
+        "release_review": release,
+        "generation_readiness": readiness,
+    }
+
+
+def build_graphic_detail_records(project: Project, graphics_result: dict[str, object]) -> list[dict[str, object]]:
+    engine = ValidationEngine()
+    report = engine.validate(project)
+    findings = serialize_validation_findings(report, project.metadata.project_id)
+    preview_pages = graphics_preview_pages(project)
+    preview_by_equipment = {
+        str(page.get("slotPath", "")).split("/")[-1]: page
+        for page in preview_pages
+        if str(page.get("slotPath", "")).startswith("/Px/Equipment/")
+    }
+    svg_paths = {path.stem: path for path in graphics_result.get("svg", [])}
+    records: list[dict[str, object]] = []
+    for index, summary in enumerate(graphics_result.get("summaries", [])):
+        json_paths = graphics_result.get("json", [])
+        if index >= len(json_paths):
+            continue
+        json_path = json_paths[index]
+        graphic_name = json_path.stem
+        equipment_id = str(summary.get("equipment_id") or "")
+        equipment = project.get_equipment(equipment_id) if equipment_id else None
+        controller_id = project.effective_equipment_controller_id(equipment) if equipment is not None else None
+        related_points = sorted(point.name for point in project.points if point.equipment_id == equipment_id)
+        related_ids = {equipment_id, controller_id or "", *related_points}
+        related_findings = [finding for finding in findings if finding["object_id"] in related_ids]
+        preview_page = preview_by_equipment.get(equipment_id)
+        records.append(
+            {
+                "graphic_name": graphic_name,
+                "json_path": json_path,
+                "svg_path": svg_paths.get(graphic_name),
+                "summary": summary,
+                "equipment": equipment,
+                "controller": project.get_controller(controller_id) if controller_id else None,
+                "point_names": related_points,
+                "validation_findings": related_findings,
+                "error_count": sum(1 for finding in related_findings if finding["severity"] == "error"),
+                "warning_count": sum(1 for finding in related_findings if finding["severity"] == "warning"),
+                "preview_page": preview_page,
+            }
+        )
+    return records
+
+
 def object_validation_context(project: Project, detail: dict[str, object]) -> dict[str, object]:
     engine = ValidationEngine()
     report = engine.validate(project)
@@ -3366,21 +3559,27 @@ async def reports_page(request: Request, project_id: str):
 async def graphics_page(request: Request, project_id: str):
     project = get_project(project_id)
     readiness = build_generation_readiness(project)
+    persisted_graphics = load_generated_graphics_result(project)
+    station_delivery = build_station_delivery_readiness(project, graphics_result=persisted_graphics)
     if request.method == "GET":
         return templates.TemplateResponse(request=request, name="graphics.html", context={
             "project": project,
-            "graphics_result": None,
-            "niagara_preview_pages": [],
+            "graphics_result": persisted_graphics,
+            "graphic_detail_records": build_graphic_detail_records(project, persisted_graphics) if persisted_graphics else [],
+            "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
             "graphics_symbol_library": graphics_symbol_library(),
             "readiness": readiness,
+            "station_delivery": station_delivery,
         })
     if request.method == "POST" and not readiness["can_generate"]:
         return templates.TemplateResponse(request=request, name="graphics.html", context={
             "project": project,
-            "graphics_result": None,
-            "niagara_preview_pages": [],
+            "graphics_result": persisted_graphics,
+            "graphic_detail_records": build_graphic_detail_records(project, persisted_graphics) if persisted_graphics else [],
+            "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
             "graphics_symbol_library": graphics_symbol_library(),
             "readiness": readiness,
+            "station_delivery": station_delivery,
         })
     output_dir = OUTPUT_DIR / project_id / "graphics"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -3393,13 +3592,38 @@ async def graphics_page(request: Request, project_id: str):
     )
     container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     niagara_preview = graphics_preview_pages(project)
+    station_delivery = build_station_delivery_readiness(project, graphics_result=result)
     return templates.TemplateResponse(request=request, name="graphics.html", context={
         "project": project,
         "graphics_result": result,
+        "graphic_detail_records": build_graphic_detail_records(project, result),
         "niagara_preview_pages": niagara_preview,
         "graphics_symbol_library": graphics_symbol_library(),
         "readiness": readiness,
+        "station_delivery": station_delivery,
     })
+
+
+@app.get("/project/{project_id}/graphics/{graphic_name}/fullscreen", response_class=HTMLResponse)
+async def graphics_fullscreen_page(request: Request, project_id: str, graphic_name: str):
+    project = get_project(project_id)
+    graphics_result = load_generated_graphics_result(project)
+    if graphics_result is None:
+        raise HTTPException(status_code=404, detail="No generated graphics found")
+    detail_records = build_graphic_detail_records(project, graphics_result)
+    detail = next((record for record in detail_records if record["graphic_name"] == graphic_name), None)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Graphic not found")
+    station_delivery = build_station_delivery_readiness(project, graphics_result=graphics_result)
+    return templates.TemplateResponse(
+        request=request,
+        name="graphics_fullscreen.html",
+        context={
+            "project": project,
+            "graphic_detail": detail,
+            "station_delivery": station_delivery,
+        },
+    )
 
 
 @app.get("/project/{project_id}/logic", response_class=HTMLResponse)
@@ -3533,11 +3757,13 @@ async def station_sync_page(request: Request, project_id: str):
     project = get_project(project_id)
     config = get_station_connection(project)
     plan = station_sync_service().build_plan(project, config)
+    station_delivery = build_station_delivery_readiness(project)
     return templates.TemplateResponse(request=request, name="station_sync.html", context={
         "project": project,
         "station_connection": config,
         "station_plan": plan,
         "probe_result": None,
+        "station_delivery": station_delivery,
     })
 
 
@@ -3585,12 +3811,14 @@ async def save_station_sync_config(
         payload=station_connection_ledger_payload(config, password_updated=password_updated),
     )
     plan = station_sync_service().build_plan(project, config)
+    station_delivery = build_station_delivery_readiness(project)
     return templates.TemplateResponse(request=request, name="station_sync.html", context={
         "project": project,
         "station_connection": config,
         "station_plan": plan,
         "probe_result": None,
         "flash_message": "Station sync configuration saved.",
+        "station_delivery": station_delivery,
     })
 
 
@@ -3650,11 +3878,13 @@ async def probe_station_sync(
         },
     )
     plan = station_sync_service().build_plan(project, config)
+    station_delivery = build_station_delivery_readiness(project)
     return templates.TemplateResponse(request=request, name="station_sync.html", context={
         "project": project,
         "station_connection": config,
         "station_plan": plan,
         "probe_result": probe_result,
+        "station_delivery": station_delivery,
     })
 
 

@@ -4,6 +4,33 @@
 
 {% block content %}
 <div class="mx-auto max-w-6xl space-y-8">
+    {% if station_delivery %}
+    <section class="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#fff7ed_55%,#f3fff7_100%)] p-8 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#162131_0%,#2b1f12_55%,#13241a_100%)]">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Station Delivery</p>
+                <h2 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Ready-To-Ship Snapshot</h2>
+                <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">Use this to confirm validation, release approval, generated graphics, and live station targeting before the project is pushed out.</p>
+            </div>
+            <div class="text-right">
+                <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ station_delivery.score_pct }}%</p>
+                <p class="mt-1 text-xs uppercase tracking-[0.16em] {% if station_delivery.status == 'ready' %}text-emerald-600 dark:text-emerald-300{% elif station_delivery.status == 'attention' %}text-amber-600 dark:text-amber-300{% else %}text-red-600 dark:text-red-300{% endif %}">{{ station_delivery.status }}</p>
+            </div>
+        </div>
+        <div class="mt-6 grid gap-3 lg:grid-cols-3">
+            {% for check in station_delivery.checks %}
+            <article class="rounded-2xl border border-white/70 bg-white/75 px-4 py-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/45">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ check.label }}</p>
+                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
+                </div>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ check.detail }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
     <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Station Sync</h1>
