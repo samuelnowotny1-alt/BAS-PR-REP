@@ -1659,6 +1659,118 @@ def test_import_page_renders_recent_ingestion_outcomes_and_parser_support() -> N
     assert "Knowledge status: indexed" in text
     assert "Recent Project Uploads" in text
     assert "stored only" in text
+    assert "Equipment Editor" in text
+    assert "Point Editor" in text
+    assert "Controller Editor" in text
+    assert 'data-inline-save-row' in text
+    assert 'data-inline-input' in text
+
+
+def test_import_editor_can_add_and_delete_equipment_rows() -> None:
+    project_id = create_project("inline-equipment-project")
+
+    save_response = run_async(
+        main.save_import_editor_row(
+            form_request(
+                f"/project/{project_id}/import/editor/equipment/save",
+                {
+                    "original_key": "",
+                    "id": "AHU-1",
+                    "type": "AHU",
+                    "subtype": "Main",
+                    "building": "Tower",
+                    "floor": "3",
+                    "controller_id": "MPC-1",
+                    "status": "design",
+                    "notes": "Inline row",
+                },
+            ),
+            project_id,
+            "equipment",
+        )
+    )
+
+    save_text = response_text(save_response)
+    project = main.get_project(project_id)
+    equipment = project.get_equipment("AHU-1")
+    assert save_response.status_code == 200
+    assert "Row saved and project validation refreshed." in save_text
+    assert equipment is not None
+    assert equipment.building == "Tower"
+    assert equipment.notes == "Inline row"
+
+    delete_response = run_async(
+        main.delete_import_editor_row(
+            request(f"/project/{project_id}/import/editor/equipment/AHU-1/delete", method="POST"),
+            project_id,
+            "equipment",
+            "AHU-1",
+        )
+    )
+
+    assert delete_response.status_code == 200
+    assert "Row deleted and project validation refreshed." in response_text(delete_response)
+    assert main.get_project(project_id).get_equipment("AHU-1") is None
+
+
+def test_import_editor_can_save_points_and_controllers() -> None:
+    project_id = create_project("inline-point-controller-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    controller_response = run_async(
+        main.save_import_editor_row(
+            form_request(
+                f"/project/{project_id}/import/editor/controllers/save",
+                {
+                    "original_key": "",
+                    "id": "MPC-1",
+                    "type": "MPC",
+                    "vendor": "Alerton",
+                    "model": "Unitary",
+                    "protocols": "BACnet/IP",
+                    "address": "192.168.10.10",
+                    "serves_equipment_ids": "AHU-1",
+                    "owned_point_names": "AHU-1 SAT",
+                },
+            ),
+            project_id,
+            "controllers",
+        )
+    )
+    point_response = run_async(
+        main.save_import_editor_row(
+            form_request(
+                f"/project/{project_id}/import/editor/points/save",
+                {
+                    "original_key": "",
+                    "name": "AHU-1 SAT",
+                    "equipment_id": "AHU-1",
+                    "controller_id": "MPC-1",
+                    "kind": "sensor",
+                    "direction": "input",
+                    "units": "degF",
+                    "bacnet_object_type": "AI",
+                    "description": "Supply air temp",
+                },
+            ),
+            project_id,
+            "points",
+        )
+    )
+
+    saved_project = main.get_project(project_id)
+    controller = saved_project.get_controller("MPC-1")
+    point = saved_project.get_point("AHU-1 SAT")
+    assert controller_response.status_code == 200
+    assert point_response.status_code == 200
+    assert controller is not None
+    assert point is not None
+    assert controller.network_addresses[0].address == "192.168.10.10"
+    assert controller.protocols[0] == Protocol.BACNET_IP
+    assert point.bacnet_object_type == "AI"
+    assert point.description == "Supply air temp"
 
 
 def test_load_demo_returns_htmx_redirect_header() -> None:
@@ -1675,6 +1787,24 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
     assert response.status_code == 200
     assert response.headers["HX-Redirect"] == "/project/demo-hvac-project"
     assert "demo-hvac-project" in main.projects
+    assert (main.OUTPUT_DIR / "demo-hvac-project" / "checkout").exists()
+    assert (main.OUTPUT_DIR / "demo-hvac-project" / "reports").exists()
+    assert (main.OUTPUT_DIR / "demo-hvac-project" / "graphics").exists()
+    assert (main.OUTPUT_DIR / "demo-hvac-project" / "logic").exists()
+    assert (main.OUTPUT_DIR / "demo-hvac-project" / "exports").exists()
+
+    documents_response = run_async(
+        main.project_documents_page(
+            request("/project/demo-hvac-project/documents?mode=generated"),
+            "demo-hvac-project",
+            mode="generated",
+        )
+    )
+    documents_text = response_text(documents_response)
+    assert documents_response.status_code == 200
+    assert "00_Project_Summary.md" in documents_text
+    assert "graphics_niagara.json" in documents_text
+    assert "checkout_sheets.xlsx" in documents_text
 
     ledger_response = run_async(
         main.system_ledger_page(
@@ -1687,6 +1817,187 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
     ledger_text = response_text(ledger_response)
     assert "Demo project loaded with generated outputs" in ledger_text
     assert "demo-hvac-project" in ledger_text
+
+
+def test_duplicate_project_route_copies_data_outputs_and_generated_documents() -> None:
+    run_async(
+        main.api_load_demo(
+            request(
+                "/api/load-demo",
+                method="POST",
+                headers=[(b"hx-request", b"true")],
+            )
+        )
+    )
+
+    response = run_async(
+        main.duplicate_project_route(
+            request("/project/demo-hvac-project/duplicate", method="POST"),
+            "demo-hvac-project",
+            name="Demo HVAC Project - Copy",
+            new_project_id="demo-hvac-project-copy",
+        )
+    )
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/project/demo-hvac-project-copy"
+
+    duplicate = main.get_project("demo-hvac-project-copy")
+    assert duplicate.metadata.name == "Demo HVAC Project - Copy"
+    assert len(duplicate.equipment) > 0
+    assert len(duplicate.points) > 0
+    assert len(duplicate.controllers) > 0
+    assert (main.OUTPUT_DIR / "demo-hvac-project-copy" / "reports" / "00_Project_Summary.md").exists()
+
+    documents_response = run_async(
+        main.project_documents_page(
+            request("/project/demo-hvac-project-copy/documents?mode=generated"),
+            "demo-hvac-project-copy",
+            mode="generated",
+        )
+    )
+    documents_text = response_text(documents_response)
+    assert documents_response.status_code == 200
+    assert "00_Project_Summary.md" in documents_text
+    assert "graphics_niagara.json" in documents_text
+
+    detail_response = run_async(main.project_detail(request("/project/demo-hvac-project-copy"), "demo-hvac-project-copy"))
+    detail_text = response_text(detail_response)
+    assert "Duplicate" in detail_text
+
+    home_response = run_async(main.index(request("/")))
+    home_text = response_text(home_response)
+    assert "Duplicate Project" in home_text
+
+
+def test_duplicate_project_route_assigns_unique_ids_for_repeat_copies() -> None:
+    project_id = create_project("duplicate-repeat-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    first = run_async(
+        main.duplicate_project_route(
+            request(f"/project/{project_id}/duplicate", method="POST"),
+            project_id,
+            name="Repeat Copy",
+            new_project_id=f"{project_id}-copy",
+        )
+    )
+    second = run_async(
+        main.duplicate_project_route(
+            request(f"/project/{project_id}/duplicate", method="POST"),
+            project_id,
+            name="Repeat Copy",
+            new_project_id=f"{project_id}-copy",
+        )
+    )
+
+    assert first.status_code == 303
+    assert first.headers["location"] == f"/project/{project_id}-copy"
+    assert second.status_code == 303
+    assert second.headers["location"] == f"/project/{project_id}-copy-2"
+    assert main.get_project(f"{project_id}-copy").metadata.name == "Repeat Copy"
+    assert main.get_project(f"{project_id}-copy-2").metadata.name == "Repeat Copy"
+
+
+def test_duplicate_project_route_skips_uploaded_documents_and_knowledge() -> None:
+    project_id = create_project("duplicate-clean-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 shall start on occupancy.")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    generated_path = main.OUTPUT_DIR / project_id / "reports" / "00_Project_Summary.md"
+    generated_path.parent.mkdir(parents=True, exist_ok=True)
+    generated_path.write_text("summary", encoding="utf-8")
+    main.register_generated_output(
+        project=project,
+        file_path=generated_path,
+        document_name=generated_path.name,
+        document_type="generated_project_summary",
+        parser_name="report_generator",
+        links=[main.ArtifactEntityLink(entity_type="equipment", entity_key="AHU-1", relationship_type="generated_output", parser_name="report_generator")],
+    )
+    main.save_project(project)
+
+    response = run_async(
+        main.duplicate_project_route(
+            request(f"/project/{project_id}/duplicate", method="POST"),
+            project_id,
+            name="Duplicate Clean Copy",
+            new_project_id=f"{project_id}-copy",
+        )
+    )
+
+    assert response.status_code == 303
+    duplicate_id = f"{project_id}-copy"
+    duplicate = main.get_project(duplicate_id)
+    assert duplicate.source_documents == []
+
+    documents_response = run_async(main.project_documents_page(request(f"/project/{duplicate_id}/documents"), duplicate_id))
+    knowledge_response = run_async(main.project_knowledge_page(request(f"/project/{duplicate_id}/knowledge"), duplicate_id))
+    documents_text = response_text(documents_response)
+    knowledge_text = response_text(knowledge_response)
+
+    assert "00_Project_Summary.md" in documents_text
+    assert "sequence.txt" not in documents_text
+    assert "No knowledge records indexed yet." in knowledge_text
+
+
+def test_duplicate_project_route_handles_projects_with_partial_outputs() -> None:
+    project_id = create_project("partial-output-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    report_path = main.OUTPUT_DIR / project_id / "reports" / "00_Project_Summary.md"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text("summary", encoding="utf-8")
+    main.register_generated_output(
+        project=project,
+        file_path=report_path,
+        document_name=report_path.name,
+        document_type="generated_project_summary",
+        parser_name="report_generator",
+        links=[main.ArtifactEntityLink(entity_type="equipment", entity_key="AHU-1", relationship_type="generated_output", parser_name="report_generator")],
+    )
+
+    response = run_async(
+        main.duplicate_project_route(
+            request(f"/project/{project_id}/duplicate", method="POST"),
+            project_id,
+            name="Partial Output Copy",
+            new_project_id=f"{project_id}-copy",
+        )
+    )
+
+    assert response.status_code == 303
+    duplicate_id = f"{project_id}-copy"
+    assert (main.OUTPUT_DIR / duplicate_id / "reports" / "00_Project_Summary.md").exists()
+    documents_response = run_async(
+        main.project_documents_page(
+            request(f"/project/{duplicate_id}/documents?mode=generated"),
+            duplicate_id,
+            mode="generated",
+        )
+    )
+    assert documents_response.status_code == 200
+    assert "00_Project_Summary.md" in response_text(documents_response)
 
 
 def test_admin_user_and_membership_changes_write_ledger_entries() -> None:

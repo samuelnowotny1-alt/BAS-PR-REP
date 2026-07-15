@@ -135,32 +135,61 @@
     {% if projects %}
     <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {% for project_id, project in projects.items() %}
-        <a href="/project/{{ project_id }}" class="card block hover:shadow-lg transition-shadow">
-            <div class="p-6">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="w-12 h-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                        <i class="fas fa-fan text-xl text-orange-500"></i>
+        <div class="card overflow-hidden hover:shadow-lg transition-shadow">
+            <a href="/project/{{ project_id }}" class="block">
+                <div class="p-6">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="w-12 h-12 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                            <i class="fas fa-fan text-xl text-orange-500"></i>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ project_id }}</span>
                     </div>
-                    <span class="text-xs text-gray-500 dark:text-gray-400 font-mono">{{ project_id }}</span>
+                    <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-1">{{ project.name }}</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ project.client or 'No client' }}</p>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.equipment_count }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.point_count }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Points</p>
+                        </div>
+                        <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                            <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.controller_count }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Controllers</p>
+                        </div>
+                    </div>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-1">{{ project.name }}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">{{ project.client or 'No client' }}</p>
-                <div class="grid grid-cols-3 gap-4 text-center">
-                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.equipment_count }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Equipment</p>
-                    </div>
-                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.point_count }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Points</p>
-                    </div>
-                    <div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                        <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ project.controller_count }}</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Controllers</p>
-                    </div>
+            </a>
+            <div class="border-t border-gray-200 px-6 py-4 dark:border-gray-700">
+                <button type="button" onclick="document.getElementById('duplicate-project-{{ project_id }}').showModal()" class="btn-secondary w-full">
+                    <i class="fas fa-copy mr-2"></i>
+                    Duplicate Project
+                </button>
+            </div>
+        </div>
+
+        <dialog id="duplicate-project-{{ project_id }}" class="rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl backdrop:bg-black/40 dark:border-gray-700 dark:bg-gray-900">
+            <div class="w-[min(92vw,32rem)]">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Duplicate Project</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a copied project with duplicated structured data and generated outputs.</p>
+                </div>
+                <div class="flex items-start justify-between mb-3">
+                    <form method="post" action="/project/{{ project_id }}/duplicate" class="w-full px-6 py-5">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="duplicate-name-{{ project_id }}">Project Name</label>
+                        <input id="duplicate-name-{{ project_id }}" name="name" value="{{ project.name }} - Copy" class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                        <label class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300" for="duplicate-project-id-{{ project_id }}">Project ID</label>
+                        <input id="duplicate-project-id-{{ project_id }}" name="new_project_id" value="{{ project_id }}-copy" class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                        <div class="mt-5 flex justify-end gap-3">
+                            <button type="button" onclick="document.getElementById('duplicate-project-{{ project_id }}').close()" class="btn-secondary">Cancel</button>
+                            <button type="submit" class="btn-primary">Create Copy</button>
+                        </div>
+                    </form>
                 </div>
             </div>
-        </a>
+        </dialog>
         {% endfor %}
     </div>
     {% else %}

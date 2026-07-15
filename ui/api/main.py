@@ -4,6 +4,7 @@ import csv
 import json
 import logging
 import os
+import re
 import shutil
 import time
 from contextlib import asynccontextmanager
@@ -18,9 +19,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSON
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from pydantic import ValidationError
+from sqlalchemy import select
 
 from bas_assistant.auth import get_current_user, require_route_permission
 from bas_assistant.core import build_container
+from bas_assistant.database import DocumentRecord, ProjectRecord
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
@@ -30,14 +34,21 @@ from bas_assistant.models import (
 )
 from bas_assistant.models.equipment import EquipmentTemplateRef
 from bas_assistant.importers import CSVImporter, create_sample_csvs
+from bas_assistant.generators import (
+    generate_checkout_sheets,
+    generate_graphics,
+    generate_logic,
+    generate_reports,
+)
 from bas_assistant.generators.graphics import GraphicsGenerator
 from bas_assistant.validation import ValidationEngine
-from bas_assistant.generators import (
-    generate_checkout_sheets, generate_reports, generate_graphics, generate_logic
-)
 from bas_assistant.exporters import (
-    NiagaraExporter, BACnetExporter, TridiumExporter,
-    JCIExporter, SiemensExporter, HoneywellExporter
+    BACnetExporter,
+    HoneywellExporter,
+    JCIExporter,
+    NiagaraExporter,
+    SiemensExporter,
+    TridiumExporter,
 )
 from bas_assistant.reasoning import (
     analyze_gaps, parse_sequence as parse_sequence_text, TroubleshootingAssistant,
@@ -47,7 +58,12 @@ from bas_assistant.reasoning import (
 )
 from bas_assistant.station_sync import StationSyncService
 from bas_assistant.config import get_settings
-from bas_assistant.runtime import build_health_report, configure_logging, ensure_runtime_directories
+from bas_assistant.runtime import (
+    build_health_report,
+    configure_logging,
+    ensure_runtime_directories,
+    provision_demo_project,
+)
 from bas_assistant.services import ArtifactEntityLink
 from ui.api.factory import create_application
 
@@ -97,6 +113,10 @@ async def lifespan_factory(_container):
     try:
         from bas_assistant.runtime import seed_codex_demo_project
         seed_codex_demo_project(container.projects, OUTPUT_DIR, logger)
+        seeded_project = container.projects.get("codex-test-project")
+        if seeded_project is not None:
+            register_persisted_generated_outputs(seeded_project)
+        refresh_projects_cache()
     except Exception:
         logger.exception("Failed to seed Codex demo project")
     
@@ -149,6 +169,59 @@ def get_project(project_id: str) -> Project:
         raise HTTPException(status_code=404, detail="Project not found")
     projects[project_id] = project
     return project
+
+
+def build_unique_project_id(base_project_id: str) -> str:
+    """Create a unique project ID by appending a numeric suffix when needed."""
+    candidate = base_project_id
+    counter = 2
+    while container.projects.get(candidate) is not None:
+        candidate = f"{base_project_id}-{counter}"
+        counter += 1
+    return candidate
+
+
+def duplicate_project_snapshot(
+    source_project_id: str,
+    *,
+    new_name: str = "",
+    new_project_id: str = "",
+) -> Project:
+    """Duplicate a project, its structured data, and generated outputs."""
+    source_project = get_project(source_project_id)
+    duplicate_name = new_name.strip() or f"{source_project.metadata.name} - Copy"
+    requested_project_id = new_project_id.strip()
+    normalized_project_id = re.sub(r"[^a-z0-9]+", "-", requested_project_id.lower()).strip("-")
+    if not normalized_project_id:
+        normalized_project_id = f"{source_project.metadata.project_id}-copy"
+    duplicate_project_id = build_unique_project_id(normalized_project_id)
+
+    duplicate = source_project.model_copy(deep=True)
+    duplicate.metadata.project_id = duplicate_project_id
+    duplicate.metadata.name = duplicate_name
+    duplicate.source_documents = []
+    duplicate.update_timestamp()
+    save_project(duplicate)
+
+    source_output_dir = OUTPUT_DIR / source_project_id
+    duplicate_output_dir = OUTPUT_DIR / duplicate_project_id
+    if source_output_dir.exists():
+        shutil.copytree(source_output_dir, duplicate_output_dir, dirs_exist_ok=True)
+
+    register_persisted_generated_outputs(duplicate)
+    record_project_ledger_event(
+        project_id=duplicate_project_id,
+        event_type="project.duplicated",
+        summary=f"Project duplicated from {source_project_id}",
+        entity_type="project",
+        entity_key=duplicate_project_id,
+        payload={
+            "source_project_id": source_project_id,
+            "project_id": duplicate_project_id,
+            "name": duplicate_name,
+        },
+    )
+    return duplicate
 
 
 def save_project(project: Project) -> None:
@@ -453,6 +526,47 @@ def register_generation_outputs(
     return documents
 
 
+def generated_document_paths(project_id: str) -> set[str]:
+    """Return already-registered generated document paths for a project."""
+    with container.db.session() as session:
+        project = session.scalar(select(ProjectRecord).where(ProjectRecord.project_id == project_id))
+        if project is None:
+            return set()
+        rows = list(
+            session.scalars(
+                select(DocumentRecord.file_path).where(
+                    DocumentRecord.project_id == project.id,
+                    DocumentRecord.document_type.startswith("generated_"),
+                )
+            )
+        )
+    return {str(path) for path in rows if path}
+
+
+def register_generation_outputs_if_missing(
+    *,
+    project: Project,
+    generator_name: str,
+    outputs: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Register generated outputs that are not yet present in the document store."""
+    existing_paths = generated_document_paths(project.metadata.project_id)
+    pending_outputs = [
+        output
+        for output in outputs
+        if isinstance(output.get("path"), Path)
+        and str(output["path"]) not in existing_paths
+        and Path(output["path"]).exists()
+    ]
+    if not pending_outputs:
+        return []
+    return register_generation_outputs(
+        project=project,
+        generator_name=generator_name,
+        outputs=pending_outputs,
+    )
+
+
 def build_checkout_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
     outputs: list[dict[str, object]] = []
     markdown_paths = result.get("markdown") or []
@@ -646,6 +760,82 @@ def build_export_output_descriptors(project: Project, results: dict[str, dict[st
                 }
             )
     return outputs
+
+
+def register_persisted_generated_outputs(project: Project) -> list[dict[str, object]]:
+    """Backfill generated artifact files into the project document library."""
+    project_id = project.metadata.project_id
+    generated_documents: list[dict[str, object]] = []
+
+    checkout_dir = OUTPUT_DIR / project_id / "checkout"
+    checkout_result = {
+        "markdown": sorted((checkout_dir / "checkout_md").glob("*.md")) if (checkout_dir / "checkout_md").exists() else [],
+        "excel": checkout_dir / "checkout_sheets.xlsx",
+    }
+    generated_documents.extend(
+        register_generation_outputs_if_missing(
+            project=project,
+            generator_name="checkout_generator",
+            outputs=build_checkout_output_descriptors(project, checkout_result),
+        )
+    )
+
+    reports_dir = OUTPUT_DIR / project_id / "reports"
+    report_result = {
+        "summary": reports_dir / "00_Project_Summary.md",
+        "equipment_schedule": reports_dir / "01_Equipment_Schedule.xlsx",
+        "point_schedule": reports_dir / "02_Point_Schedule.xlsx",
+        "controller_schedule": reports_dir / "03_Controller_Schedule.xlsx",
+        "validation": reports_dir / "04_Validation_Report.md",
+    }
+    generated_documents.extend(
+        register_generation_outputs_if_missing(
+            project=project,
+            generator_name="report_generator",
+            outputs=build_report_output_descriptors(project, report_result),
+        )
+    )
+
+    graphics_result = load_generated_graphics_result(project)
+    if graphics_result is not None:
+        generated_documents.extend(
+            register_generation_outputs_if_missing(
+                project=project,
+                generator_name="graphics_generator",
+                outputs=build_graphics_output_descriptors(project, graphics_result),
+            )
+        )
+
+    logic_dir = OUTPUT_DIR / project_id / "logic"
+    logic_result = {
+        "json": sorted((logic_dir / "logic_json").glob("*.json")) if (logic_dir / "logic_json").exists() else [],
+        "niagara": sorted((logic_dir / "logic_niagara").glob("*.json")) if (logic_dir / "logic_niagara").exists() else [],
+    }
+    generated_documents.extend(
+        register_generation_outputs_if_missing(
+            project=project,
+            generator_name="logic_generator",
+            outputs=build_logic_output_descriptors(project, logic_result),
+        )
+    )
+
+    export_dir = OUTPUT_DIR / project_id / "exports"
+    export_result = {
+        vendor: {
+            "files": [str(path) for path in sorted((export_dir / vendor).rglob("*")) if path.is_file()],
+        }
+        for vendor in ("niagara", "bacnet", "tridium", "jci", "siemens", "honeywell")
+        if (export_dir / vendor).exists()
+    }
+    generated_documents.extend(
+        register_generation_outputs_if_missing(
+            project=project,
+            generator_name="export_generator",
+            outputs=build_export_output_descriptors(project, export_result),
+        )
+    )
+
+    return generated_documents
 
 
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
@@ -1604,11 +1794,13 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
             "project": project,
             "recent_upload_views": [],
             "import_status_view": None,
+            "inline_editors": build_import_editor_views(project),
         }
     return {
         "project": project,
         "recent_upload_views": _enrich_recent_upload_views(workspace_view["recent_uploads"]),
         "import_status_view": workspace_view["import_status_view"],
+        "inline_editors": build_import_editor_views(project),
     }
 
 
@@ -1622,6 +1814,218 @@ def timed_page_context(label: str, builder):
 
 def _form_text(value: object) -> str:
     return value if isinstance(value, str) else ""
+
+
+def _form_int(value: object) -> str:
+    return "" if value is None else str(value)
+
+
+def _form_float(value: object) -> str:
+    return "" if value is None else str(value)
+
+
+def _split_csv_values(value: str) -> list[str]:
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+INLINE_EDITOR_FIELDS: dict[str, list[dict[str, object]]] = {
+    "equipment": [
+        {"key": "id", "label": "Equipment ID"},
+        {"key": "type", "label": "Type", "options": [item.value for item in EquipmentType]},
+        {"key": "subtype", "label": "Subtype"},
+        {"key": "building", "label": "Building"},
+        {"key": "floor", "label": "Floor"},
+        {"key": "controller_id", "label": "Controller"},
+        {"key": "status", "label": "Status"},
+        {"key": "notes", "label": "Notes"},
+    ],
+    "points": [
+        {"key": "name", "label": "Point Name"},
+        {"key": "equipment_id", "label": "Equipment"},
+        {"key": "controller_id", "label": "Controller"},
+        {"key": "kind", "label": "Kind", "options": [item.value for item in PointKind]},
+        {"key": "direction", "label": "Direction", "options": [item.value for item in PointDirection]},
+        {"key": "units", "label": "Units"},
+        {"key": "bacnet_object_type", "label": "BACnet"},
+        {"key": "description", "label": "Description"},
+    ],
+    "controllers": [
+        {"key": "id", "label": "Controller ID"},
+        {"key": "type", "label": "Type"},
+        {"key": "vendor", "label": "Vendor"},
+        {"key": "model", "label": "Model"},
+        {"key": "protocols", "label": "Protocols"},
+        {"key": "address", "label": "Primary Address"},
+        {"key": "serves_equipment_ids", "label": "Serves Equipment"},
+        {"key": "owned_point_names", "label": "Owned Points"},
+    ],
+}
+
+
+INLINE_EDITOR_TITLES = {
+    "equipment": "Equipment Editor",
+    "points": "Point Editor",
+    "controllers": "Controller Editor",
+}
+
+
+def build_import_editor_views(
+    project: Project,
+    *,
+    messages: dict[str, dict[str, str]] | None = None,
+) -> dict[str, dict[str, object]]:
+    message_map = messages or {}
+    return {
+        "equipment": build_import_editor_view(project, "equipment", message_map.get("equipment")),
+        "points": build_import_editor_view(project, "points", message_map.get("points")),
+        "controllers": build_import_editor_view(project, "controllers", message_map.get("controllers")),
+    }
+
+
+def build_import_editor_view(
+    project: Project,
+    entity_type: str,
+    message: dict[str, str] | None = None,
+) -> dict[str, object]:
+    if entity_type == "equipment":
+        rows = [
+            {
+                "key": equipment.id,
+                "values": {
+                    "id": equipment.id,
+                    "type": equipment.type.value,
+                    "subtype": equipment.subtype or "",
+                    "building": equipment.building or "",
+                    "floor": equipment.floor or "",
+                    "controller_id": equipment.controller_id or "",
+                    "status": equipment.status,
+                    "notes": equipment.notes or "",
+                },
+            }
+            for equipment in project.equipment
+        ]
+    elif entity_type == "points":
+        rows = [
+            {
+                "key": point.name,
+                "values": {
+                    "name": point.name,
+                    "equipment_id": point.equipment_id,
+                    "controller_id": point.controller_id or "",
+                    "kind": point.kind.value,
+                    "direction": point.direction.value,
+                    "units": point.units or "",
+                    "bacnet_object_type": point.bacnet_object_type or "",
+                    "description": point.description or "",
+                },
+            }
+            for point in project.points
+        ]
+    elif entity_type == "controllers":
+        rows = [
+            {
+                "key": controller.id,
+                "values": {
+                    "id": controller.id,
+                    "type": controller.type,
+                    "vendor": controller.vendor or "",
+                    "model": controller.model or "",
+                    "protocols": ", ".join(protocol.value for protocol in controller.protocols),
+                    "address": controller.network_addresses[0].address if controller.network_addresses else "",
+                    "serves_equipment_ids": ", ".join(controller.serves_equipment_ids),
+                    "owned_point_names": ", ".join(controller.owned_point_names),
+                },
+            }
+            for controller in project.controllers
+        ]
+    else:
+        raise HTTPException(status_code=404, detail="Unknown editor type")
+    return {
+        "entity_type": entity_type,
+        "title": INLINE_EDITOR_TITLES[entity_type],
+        "section_id": f"{entity_type}-editor-section",
+        "save_url": f"/project/{project.metadata.project_id}/import/editor/{entity_type}/save",
+        "delete_url_prefix": f"/project/{project.metadata.project_id}/import/editor/{entity_type}",
+        "fields": INLINE_EDITOR_FIELDS[entity_type],
+        "rows": rows,
+        "message": message,
+    }
+
+
+def _editor_key_for_entity(entity_type: str, payload: dict[str, str]) -> str:
+    key_field = "name" if entity_type == "points" else "id"
+    return payload.get(key_field, "").strip()
+
+
+def _find_entity_index(project: Project, entity_type: str, entity_key: str) -> int | None:
+    if entity_type == "equipment":
+        return next((index for index, equipment in enumerate(project.equipment) if equipment.id == entity_key), None)
+    if entity_type == "points":
+        return next((index for index, point in enumerate(project.points) if point.name == entity_key), None)
+    if entity_type == "controllers":
+        return next((index for index, controller in enumerate(project.controllers) if controller.id == entity_key), None)
+    return None
+
+
+def _build_equipment_from_form(form_data: dict[str, str]) -> Equipment:
+    return Equipment(
+        id=form_data.get("id", "").strip(),
+        type=EquipmentType(form_data.get("type", "").strip()),
+        subtype=form_data.get("subtype", "").strip() or None,
+        building=form_data.get("building", "").strip() or None,
+        floor=form_data.get("floor", "").strip() or None,
+        controller_id=form_data.get("controller_id", "").strip() or None,
+        status=form_data.get("status", "").strip() or "design",
+        notes=form_data.get("notes", "").strip() or None,
+    )
+
+
+def _build_point_from_form(form_data: dict[str, str]) -> Point:
+    return Point(
+        name=form_data.get("name", "").strip(),
+        equipment_id=form_data.get("equipment_id", "").strip(),
+        controller_id=form_data.get("controller_id", "").strip() or None,
+        kind=PointKind(form_data.get("kind", "").strip()),
+        direction=PointDirection(form_data.get("direction", "").strip()),
+        units=form_data.get("units", "").strip() or None,
+        bacnet_object_type=form_data.get("bacnet_object_type", "").strip() or None,
+        description=form_data.get("description", "").strip() or None,
+    )
+
+
+def _build_controller_from_form(form_data: dict[str, str]) -> Controller:
+    protocols = [Protocol(value) for value in _split_csv_values(form_data.get("protocols", ""))]
+    address = form_data.get("address", "").strip()
+    network_addresses = [
+        ControllerNetworkAddress(protocol=protocols[0] if protocols else Protocol.BACNET_IP, address=address)
+    ] if address else []
+    return Controller(
+        id=form_data.get("id", "").strip(),
+        type=form_data.get("type", "").strip() or "generic",
+        vendor=form_data.get("vendor", "").strip() or None,
+        model=form_data.get("model", "").strip() or None,
+        protocols=protocols,
+        network_addresses=network_addresses,
+        serves_equipment_ids=_split_csv_values(form_data.get("serves_equipment_ids", "")),
+        owned_point_names=_split_csv_values(form_data.get("owned_point_names", "")),
+    )
+
+
+def _render_import_editor_section(
+    request: Request,
+    project: Project,
+    entity_type: str,
+    *,
+    message: dict[str, str] | None = None,
+) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="partials/import_editor_section.html",
+        context={
+            "project": project,
+            "editor": build_import_editor_view(project, entity_type, message),
+        },
+    )
 
 
 def assumption_set_for_project(project_id: str):
@@ -2371,6 +2775,24 @@ async def create_project(
     return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
 
+@app.post("/project/{project_id}/duplicate")
+async def duplicate_project_route(
+    request: Request,
+    project_id: str,
+    name: str = Form(""),
+    new_project_id: str = Form(""),
+):
+    duplicate = duplicate_project_snapshot(
+        project_id,
+        new_name=name,
+        new_project_id=new_project_id,
+    )
+    target = f"/project/{duplicate.metadata.project_id}"
+    if request.headers.get("HX-Request") == "true":
+        return Response(status_code=200, headers={"HX-Redirect": target})
+    return RedirectResponse(url=target, status_code=303)
+
+
 @app.post("/api/project/new", response_class=HTMLResponse)
 async def api_create_project(
     project_id: str = Form(...),
@@ -3079,6 +3501,112 @@ async def import_page(request: Request, project_id: str):
             f"import_page:{project_id}",
             lambda: _import_page_context(project, project_id),
         ),
+    )
+
+
+@app.get("/project/{project_id}/import/editor/{entity_type}", response_class=HTMLResponse)
+async def import_editor_section(request: Request, project_id: str, entity_type: str):
+    project = get_project(project_id)
+    return _render_import_editor_section(request, project, entity_type)
+
+
+@app.post("/project/{project_id}/import/editor/{entity_type}/save", response_class=HTMLResponse)
+async def save_import_editor_row(request: Request, project_id: str, entity_type: str):
+    project = get_project(project_id)
+    form = await request.form()
+    form_data = {str(key): str(value) for key, value in form.items()}
+    original_key = form_data.get("original_key", "").strip()
+
+    try:
+        if entity_type == "equipment":
+            updated_entity = _build_equipment_from_form(form_data)
+        elif entity_type == "points":
+            updated_entity = _build_point_from_form(form_data)
+        elif entity_type == "controllers":
+            updated_entity = _build_controller_from_form(form_data)
+        else:
+            raise HTTPException(status_code=404, detail="Unknown editor type")
+    except (ValidationError, ValueError) as exc:
+        return _render_import_editor_section(
+            request,
+            project,
+            entity_type,
+            message={"level": "error", "text": str(exc)},
+        )
+
+    new_key = _editor_key_for_entity(entity_type, form_data)
+    if not new_key:
+        return _render_import_editor_section(
+            request,
+            project,
+            entity_type,
+            message={"level": "error", "text": "The primary ID field is required."},
+        )
+
+    existing_index = _find_entity_index(project, entity_type, original_key) if original_key else None
+    conflicting_index = _find_entity_index(project, entity_type, new_key)
+    if conflicting_index is not None and conflicting_index != existing_index:
+        return _render_import_editor_section(
+            request,
+            project,
+            entity_type,
+            message={"level": "error", "text": f"{new_key} already exists in this project."},
+        )
+
+    if entity_type == "equipment":
+        if existing_index is None:
+            project.equipment.append(updated_entity)
+        else:
+            project.equipment[existing_index] = updated_entity
+    elif entity_type == "points":
+        if existing_index is None:
+            project.points.append(updated_entity)
+        else:
+            project.points[existing_index] = updated_entity
+    else:
+        if existing_index is None:
+            project.controllers.append(updated_entity)
+        else:
+            project.controllers[existing_index] = updated_entity
+
+    ValidationEngine().validate(project)
+    save_project(project)
+    return _render_import_editor_section(
+        request,
+        project,
+        entity_type,
+        message={"level": "success", "text": "Row saved and project validation refreshed."},
+    )
+
+
+@app.post("/project/{project_id}/import/editor/{entity_type}/{entity_key}/delete", response_class=HTMLResponse)
+async def delete_import_editor_row(request: Request, project_id: str, entity_type: str, entity_key: str):
+    project = get_project(project_id)
+    existing_index = _find_entity_index(project, entity_type, entity_key)
+    if existing_index is None:
+        return _render_import_editor_section(
+            request,
+            project,
+            entity_type,
+            message={"level": "error", "text": f"{entity_key} was not found."},
+        )
+
+    if entity_type == "equipment":
+        del project.equipment[existing_index]
+    elif entity_type == "points":
+        del project.points[existing_index]
+    elif entity_type == "controllers":
+        del project.controllers[existing_index]
+    else:
+        raise HTTPException(status_code=404, detail="Unknown editor type")
+
+    ValidationEngine().validate(project)
+    save_project(project)
+    return _render_import_editor_section(
+        request,
+        project,
+        entity_type,
+        message={"level": "success", "text": "Row deleted and project validation refreshed."},
     )
 
 
@@ -3979,19 +4507,6 @@ async def api_create_sample_data():
 @app.post("/api/load-demo")
 async def api_load_demo(request: Request):
     """Load the demo HVAC project with all pre-generated outputs."""
-    from pathlib import Path
-    from bas_assistant.models import Project, ProjectMetadata, UnitSystem
-    from bas_assistant.importers import CSVImporter, create_sample_csvs
-    from bas_assistant.generators import (
-        generate_checkout_sheets, generate_reports, generate_graphics, generate_logic
-    )
-    from bas_assistant.exporters import (
-        NiagaraExporter, BACnetExporter, TridiumExporter,
-        JCIExporter, SiemensExporter, HoneywellExporter
-    )
-    from bas_assistant.validation import ValidationEngine
-    from bas_assistant.reasoning import analyze_gaps
-
     project_id = "demo-hvac-project"
 
     def redirect_response():
@@ -3999,94 +4514,19 @@ async def api_load_demo(request: Request):
         if request.headers.get("HX-Request") == "true":
             return Response(status_code=200, headers={"HX-Redirect": target})
         return RedirectResponse(url=target, status_code=303)
-    
-    # Check if already loaded
-    if project_id in projects:
+
+    if container.projects.get(project_id) is not None:
         return redirect_response()
-    
-    # Create project
-    metadata = ProjectMetadata(
+    project = provision_demo_project(
+        container.projects,
+        OUTPUT_DIR,
+        logger,
         project_id=project_id,
-        name="Demo HVAC Project",
-        client="Demo Client",
-        location="Demo Building",
-        unit_system=UnitSystem.IP,
-        design_phase="Design Development",
-        engineer_of_record="Demo Engineer",
-        programmer="Demo Programmer",
-        commissioning_agent="Demo CxA",
-        naming_standard="ASHRAE 135",
+        project_name="Demo HVAC Project",
+        examples_dir=BASE_DIR / "examples",
     )
-    project = Project(metadata=metadata)
-    
-    # Import sample data
-    importer = CSVImporter(project)
-    create_sample_csvs(BASE_DIR / "examples")
-    
-    equip_file = BASE_DIR / "examples" / "equipment_schedule.csv"
-    if equip_file.exists():
-        importer.import_equipment_schedule(equip_file, "equip_schedule_demo")
-    
-    points_file = BASE_DIR / "examples" / "point_list.csv"
-    if points_file.exists():
-        importer.import_point_list(points_file, "point_list_demo")
-    
-    ctrl_file = BASE_DIR / "examples" / "controller_schedule.csv"
-    if ctrl_file.exists():
-        importer.import_controller_schedule(ctrl_file, "ctrl_schedule_demo")
-    
-    # Save project
-    save_project(project)
-    
-    # Generate all outputs
-    output_dir = OUTPUT_DIR / project_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Validation
-    engine = ValidationEngine()
-    engine.validate(project)
-    
-    # Gap analysis
-    analyze_gaps(project)
-    
-    # Checkout sheets
-    checkout_dir = output_dir / "checkout"
-    checkout_dir.mkdir(parents=True, exist_ok=True)
-    generate_checkout_sheets(project, checkout_dir)
-    
-    # Reports
-    reports_dir = output_dir / "reports"
-    reports_dir.mkdir(parents=True, exist_ok=True)
-    generate_reports(project, reports_dir)
-    
-    # Graphics
-    graphics_dir = output_dir / "graphics"
-    graphics_dir.mkdir(parents=True, exist_ok=True)
-    generate_graphics(project, graphics_dir)
-    
-    # Logic
-    logic_dir = output_dir / "logic"
-    logic_dir.mkdir(parents=True, exist_ok=True)
-    generate_logic(project, logic_dir)
-    
-    # Exports
-    exports_dir = output_dir / "exports"
-    exports_dir.mkdir(parents=True, exist_ok=True)
-    
-    vendor_map = {
-        "niagara": NiagaraExporter,
-        "bacnet": BACnetExporter,
-        "tridium": TridiumExporter,
-        "jci": JCIExporter,
-        "siemens": SiemensExporter,
-        "honeywell": HoneywellExporter,
-    }
-    
-    for vendor_name, exporter_class in vendor_map.items():
-        vendor_dir = exports_dir / vendor_name
-        vendor_dir.mkdir(parents=True, exist_ok=True)
-        exporter = exporter_class(project)
-        exporter.export(vendor_dir)
+    generated_documents = register_persisted_generated_outputs(project)
+    projects[project_id] = project
 
     record_project_ledger_event(
         project_id=project_id,
@@ -4100,6 +4540,7 @@ async def api_load_demo(request: Request):
             "point_count": len(project.points),
             "controller_count": len(project.controllers),
             "generated_outputs": ["checkout", "reports", "graphics", "logic", "exports"],
+            "generated_documents": len(generated_documents),
         },
     )
     

@@ -65,6 +65,10 @@
 
     <div id="import-result"></div>
 
+    {% for editor in inline_editors.values() %}
+    {% include "partials/import_editor_section.html" %}
+    {% endfor %}
+
     {% if import_status_view %}
     <div class="mt-12 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between gap-4 mb-4">
@@ -163,6 +167,103 @@
             const hasFile = Array.from(document.querySelectorAll('input[type="file"]')).some(i => i.files.length > 0);
             document.querySelector('button[type="submit"]').disabled = !hasFile;
         });
+    });
+
+    function wireInlineEditorSections(root = document) {
+        const markRowState = (row, text, className) => {
+            const indicator = row?.querySelector('[data-inline-row-state]');
+            if (!indicator) {
+                return;
+            }
+            indicator.textContent = text;
+            indicator.className = `mt-2 text-[11px] uppercase tracking-[0.16em] ${className}`;
+        };
+
+        root.querySelectorAll('[data-inline-add-row]').forEach((button) => {
+            if (button.dataset.inlineEditorBound === 'true') {
+                return;
+            }
+            button.dataset.inlineEditorBound = 'true';
+            button.addEventListener('click', () => {
+                const section = document.getElementById(button.dataset.inlineAddRow);
+                const body = section?.querySelector('[data-inline-editor-body]');
+                const template = section?.querySelector('template[data-inline-editor-template]');
+                if (!body || !template) {
+                    return;
+                }
+                const fragment = template.content.cloneNode(true);
+                const emptyState = body.querySelector('td[colspan]');
+                if (emptyState) {
+                    emptyState.closest('tr')?.remove();
+                }
+                body.prepend(fragment);
+                wireInlineEditorSections(section);
+            });
+        });
+
+        root.querySelectorAll('[data-inline-input]').forEach((input) => {
+            if (input.dataset.inlineEditorBound === 'true') {
+                return;
+            }
+            input.dataset.inlineEditorBound = 'true';
+
+            const queueAutosave = () => {
+                const row = input.closest('tr');
+                const saveButton = row?.querySelector('[data-inline-save-row]');
+                if (!row || !saveButton) {
+                    return;
+                }
+                markRowState(row, 'Unsaved', 'text-amber-500');
+                window.clearTimeout(Number(row.dataset.autosaveTimer || '0'));
+                row.dataset.autosaveTimer = String(window.setTimeout(() => {
+                    markRowState(row, 'Saving', 'text-sky-500');
+                    saveButton.click();
+                }, 150));
+            };
+
+            input.addEventListener('change', queueAutosave);
+            input.addEventListener('blur', queueAutosave);
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    queueAutosave();
+                }
+            });
+        });
+
+        root.querySelectorAll('[data-inline-save-row]').forEach((button) => {
+            if (button.dataset.inlineEditorBound === 'true') {
+                return;
+            }
+            button.dataset.inlineEditorBound = 'true';
+            button.addEventListener('click', () => {
+                const row = button.closest('tr');
+                if (row?.dataset.autosaveTimer) {
+                    window.clearTimeout(Number(row.dataset.autosaveTimer));
+                }
+                markRowState(row, 'Saving', 'text-sky-500');
+            });
+        });
+
+        root.querySelectorAll('[data-inline-remove-row]').forEach((button) => {
+            if (button.dataset.inlineEditorBound === 'true') {
+                return;
+            }
+            button.dataset.inlineEditorBound = 'true';
+            button.addEventListener('click', () => {
+                const row = button.closest('tr');
+                const body = row?.parentElement;
+                row?.remove();
+                if (body && !body.querySelector('tr')) {
+                    body.innerHTML = '<tr><td colspan="9" class="px-4 py-6 text-sm text-gray-500">No rows yet. Add one inline.</td></tr>';
+                }
+            });
+        });
+    }
+
+    wireInlineEditorSections();
+    document.body.addEventListener('htmx:afterSwap', (event) => {
+        wireInlineEditorSections(event.target);
     });
 </script>
 {% endblock %}

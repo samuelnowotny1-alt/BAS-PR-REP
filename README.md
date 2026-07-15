@@ -17,6 +17,7 @@ Turn sequences of operation → validated, vendor-ready deliverables (Niagara, B
 - **Sequence Parser** — Natural language SOO → structured logic + points + graphics
 - **Troubleshooting** — Trend/alarm/loop analysis with confidence scoring
 - **Assumptions Tracker** — Categorized, statused, impact-linked engineering assumptions
+- **Pi Lab Emulator** — JACE-like gateway + controller/point REST emulator generated from project JSON
 - **Web UI** — htmx + Tailwind, dark mode, responsive sidebar, document library, object lineage
 - **Authentication** — Bootstrap admin, role-based access, project memberships
 
@@ -107,6 +108,9 @@ bas logic project.json -o logic/
 
 # Export to vendor formats
 bas export project.json -o export/ --format all
+
+# Create a Pi-friendly emulator lab
+bas emulate project.json -o emulation --serve --host 0.0.0.0 --port 8787
 ```
 
 ## Web UI Endpoints

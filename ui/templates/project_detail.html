@@ -30,6 +30,10 @@
                     {% else %}bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200{% endif %}">
                     {{ project_view.validation_status|capitalize }}
                 </span>
+                <button type="button" onclick="document.getElementById('duplicate-project-dialog').showModal()" class="btn-secondary">
+                    <i class="fas fa-copy mr-2"></i>
+                    Duplicate
+                </button>
                 <a href="/project/{{ project_view.project_id }}/validate" class="btn-secondary">
                     <i class="fas fa-sync mr-2"></i>
                     Re-validate
@@ -37,6 +41,27 @@
             </div>
         </div>
     </div>
+
+    <dialog id="duplicate-project-dialog" class="rounded-2xl border border-gray-200 bg-white p-0 shadow-2xl backdrop:bg-black/40 dark:border-gray-700 dark:bg-gray-900">
+        <div class="w-[min(92vw,32rem)]">
+            <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Duplicate Project</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Create a copied project with duplicated structured data and generated outputs.</p>
+            </div>
+            <div class="space-y-4 px-6 py-5">
+                <form method="post" action="/project/{{ project_view.project_id }}/duplicate">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300" for="duplicate-name">Project Name</label>
+                    <input id="duplicate-name" name="name" value="{{ project_view.name }} - Copy" class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                    <label class="mt-4 block text-sm font-medium text-gray-700 dark:text-gray-300" for="duplicate-project-id">Project ID</label>
+                    <input id="duplicate-project-id" name="new_project_id" value="{{ project_view.project_id }}-copy" class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" />
+                    <div class="mt-5 flex justify-end gap-3">
+                        <button type="button" onclick="document.getElementById('duplicate-project-dialog').close()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Create Copy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </dialog>
 
     <!-- Stats Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

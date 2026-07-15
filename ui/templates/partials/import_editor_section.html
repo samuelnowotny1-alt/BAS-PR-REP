@@ -1,0 +1,102 @@
+<section id="{{ editor.section_id }}" class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ editor.title }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Edit persisted rows in place. Save refreshes project validation immediately.</p>
+        </div>
+        <button
+            type="button"
+            class="btn-secondary"
+            data-inline-add-row="{{ editor.section_id }}"
+        >
+            <i class="fas fa-plus mr-2"></i>
+            Add Row
+        </button>
+    </div>
+
+    {% if editor.message %}
+    <div class="mt-4 rounded-xl px-4 py-3 text-sm {% if editor.message.level == 'error' %}border border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200{% else %}border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200{% endif %}">
+        {{ editor.message.text }}
+    </div>
+    {% endif %}
+
+    <div class="mt-5 overflow-x-auto">
+        <table class="w-full min-w-[980px]">
+            <thead class="bg-gray-50 dark:bg-gray-900/50">
+                <tr>
+                    {% for field in editor.fields %}
+                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{{ field.label }}</th>
+                    {% endfor %}
+                    <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-700" data-inline-editor-body>
+                {% for row in editor.rows %}
+                <tr class="bg-white dark:bg-gray-800">
+                    {% for field in editor.fields %}
+                    <td class="px-3 py-3 align-top">
+                        {% if loop.first %}<input type="hidden" name="original_key" value="{{ row.key }}">{% endif %}
+                        {% if field.options %}
+                        <select name="{{ field.key }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" data-inline-input>
+                            {% for option in field.options %}
+                            <option value="{{ option }}" {% if row.values[field.key] == option %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <input
+                            type="text"
+                            name="{{ field.key }}"
+                            value="{{ row.values[field.key] }}"
+                            data-inline-input
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                        >
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="px-3 py-3 align-top">
+                        <div class="flex gap-2">
+                            <button type="button" class="btn-primary text-sm" data-inline-save-row hx-post="{{ editor.save_url }}" hx-include="closest tr" hx-target="#{{ editor.section_id }}" hx-swap="outerHTML">Save</button>
+                            <button type="button" class="btn-secondary text-sm" hx-post="{{ editor.delete_url_prefix }}/{{ row.key|urlencode }}/delete" hx-target="#{{ editor.section_id }}" hx-swap="outerHTML">Delete</button>
+                        </div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.16em] text-gray-400" data-inline-row-state>Saved</p>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="{{ editor.fields|length + 1 }}" class="px-4 py-6 text-sm text-gray-500">No rows yet. Add one inline.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <template data-inline-editor-template>
+        <tr class="bg-white dark:bg-gray-800">
+            {% for field in editor.fields %}
+            <td class="px-3 py-3 align-top">
+                {% if loop.first %}<input type="hidden" name="original_key" value="">{% endif %}
+                {% if field.options %}
+                <select name="{{ field.key }}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white" data-inline-input>
+                    {% for option in field.options %}
+                    <option value="{{ option }}" {% if loop.first %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
+                {% else %}
+                <input
+                    type="text"
+                    name="{{ field.key }}"
+                    value=""
+                    data-inline-input
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-950 dark:text-white"
+                >
+                {% endif %}
+            </td>
+            {% endfor %}
+            <td class="px-3 py-3 align-top">
+                <div class="flex gap-2">
+                    <button type="button" class="btn-primary text-sm" data-inline-save-row hx-post="{{ editor.save_url }}" hx-include="closest tr" hx-target="#{{ editor.section_id }}" hx-swap="outerHTML">Save</button>
+                    <button type="button" class="btn-secondary text-sm" data-inline-remove-row>Remove</button>
+                </div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.16em] text-amber-500" data-inline-row-state>Unsaved</p>
+            </td>
+        </tr>
+    </template>
+</section>

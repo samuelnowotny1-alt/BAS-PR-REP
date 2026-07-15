@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from .emulation import BasEmulationLab, create_emulation_app
 from .importers import CSVImporter, create_sample_csvs
 from .models import (
     Project,
@@ -195,6 +196,40 @@ def summary(project_file: str):
         for kind, count in sorted(kind_counts.items()):
             table.add_row(kind, str(count))
         console.print(table)
+
+
+@main.command()
+@click.argument("project_file", type=click.Path(exists=True))
+@click.option("--output-dir", "-o", default="./emulation", help="Directory for emulator manifest output")
+@click.option("--gateway-name", default="JACE-EMU", help="Gateway device name to expose")
+@click.option("--serve/--no-serve", default=False, help="Run the REST emulator after writing manifest files")
+@click.option("--host", default="0.0.0.0", help="Bind host when serving")
+@click.option("--port", default=8787, type=int, help="Bind port when serving")
+def emulate(project_file: str, output_dir: str, gateway_name: str, serve: bool, host: str, port: int):
+    """Create a Pi-friendly BAS lab emulator from a project JSON file."""
+    with open(project_file) as f:
+        project = Project.model_validate_json(f.read())
+
+    lab = BasEmulationLab(project=project, gateway_name=gateway_name)
+    written = lab.write_output(Path(output_dir))
+
+    console.print(Panel.fit(
+        f"[green]Created emulator lab for {project.metadata.project_id}[/green]\n"
+        f"Gateway: {lab.gateway.device_id} ({lab.gateway.protocol})\n"
+        f"Controllers: {len(lab.controllers)}\n"
+        f"Points: {sum(device.point_count for device in lab.controllers)}\n"
+        f"Manifest: {written['manifest']}\n"
+        f"Snapshot: {written['snapshot']}",
+        title="BAS Lab Emulator",
+    ))
+
+    if not serve:
+        return
+
+    import uvicorn
+
+    console.print(f"[cyan]Serving emulator API on http://{host}:{port}[/cyan]")
+    uvicorn.run(create_emulation_app(project=project, gateway_name=gateway_name), host=host, port=port)
 
 
 def _print_import_result(result):

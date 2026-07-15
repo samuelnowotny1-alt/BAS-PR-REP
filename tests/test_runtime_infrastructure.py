@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from bas_assistant.config import Settings
-from bas_assistant.runtime import build_health_report, ensure_runtime_directories
+from bas_assistant.runtime import build_health_report, ensure_runtime_directories, seed_codex_demo_project
+from bas_assistant.services.projects import JsonProjectRepository
 from ui.api import main
 
 
@@ -77,3 +78,23 @@ def test_timed_page_context_logs_duration(monkeypatch: pytest.MonkeyPatch) -> No
     assert result == {"ok": True}
     assert messages
     assert messages[0].startswith("page_context[dashboard] built in ")
+
+
+def test_seed_codex_demo_project_creates_project_and_outputs(tmp_path: Path) -> None:
+    data_dir = tmp_path / "data"
+    output_dir = tmp_path / "output"
+    repo = JsonProjectRepository(data_dir)
+
+    seed_codex_demo_project(repo, output_dir, main.logger)
+
+    project = repo.get("codex-test-project")
+    assert project is not None
+    assert project.metadata.name == "Codex Test Project"
+    assert len(project.equipment) > 0
+    assert len(project.points) > 0
+    assert len(project.controllers) > 0
+    assert (output_dir / "codex-test-project" / "checkout").exists()
+    assert (output_dir / "codex-test-project" / "reports").exists()
+    assert (output_dir / "codex-test-project" / "graphics").exists()
+    assert (output_dir / "codex-test-project" / "logic").exists()
+    assert (output_dir / "codex-test-project" / "exports").exists()
