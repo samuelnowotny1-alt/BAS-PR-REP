@@ -259,3 +259,21 @@ class ApplicationLogRecord(Base):
     message: Mapped[str] = mapped_column(Text)
     context_json: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+
+class SystemLedgerRecord(Base):
+    """Durable system-wide ledger of meaningful project and application changes."""
+
+    __tablename__ = "system_ledger"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    project_id: Mapped[int | None] = mapped_column(ForeignKey("projects.id"), nullable=True, index=True)
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id"), nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(120), index=True)
+    entity_type: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    entity_key: Mapped[str | None] = mapped_column(String(160), nullable=True, index=True)
+    summary: Mapped[str] = mapped_column(Text)
+    payload_json: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    project: Mapped[ProjectRecord | None] = relationship()
+    task: Mapped[TaskRecord | None] = relationship()

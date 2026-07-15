@@ -8,7 +8,7 @@ from bas_assistant.auth import AuthenticationService
 from bas_assistant.config import Settings
 from bas_assistant.database import DatabaseManager
 from bas_assistant.parsers import NiagaraArtifactParser
-from bas_assistant.services import ArtifactLinkService, DashboardService, JsonProjectRepository, KnowledgeIngestionService, ProjectQueryService, TaskService, UploadService
+from bas_assistant.services import ArtifactLinkService, DashboardService, JsonProjectRepository, KnowledgeIngestionService, LedgerService, ProjectQueryService, TaskService, UploadService
 
 
 @dataclass(slots=True)
@@ -24,6 +24,7 @@ class ApplicationContainer:
     artifact_links: ArtifactLinkService
     knowledge: KnowledgeIngestionService
     parsers: NiagaraArtifactParser
+    ledger: LedgerService
     tasks: TaskService
     dashboard: DashboardService
 
@@ -38,7 +39,8 @@ def build_container(settings: Settings) -> ApplicationContainer:
     artifact_links = ArtifactLinkService(db)
     knowledge = KnowledgeIngestionService(db)
     parsers = NiagaraArtifactParser()
-    tasks = TaskService(db)
+    ledger = LedgerService(db)
+    tasks = TaskService(db, ledger=ledger)
     auth = AuthenticationService(db, settings)
     auth.ensure_bootstrap_admin()
     dashboard = DashboardService(
@@ -58,6 +60,7 @@ def build_container(settings: Settings) -> ApplicationContainer:
         artifact_links=artifact_links,
         knowledge=knowledge,
         parsers=parsers,
+        ledger=ledger,
         tasks=tasks,
         dashboard=dashboard,
     )

@@ -10,6 +10,8 @@ from sqlalchemy import desc, select
 
 from bas_assistant.database import DatabaseManager, ProjectRecord, TaskRecord
 
+from .ledger import LedgerService
+
 
 @dataclass(slots=True)
 class TaskSnapshot:
@@ -27,8 +29,9 @@ class TaskSnapshot:
 class TaskService:
     """Persist ingestion and parser task activity."""
 
-    def __init__(self, db: DatabaseManager) -> None:
+    def __init__(self, db: DatabaseManager, *, ledger: LedgerService | None = None) -> None:
         self.db = db
+        self.ledger = ledger
 
     def create_task(
         self,
@@ -53,7 +56,15 @@ class TaskService:
             )
             session.add(task)
             session.flush()
-            return int(task.id)
+            task_id = int(task.id)
+        self._record_ledger_event(
+            event_type="task.created",
+            summary=f"{task_type} started",
+            project_id=project_id,
+            task_id=task_id,
+            payload={"task_type": task_type, "status": "pending", "payload": payload},
+        )
+        return task_id
 
     def mark_status(self, task_id: int, *, status: str, detail: dict[str, Any] | None = None) -> None:
         """Append a status transition to an existing task."""
@@ -68,6 +79,15 @@ class TaskService:
             history.append(self._status_entry(status, detail or {}))
             result_json["status_history"] = history
             task.result_json = result_json
+            project_public_id = self._project_public_id(session, task.project_id)
+            task_type = task.task_type
+        self._record_ledger_event(
+            event_type="task.status_changed",
+            summary=f"{task_type} marked {status}",
+            project_id=project_public_id,
+            task_id=task_id,
+            payload={"task_type": task_type, "status": status, "detail": detail or {}},
+        )
 
     def complete_task(self, task_id: int, *, result: dict[str, Any]) -> None:
         """Mark a task completed and store its result payload."""
@@ -83,6 +103,15 @@ class TaskService:
             result_json["status_history"] = history
             result_json["result"] = result
             task.result_json = result_json
+            project_public_id = self._project_public_id(session, task.project_id)
+            task_type = task.task_type
+        self._record_ledger_event(
+            event_type="task.completed",
+            summary=f"{task_type} completed",
+            project_id=project_public_id,
+            task_id=task_id,
+            payload={"task_type": task_type, "status": "completed", "result": result},
+        )
 
     def fail_task(self, task_id: int, *, error: str, detail: dict[str, Any] | None = None) -> None:
         """Mark a task failed and store the error context."""
@@ -99,6 +128,15 @@ class TaskService:
             result_json["status_history"] = history
             result_json["error"] = payload
             task.result_json = result_json
+            project_public_id = self._project_public_id(session, task.project_id)
+            task_type = task.task_type
+        self._record_ledger_event(
+            event_type="task.failed",
+            summary=f"{task_type} failed",
+            project_id=project_public_id,
+            task_id=task_id,
+            payload={"task_type": task_type, "status": "failed", "error": payload},
+        )
 
     def list_recent_for_project(self, project_id: str, *, limit: int = 10) -> list[TaskSnapshot]:
         """Return recent tasks for a project."""
@@ -133,3 +171,30 @@ class TaskService:
             "detail": detail,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+
+    def _project_public_id(self, session, project_db_id: int | None) -> str | None:
+        if project_db_id is None:
+            return None
+        project_record = session.get(ProjectRecord, project_db_id)
+        return project_record.project_id if project_record is not None else None
+
+    def _record_ledger_event(
+        self,
+        *,
+        event_type: str,
+        summary: str,
+        project_id: str | None,
+        task_id: int,
+        payload: dict[str, Any],
+    ) -> None:
+        if self.ledger is None:
+            return
+        self.ledger.record_event(
+            event_type=event_type,
+            summary=summary,
+            project_id=project_id,
+            task_id=task_id,
+            entity_type="task",
+            entity_key=str(task_id),
+            payload=payload,
+        )

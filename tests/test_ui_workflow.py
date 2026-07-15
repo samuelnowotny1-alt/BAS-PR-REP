@@ -1054,6 +1054,11 @@ def test_bulk_remediation_fills_missing_equipment_provenance() -> None:
     assert updated_project.get_equipment("AHU-1").provenance["source_name"] == "bulk_remediation"
     assert updated_project.get_equipment("AHU-2").provenance["source_name"] == "equip.csv"
 
+    activity_response = run_async(main.project_activity_page(request(f"/project/{project_id}/activity"), project_id))
+    activity_text = response_text(activity_response)
+    assert "Change Ledger" in activity_text
+    assert "Fill Missing Provenance updated 1 equipment" in activity_text
+
 
 def test_bulk_remediation_preview_shows_proposed_equipment_changes() -> None:
     project_id = create_project("bulk-preview-project")
@@ -1263,6 +1268,47 @@ def test_project_activity_page_renders_task_outcome_summaries() -> None:
     assert "Imported 2 equipment items" in text
     assert "ignored invalid graphic sections mystery_box" in text
     assert "Warnings" in text
+    assert "Change Ledger" in text
+    assert "equipment_import completed" in text
+
+
+def test_system_ledger_page_renders_project_and_remediation_history() -> None:
+    project_id = create_project("ledger-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    run_async(
+        main.bulk_remediate_object_list(
+            project_id=project_id,
+            entity_plural="equipment",
+            action="fill_missing_provenance",
+            status="",
+            controller_state="",
+            addressing_state="",
+            provenance_state="missing",
+            equipment_type="",
+            point_kind="",
+            protocol="",
+            validation_category="",
+            fix_group="",
+        )
+    )
+
+    response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="bulk_remediation.applied",
+            entity_type="equipment",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "System Ledger" in text
+    assert "Fill Missing Provenance updated 1 equipment" in text
+    assert "AHU-1" in text
 
 
 def test_graphics_preview_pages_prefers_equipment_pages() -> None:

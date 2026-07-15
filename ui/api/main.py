@@ -2293,12 +2293,47 @@ async def bulk_remediate_object_list(
     target_rows = list(list_view["rows"])
     row_key = "id" if entity_type != "point" else "name"
     target_ids = [str(row.get(row_key)) for row in target_rows if row.get(row_key)]
+    preview = preview_bulk_remediation(
+        project=project,
+        entity_type=entity_type,
+        target_ids=target_ids,
+        action=action,
+    )
     updated_count, action_label = apply_bulk_remediation(
         project=project,
         entity_type=entity_type,
         target_ids=target_ids,
         action=action,
     )
+    if updated_count:
+        container.ledger.record_event(
+            event_type="bulk_remediation.applied",
+            summary=f"{action_label.replace('_', ' ').title()} updated {updated_count} {entity_plural}",
+            project_id=project_id,
+            entity_type=entity_type,
+            entity_key="*",
+            payload={
+                "action": action,
+                "action_label": action_label,
+                "entity_plural": entity_plural,
+                "targeted_count": int(preview.get("targeted_count", 0) or 0),
+                "change_count": int(preview.get("change_count", 0) or 0),
+                "skipped_count": int(preview.get("skipped_count", 0) or 0),
+                "changes": list(preview.get("changes") or []),
+                "skipped": list(preview.get("skipped") or []),
+                "filters": {
+                    "status": status,
+                    "controller_state": controller_state,
+                    "addressing_state": addressing_state,
+                    "provenance_state": provenance_state,
+                    "equipment_type": equipment_type,
+                    "point_kind": point_kind,
+                    "protocol": protocol,
+                    "validation_category": validation_category,
+                    "fix_group": fix_group,
+                },
+            },
+        )
     redirect_filters = {
         "status": status,
         "controller_state": controller_state,
@@ -2388,6 +2423,28 @@ async def project_activity_page(request: Request, project_id: str):
         context={
             "project": project,
             "activity_view": activity_view,
+            "current_user": get_current_user(request),
+        },
+    )
+
+
+@app.get("/activity/ledger", response_class=HTMLResponse)
+async def system_ledger_page(
+    request: Request,
+    project_id: str = "",
+    event_type: str = "",
+    entity_type: str = "",
+):
+    ledger_view = container.project_queries.system_ledger_view(
+        project_id=project_id,
+        event_type=event_type,
+        entity_type=entity_type,
+    )
+    return templates.TemplateResponse(
+        request=request,
+        name="system_ledger.html",
+        context={
+            "ledger_view": ledger_view,
             "current_user": get_current_user(request),
         },
     )

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block page_title %}System Ledger - BAS Assistant{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white">System Ledger</h1>
+        <p class="mt-1 text-gray-500 dark:text-gray-400">Durable history of tracked updates across every project.</p>
+    </div>
+
+    <div class="card p-6">
+        <form method="get" action="/activity/ledger" class="grid gap-3 lg:grid-cols-4">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Project
+                <select name="project_id" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">All projects</option>
+                    {% for option in ledger_view.filter_options.projects %}
+                    <option value="{{ option.value }}" {% if ledger_view.filters.project_id == option.value %}selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Event Type
+                <select name="event_type" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">All event types</option>
+                    {% for value in ledger_view.filter_options.event_types %}
+                    <option value="{{ value }}" {% if ledger_view.filters.event_type == value %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Entity Type
+                <select name="entity_type" class="mt-2 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900">
+                    <option value="">All entity types</option>
+                    {% for value in ledger_view.filter_options.entity_types %}
+                    <option value="{{ value }}" {% if ledger_view.filters.entity_type == value %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <div class="flex items-end">
+                <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">Filter Ledger</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="mt-6 space-y-4">
+        {% for event in ledger_view.events %}
+        <div class="card p-6">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ event.summary }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {% if event.project_id %}
+                        <a href="/project/{{ event.project_id }}/activity" class="font-medium text-sky-700 underline dark:text-sky-300">{{ event.project_name or event.project_id }}</a>
+                        <span> · {{ event.project_id }}</span>
+                        {% else %}
+                        <span>System-wide</span>
+                        {% endif %}
+                        <span> · {{ event.event_type }}</span>
+                        {% if event.entity_type %}<span> · {{ event.entity_type }}</span>{% endif %}
+                        {% if event.entity_key %}<span> · {{ event.entity_key }}</span>{% endif %}
+                    </p>
+                </div>
+                <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ event.created_at }}</span>
+            </div>
+            {% if event.targeted_count or event.change_count %}
+            <div class="mt-4 flex flex-wrap gap-2">
+                {% if event.targeted_count %}
+                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{{ event.targeted_count }} targeted</span>
+                {% endif %}
+                {% if event.change_count %}
+                <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">{{ event.change_count }} changes</span>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% if event.changes %}
+            <div class="mt-4 space-y-2">
+                {% for change in event.changes[:6] %}
+                <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 dark:border-gray-700 dark:bg-gray-900">
+                    <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ change.entity_id }}</p>
+                    <div class="mt-2 space-y-2">
+                        {% for field_change in change.field_changes %}
+                        <div class="text-xs text-gray-600 dark:text-gray-300">{{ field_change.field }}: "{{ field_change.from }}" → "{{ field_change.to }}"</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="card p-6">
+            <p class="text-sm text-gray-500 dark:text-gray-400">No ledger entries match the selected filters.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

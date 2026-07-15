@@ -19,6 +19,7 @@ from bas_assistant.database import (
     PointRecord,
     ProjectMembershipRecord,
     ProjectRecord,
+    SystemLedgerRecord,
     TaskRecord,
     UploadRecord,
     UserAccount,
@@ -367,10 +368,19 @@ class ProjectQueryService:
                     .limit(20)
                 )
             )
+            ledger_events = list(
+                session.scalars(
+                    select(SystemLedgerRecord)
+                    .where(SystemLedgerRecord.project_id == project.id)
+                    .order_by(SystemLedgerRecord.created_at.desc(), SystemLedgerRecord.id.desc())
+                    .limit(25)
+                )
+            )
         return {
             "project_id": project.project_id,
             "project_name": project.name,
             "tasks": [self._task_to_view(task) for task in tasks],
+            "ledger_events": [self._ledger_event_to_view(event, project_id=project.project_id, project_name=project.name) for event in ledger_events],
             "uploads": [
                 {
                     "filename": upload.filename,
@@ -381,6 +391,68 @@ class ProjectQueryService:
                 }
                 for upload in uploads
             ],
+        }
+
+    def system_ledger_view(
+        self,
+        *,
+        project_id: str = "",
+        event_type: str = "",
+        entity_type: str = "",
+        limit: int = 120,
+    ) -> dict[str, object]:
+        """Return a global ledger view spanning every tracked system update."""
+        normalized_project_id = project_id.strip()
+        normalized_event_type = event_type.strip()
+        normalized_entity_type = entity_type.strip()
+        with self.db.session() as session:
+            project_options = list(
+                session.execute(select(ProjectRecord.project_id, ProjectRecord.name).order_by(ProjectRecord.name, ProjectRecord.project_id))
+            )
+            event_type_options = [
+                row[0]
+                for row in session.execute(
+                    select(SystemLedgerRecord.event_type).distinct().order_by(SystemLedgerRecord.event_type)
+                )
+                if row[0]
+            ]
+            entity_type_options = [
+                row[0]
+                for row in session.execute(
+                    select(SystemLedgerRecord.entity_type).distinct().order_by(SystemLedgerRecord.entity_type)
+                )
+                if row[0]
+            ]
+            statement = (
+                select(SystemLedgerRecord, ProjectRecord.project_id, ProjectRecord.name)
+                .select_from(SystemLedgerRecord)
+                .outerjoin(ProjectRecord, ProjectRecord.id == SystemLedgerRecord.project_id)
+                .order_by(SystemLedgerRecord.created_at.desc(), SystemLedgerRecord.id.desc())
+                .limit(limit)
+            )
+            if normalized_project_id:
+                statement = statement.where(ProjectRecord.project_id == normalized_project_id)
+            if normalized_event_type:
+                statement = statement.where(SystemLedgerRecord.event_type == normalized_event_type)
+            if normalized_entity_type:
+                statement = statement.where(SystemLedgerRecord.entity_type == normalized_entity_type)
+            rows = list(session.execute(statement))
+        events = [
+            self._ledger_event_to_view(record, project_id=public_project_id, project_name=project_name)
+            for record, public_project_id, project_name in rows
+        ]
+        return {
+            "events": events,
+            "filters": {
+                "project_id": normalized_project_id,
+                "event_type": normalized_event_type,
+                "entity_type": normalized_entity_type,
+            },
+            "filter_options": {
+                "projects": [{"value": value, "label": f"{name} ({value})"} for value, name in project_options],
+                "event_types": list(event_type_options),
+                "entity_types": list(entity_type_options),
+            },
         }
 
     def import_status_view(self, project_id: str) -> dict[str, object] | None:
@@ -1067,6 +1139,32 @@ class ProjectQueryService:
             "outcome_summary": outcome_summary,
             "warning_messages": warning_messages,
             "error_messages": error_messages,
+        }
+
+    def _ledger_event_to_view(
+        self,
+        event: SystemLedgerRecord,
+        *,
+        project_id: str | None,
+        project_name: str | None,
+    ) -> dict[str, object]:
+        payload = dict(event.payload_json or {})
+        changes = list(payload.get("changes") or [])
+        return {
+            "id": event.id,
+            "project_id": project_id,
+            "project_name": project_name,
+            "task_id": event.task_id,
+            "event_type": event.event_type,
+            "entity_type": event.entity_type,
+            "entity_key": event.entity_key,
+            "summary": event.summary,
+            "created_at": event.created_at,
+            "payload": payload,
+            "change_count": int(payload.get("change_count", len(changes)) or 0),
+            "targeted_count": int(payload.get("targeted_count", 0) or 0),
+            "changes": changes,
+            "skipped": list(payload.get("skipped") or []),
         }
 
     def _format_controller_address(self, address: dict[str, object]) -> str:
