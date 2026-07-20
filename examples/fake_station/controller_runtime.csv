@@ -1,6 +1,6 @@
 timestamp,controller_id,online,protocols,equipment_count,owned_points,cpu_load_pct,network_health
 2026-07-10T23:45:00,MPC-1,true,BACnet/IP,2,20,24,good
 2026-07-10T23:45:00,MPC-2,true,"BACnet/IP,Modbus/TCP",8,47,31,good
-2026-07-10T23:45:00,VAV-1,true,BACnet/MSTP,2,11,38,good
-2026-07-10T23:45:00,VAV-2,true,BACnet/MSTP,2,11,45,good
-2026-07-10T23:45:00,VAV-3,true,BACnet/MSTP,1,6,52,good
+2026-07-10T23:45:00,VAV-1,true,"BACnet/IP,BACnet/MSTP",2,11,38,good
+2026-07-10T23:45:00,VAV-2,true,"BACnet/IP,BACnet/MSTP",2,11,45,good
+2026-07-10T23:45:00,VAV-3,true,"BACnet/IP,BACnet/MSTP",1,6,52,good

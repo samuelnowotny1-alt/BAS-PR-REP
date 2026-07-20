@@ -1,0 +1,93 @@
+{
+  "device_id": "VAV-3",
+  "role": "controller",
+  "display_name": "Level 2 East VAV Controller",
+  "bacnet_device_instance": 2550488,
+  "protocol": "BACnet/IP",
+  "address": "10.30.1.103",
+  "network_number": null,
+  "vendor": "Distech",
+  "model": "ECB-PTU-208",
+  "parent_device_id": "JACE-EMU",
+  "point_count": 6,
+  "points": [
+    {
+      "point_name": "VAV-203 ZN-T",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "sensor",
+      "direction": "input",
+      "object_type": "AI",
+      "object_instance": 3023,
+      "units": "degF",
+      "writable": false,
+      "present_value": 50.0,
+      "baseline_value": 50.0
+    },
+    {
+      "point_name": "VAV-203 ZN-SP",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "setpoint",
+      "direction": "output",
+      "object_type": "AV",
+      "object_instance": 3024,
+      "units": "degF",
+      "writable": true,
+      "present_value": 72.0,
+      "baseline_value": 72.0
+    },
+    {
+      "point_name": "VAV-203 DMP-CMD",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "actuator",
+      "direction": "output",
+      "object_type": "AO",
+      "object_instance": 3025,
+      "units": "pct",
+      "writable": true,
+      "present_value": 45.0,
+      "baseline_value": 45.0
+    },
+    {
+      "point_name": "VAV-203 DMP-POS",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "sensor",
+      "direction": "input",
+      "object_type": "AI",
+      "object_instance": 3026,
+      "units": "pct",
+      "writable": false,
+      "present_value": 45.0,
+      "baseline_value": 45.0
+    },
+    {
+      "point_name": "VAV-203 AIRFLOW",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "sensor",
+      "direction": "input",
+      "object_type": "AI",
+      "object_instance": 3027,
+      "units": "cfm",
+      "writable": false,
+      "present_value": 0.0,
+      "baseline_value": 0.0
+    },
+    {
+      "point_name": "VAV-203 HTG-CMD",
+      "equipment_id": "VAV-203",
+      "controller_id": "VAV-3",
+      "kind": "actuator",
+      "direction": "output",
+      "object_type": "AO",
+      "object_instance": 3028,
+      "units": "pct",
+      "writable": true,
+      "present_value": 45.0,
+      "baseline_value": 45.0
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime, timedelta
 from urllib.parse import urlencode
 from io import BytesIO
 from pathlib import Path
@@ -737,6 +738,46 @@ def test_project_documents_page_and_download_render() -> None:
     assert download_response.headers["content-disposition"].endswith('filename="sequence.txt"')
 
 
+def test_generated_documents_page_surfaces_stale_missing_and_unregistered_outputs() -> None:
+    project_id = create_project("generated-review-project")
+    project = main.get_project(project_id)
+
+    reports_dir = main.OUTPUT_DIR / project_id / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = reports_dir / "00_Project_Summary.md"
+    summary_path.write_text("summary", encoding="utf-8")
+
+    missing_validation_path = reports_dir / "04_Validation_Report.md"
+    main.register_generated_output(
+        project=project,
+        file_path=missing_validation_path,
+        document_name=missing_validation_path.name,
+        document_type="generated_validation_report",
+        parser_name="report_generator",
+        links=[],
+        metadata={"generator": "reports", "report_key": "validation"},
+    )
+    project.metadata.updated_at = datetime.now() + timedelta(minutes=10)
+
+    review = main.build_generated_output_review(project)
+    page_response = run_async(
+        main.project_documents_page(
+            request(f"/project/{project_id}/documents?mode=generated"),
+            project_id,
+            mode="generated",
+        )
+    )
+    page_text = response_text(page_response)
+
+    assert review["status"] == "blocked"
+    assert review["error_count"] == 1
+    assert review["warning_count"] >= 2
+    assert "Generated Output Review" in page_text
+    assert "Registered generated documents are missing on disk" in page_text
+    assert "Generated files exist but are not registered in the library" in page_text
+    assert "Generated outputs look stale against the current project data" in page_text
+
+
 def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
     project_id = create_project("knowledge-search-project")
     project = main.get_project(project_id)
@@ -1374,7 +1415,7 @@ def test_graphics_preview_pages_prefers_equipment_pages() -> None:
     assert all(str(page.get("slotPath", "")).startswith("/Px/Equipment/") for page in pages)
 
 
-def test_graphics_page_includes_symbol_library() -> None:
+def test_graphics_library_page_includes_symbol_library() -> None:
     project_id = create_project()
     project = main.projects[project_id]
     project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU))
@@ -1388,12 +1429,13 @@ def test_graphics_page_includes_symbol_library() -> None:
         )
     )
 
-    response = run_async(main.graphics_page(request(f"/project/{project_id}/graphics"), project_id))
+    response = run_async(main.graphics_library_page(request(f"/project/{project_id}/graphics/library"), project_id))
 
     text = response_text(response)
     assert response.status_code == 200
-    assert "Graphics Library" in text
-    assert "Library Symbol" in text
+    assert "Known Unit Graphics" in text
+    assert "Isometric Asset Library" in text
+    assert "Legacy Flat Symbol Reference" in text
     assert "ahu" in text
 
 
@@ -3344,8 +3386,16 @@ def test_graphics_page_loads_persisted_results_and_fullscreen_link() -> None:
     text = response_text(response)
     assert response.status_code == 200
     assert "Validated Delivery Snapshot" in text
+    assert "Inspect" in text
+    assert "Sim" in text
     assert "Fullscreen" in text
+    assert "Active Device Graphics" in text
+    assert "Known Unit Library" in text
+    assert "Graphics Library" not in text
+    assert f"/project/{project_id}/graphics/{graphic_name}" in text
+    assert text.count(f"/project/{project_id}/graphics/{graphic_name}/fullscreen") >= 2
     assert f"/project/{project_id}/graphics/{graphic_name}/fullscreen" in text
+    assert f"/output/{project_id}/graphics/graphics_svg/{graphic_name}.svg" in text
 
 
 def test_graphics_fullscreen_page_renders_graphic_context() -> None:
@@ -3378,7 +3428,9 @@ def test_graphics_fullscreen_page_renders_graphic_context() -> None:
     )
     main.save_project(project)
 
-    run_async(main.graphics_page(request(f"/project/{project_id}/graphics/generate", method="POST"), project_id))
+    output_dir = main.OUTPUT_DIR / project_id / "graphics"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    main.generate_graphics(project, output_dir)
     persisted = main.load_generated_graphics_result(project)
     assert persisted is not None
     graphic_name = persisted["json"][0].stem
@@ -3393,10 +3445,82 @@ def test_graphics_fullscreen_page_renders_graphic_context() -> None:
 
     text = response_text(response)
     assert response.status_code == 200
-    assert "Fullscreen Graphic" in text
+    assert "Realtime Simulation Deck" in text
+    assert "Live Telemetry" in text
+    assert "hvac-sim-data" in text
     assert "Graphic Payload" in text
     assert "Object Context" in text
     assert "AHU-1" in text
+
+
+def test_graphics_detail_page_renders_elements_and_bindings() -> None:
+    project_id = create_project("graphics-detail-project")
+    project = main.get_project(project_id)
+    project.controllers.append(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[ControllerNetworkAddress(protocol=Protocol.BACNET_IP, address="192.168.10.10")],
+        )
+    )
+    project.equipment.append(
+        Equipment(
+            id="AHU-1",
+            type=EquipmentType.AHU,
+            controller_id="MPC-1",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+    project.points.append(
+        main.Point(
+            name="AHU-1 SF STATUS",
+            equipment_id="AHU-1",
+            controller_id="MPC-1",
+            kind=main.PointKind.STATUS,
+            direction=main.PointDirection.INPUT,
+        )
+    )
+    main.save_project(project)
+
+    output_dir = main.OUTPUT_DIR / project_id / "graphics"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    main.generate_graphics(project, output_dir)
+    persisted = main.load_generated_graphics_result(project)
+    assert persisted is not None
+    graphic_name = persisted["json"][0].stem
+
+    response = run_async(
+        main.graphics_detail_page(
+            request(f"/project/{project_id}/graphics/{graphic_name}"),
+            project_id,
+            graphic_name,
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Graphic Inspect" in text
+    assert "Physical Asset Assembly" in text
+    assert "Elements And Bindings" in text
+    assert "Connected Points" in text
+    assert "Point Matrix" in text
+    assert "Legend" in text
+    assert "station-point-badge" in text
+    assert "AHU-1 SAT" in text
+    assert "AHU Draw-Through Cabinet" in text
+    assert "Explicit Relations" in text
+    assert "AHU-1 SF STATUS" in text
+    assert f"/output/{project_id}/graphics/graphics_json/{graphic_name}.json" in text
 
 
 def test_read_only_project_api_endpoints() -> None:

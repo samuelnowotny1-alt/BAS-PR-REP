@@ -18,7 +18,16 @@ from .types import (
 from .checkout import CheckoutItem, CheckoutReport, CheckoutSheet
 from .controller import Controller, ControllerIOCapacity, ControllerNetworkAddress
 from .equipment import Equipment, EquipmentRelationship, EquipmentTemplateRef
-from .graphics import GraphicBinding, GraphicDefinition, GraphicElement, GraphicNavigation
+from .graphics import (
+    GraphicBinding,
+    GraphicDefinition,
+    GraphicElement,
+    GraphicNavigation,
+    IsometricAssetAnchor,
+    IsometricAssetBindingTarget,
+    IsometricAssetDefinition,
+    default_isometric_asset_library,
+)
 from .logic import LogicBlock, LogicConnection, LogicDiagram, LogicParameter, LogicSignal
 from .points import Point, PointValidationIssue
 from .station_sync import (
@@ -94,4 +103,8 @@ __all__ = [
     "GraphicBinding",
     "GraphicNavigation",
     "GraphicDefinition",
+    "IsometricAssetAnchor",
+    "IsometricAssetBindingTarget",
+    "IsometricAssetDefinition",
+    "default_isometric_asset_library",
 ]

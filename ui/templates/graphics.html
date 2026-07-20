@@ -3,7 +3,7 @@
 {% block page_title %}Graphics - {{ project.metadata.name }}{% endblock %}
 
 {% block content %}
-<div class="mx-auto max-w-7xl space-y-8">
+<div class="mx-auto max-w-[1800px] space-y-8 px-4 2xl:px-6">
     {% if readiness %}
     <section class="rounded-[24px] border px-6 py-5 {% if readiness.status == 'blocked' %}border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-900/20{% elif readiness.status == 'caution' %}border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-900/20{% else %}border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-900/20{% endif %}">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -82,33 +82,33 @@
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Program-Facing Graphic Preview</h1>
                     <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
-                        Review generated graphics in two ways: the raw BAS graphic artifacts and a Niagara-style PX page preview rendered from the exporter component tree.
+                        Review the active devices recognized in this project. Reusable and historical unit graphics are stored separately in the known unit library.
                     </p>
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <div class="rounded-2xl border border-orange-200 bg-white/80 p-4 backdrop-blur dark:border-orange-800 dark:bg-gray-900/50">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Graphics</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphics_result.json|length }}</p>
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Active Devices</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphic_detail_records|length }}</p>
                 </div>
                 <div class="rounded-2xl border border-blue-200 bg-white/80 p-4 backdrop-blur dark:border-blue-800 dark:bg-gray-900/50">
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">SVG</p>
-                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphics_result.svg|length }}</p>
+                    <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ graphic_detail_records|selectattr('svg_path')|list|length }}</p>
                 </div>
                 <div class="rounded-2xl border border-emerald-200 bg-white/80 p-4 backdrop-blur dark:border-emerald-800 dark:bg-gray-900/50">
                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">PX Pages</p>
                     <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{{ niagara_preview_pages|length }}</p>
                 </div>
                 <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 backdrop-blur dark:border-gray-700 dark:bg-gray-900/50">
-                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Export</p>
-                    <p class="mt-2 truncate text-xs font-mono text-gray-700 dark:text-gray-300">graphics_niagara.json</p>
+                    <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Library</p>
+                    <a href="/project/{{ project.metadata.project_id }}/graphics/library" class="btn-secondary mt-2 inline-flex text-sm">Access Graphic Library</a>
                 </div>
             </div>
         </div>
     </section>
 
     {% if graphics_result %}
-    <section class="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
+    <section class="grid gap-8 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <div class="mb-4">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Niagara PX Preview</h2>
@@ -157,10 +157,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid gap-0 overflow-hidden xl:grid-cols-[minmax(0,1fr)_340px]">
-                    <div class="min-w-0 border-b border-gray-200 bg-[#f6f7f9] p-4 dark:border-gray-700 dark:bg-[#111827] xl:border-b-0 xl:border-r">
-                        <div class="overflow-auto rounded-[20px] border border-gray-300 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_55%,#ececec_100%)] p-4 shadow-inner dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_58%,#0b1220_100%)]">
-                            <div id="px-preview-canvas" class="relative mx-auto w-full max-w-[980px] overflow-hidden rounded-[18px] border border-gray-400 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.15)] dark:border-gray-600 dark:bg-[#f8fafc]"></div>
+                <div class="grid gap-0 overflow-hidden 2xl:grid-cols-[minmax(0,1.25fr)_380px]">
+                    <div class="min-w-0 border-b border-gray-200 bg-[#f6f7f9] p-5 dark:border-gray-700 dark:bg-[#111827] 2xl:border-b-0 2xl:border-r">
+                        <div class="overflow-auto rounded-[20px] border border-gray-300 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_55%,#ececec_100%)] p-5 shadow-inner dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_58%,#0b1220_100%)]">
+                            <div id="px-preview-canvas" class="relative mx-auto min-h-[720px] w-full max-w-[1380px] overflow-hidden rounded-[18px] border border-gray-400 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.15)] dark:border-gray-600 dark:bg-[#f8fafc]"></div>
                         </div>
                     </div>
                     <div class="relative z-10 min-w-0 space-y-5 bg-white p-5 dark:bg-gray-800">
@@ -179,13 +179,16 @@
             <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="mb-4 flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Generated Artifacts</h2>
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Raw graphic JSON, SVG previews, and Niagara export files.</p>
+                        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Active Device Graphics</h2>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Only devices currently recognized by the system are shown here.</p>
                     </div>
-                    <a href="/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" target="_blank" class="btn-primary">
-                        <i class="fas fa-download mr-2"></i>
-                        Niagara Export
-                    </a>
+                    <div class="flex gap-2">
+                        <a href="/project/{{ project.metadata.project_id }}/graphics/library" class="btn-secondary">Known Unit Library</a>
+                        <a href="/output/{{ project.metadata.project_id }}/graphics/graphics_niagara.json" target="_blank" class="btn-primary">
+                            <i class="fas fa-download mr-2"></i>
+                            Niagara Export
+                        </a>
+                    </div>
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
@@ -196,17 +199,21 @@
                     <div class="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 dark:border-gray-700 dark:bg-gray-900/50">
                             <div>
-                                <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ graphic_name }}</h3>
+                                <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                                    <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}" class="hover:text-orange-600 dark:hover:text-orange-300">{{ record.payload_title }}</a>
+                                </h3>
                                 <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ json_file.name }}</p>
                                 <p class="mt-2 text-xs uppercase tracking-[0.16em] {% if summary.sequence_review_status == 'covered' %}text-emerald-600 dark:text-emerald-300{% elif summary.sequence_review_status == 'attention' %}text-amber-600 dark:text-amber-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">
                                     Sequence Review: {{ summary.sequence_review_status }}
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">JSON</a>
+                                <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}" class="btn-primary text-sm">Inspect</a>
+                                <a href="{{ record.json_url }}" target="_blank" class="btn-secondary text-sm">JSON</a>
                                 {% if record.svg_path %}
-                                <a href="/output/{{ project.metadata.project_id }}/graphics/{{ record.svg_path.name }}" target="_blank" class="btn-secondary text-sm">SVG</a>
+                                <a href="{{ record.svg_url }}" target="_blank" class="btn-secondary text-sm">SVG</a>
                                 {% endif %}
+                                <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}/fullscreen" class="btn-secondary text-sm">Sim</a>
                                 <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}/fullscreen" class="btn-primary text-sm">Fullscreen</a>
                             </div>
                         </div>
@@ -228,41 +235,51 @@
                             <p class="mt-2 text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
                             {% endif %}
                         </div>
+                        {% if record.svg_url %}
+                        <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}" class="block border-b border-gray-200 bg-[radial-gradient(circle_at_top,#f8fafc_0%,#eef2f7_65%,#dce4ee_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_65%,#0b1220_100%)]">
+                            <div class="overflow-hidden rounded-[18px] border border-gray-300 bg-white p-3 shadow-inner dark:border-gray-700 dark:bg-slate-50">
+                                <img src="{{ record.svg_url }}" alt="{{ record.payload_title }}" class="mx-auto block h-56 w-full object-contain" />
+                            </div>
+                        </a>
+                        {% endif %}
+                        <div class="grid gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 text-sm dark:border-gray-700 dark:bg-gray-900/40 md:grid-cols-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Elements</p>
+                                <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ record.element_count }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Bindings</p>
+                                <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ record.binding_count }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Layers</p>
+                                <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">{{ record.layer_names|join(', ') if record.layer_names else 'default' }}</p>
+                            </div>
+                        </div>
+                        {% if record.binding_details %}
+                        <div class="border-b border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800/70">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Connected Points</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                {% for binding in record.binding_details[:10] %}
+                                <span class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{{ binding.point_name }} · {{ binding.binding_type }}</span>
+                                {% endfor %}
+                                {% if record.binding_details|length > 10 %}
+                                <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">+{{ record.binding_details|length - 10 }} more</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="bg-gray-950 p-4 text-[12px] leading-5 text-gray-200">
-                            <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ json_file.read_text()[:1600] }}{% if json_file.read_text()|length > 1600 %}...{% endif %}</pre>
+                            <pre class="max-h-64 overflow-auto whitespace-pre-wrap">{{ record.payload_excerpt }}{% if record.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
-            </section>
-
-            <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div class="mb-4">
-                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphics Library</h2>
-                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Reusable symbol structures from the generator library. This is the pre-export shape library we can evolve toward PX-style graphics.</p>
+                {% if not graphic_detail_records %}
+                <div class="rounded-2xl border border-dashed border-gray-300 px-6 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    No active device graphics are currently recognized for this project.
                 </div>
-                <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-                    {% for symbol in graphics_symbol_library %}
-                    <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
-                        <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                            <div>
-                                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
-                                <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
-                            </div>
-                            <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
-                                {{ symbol.element_count }} elems
-                            </span>
-                        </div>
-                        <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
-                            {{ symbol.svg|safe }}
-                        </div>
-                        <div class="flex items-center justify-between px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
-                            <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
-                            <span>Library Symbol</span>
-                        </div>
-                    </article>
-                    {% endfor %}
-                </div>
+                {% endif %}
             </section>
         </div>
     </section>
@@ -271,40 +288,12 @@
         <i class="fas fa-chart-area mb-4 text-4xl text-gray-300 dark:text-gray-600"></i>
         <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">No Graphics Generated</h2>
         <p class="mx-auto mt-2 max-w-2xl text-sm text-gray-500 dark:text-gray-400">
-            Generate graphics to inspect JSON, SVG, and a Niagara-style PX preview for the current project.
+            Generate graphics to inspect active device graphics for the current project.
         </p>
         <button hx-post="/project/{{ project.metadata.project_id }}/graphics/generate" hx-target="body" class="btn-primary mt-6" {% if readiness and not readiness.can_generate %}disabled{% endif %}>
             <i class="fas fa-magic mr-2"></i>
             Generate Graphics
         </button>
-    </section>
-    <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <div class="mb-4">
-            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphics Library</h2>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Reusable symbol structures available before generation.</p>
-        </div>
-        <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-            {% for symbol in graphics_symbol_library %}
-            <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
-                <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
-                        <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
-                    </div>
-                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
-                        {{ symbol.element_count }} elems
-                    </span>
-                </div>
-                <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
-                    {{ symbol.svg|safe }}
-                </div>
-                <div class="flex items-center justify-between px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
-                    <span>Library Symbol</span>
-                </div>
-            </article>
-            {% endfor %}
-        </div>
     </section>
     {% endif %}
 </div>

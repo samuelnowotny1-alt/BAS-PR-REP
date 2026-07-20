@@ -340,11 +340,11 @@
                     </a>
                     <a href="{% if project %}/project/{{ project.metadata.project_id }}/knowledge{% else %}/{% endif %}" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-book-open"></i></span>
-                        <span>Knowledge / Docs</span>
+                        <span>Knowledge</span>
                     </a>
                     <a href="{% if project %}/project/{{ project.metadata.project_id }}/activity{% else %}/activity/ledger{% endif %}" class="sidebar-link {% if '/activity' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-list-check"></i></span>
-                        <span>Conversations / Tasks</span>
+                        <span>Activity</span>
                     </a>
                     <a href="/healthz" class="sidebar-link {% if '/health' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-heart-pulse"></i></span>
@@ -356,12 +356,12 @@
                     <div class="sidebar-section-title">Quick Actions</div>
                     <a href="/project/new" class="sidebar-action">
                         <span class="sidebar-action-icon"><i class="fas fa-plus"></i></span>
-                        <span>Create Project</span>
+                        <span>New Project</span>
                     </a>
                     <form method="post" action="/api/load-demo">
                         <button type="submit" class="sidebar-action-button">
                             <span class="sidebar-action-icon"><i class="fas fa-flask"></i></span>
-                            <span>Load Demo Project</span>
+                            <span>Load Demo</span>
                         </button>
                     </form>
                     {% if project %}
@@ -370,7 +370,7 @@
                         <input type="hidden" name="new_project_id" value="{{ project.metadata.project_id }}-copy">
                         <button type="submit" class="sidebar-action-button">
                             <span class="sidebar-action-icon"><i class="fas fa-copy"></i></span>
-                            <span>Duplicate Project</span>
+                            <span>Duplicate</span>
                         </button>
                     </form>
                     {% endif %}
@@ -378,7 +378,7 @@
             </nav>
             <div class="sidebar-footer">
                 <div><strong>BAS Assistant v0.1.0</strong></div>
-                <div class="mt-1">Environment: {{ environment_name }}</div>
+                <div class="mt-1">Env: {{ environment_name }}</div>
                 {% if auth_required and session_user %}
                 <div class="mt-1">Signed in as {{ session_user.username }}</div>
                 {% endif %}

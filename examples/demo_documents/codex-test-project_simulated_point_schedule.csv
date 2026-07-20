@@ -1,0 +1,2 @@
+Point Name,Equipment ID,Controller ID,Point Kind,Direction,Units,BACnet Object Type,BACnet Instance,Source,Source Reference,Description
+AHU-1 SAT,AHU-1,MPC-1,sensor,input,degF,AI,1,point_list,Row 1,Supply Air Temperature

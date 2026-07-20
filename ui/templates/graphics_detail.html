@@ -1,0 +1,658 @@
+{% extends "base.html" %}
+
+{% block page_title %}{{ graphic_detail.graphic_name }} - Graphic Inspect{% endblock %}
+
+{% block content %}
+<style>
+    .station-page-shell {
+        border: 1px solid #8e99a8;
+        border-radius: 20px;
+        overflow: hidden;
+        background: #bfc8d4;
+        box-shadow: 0 22px 55px rgba(15, 23, 42, 0.18);
+    }
+    .station-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+        gap: 0;
+        background: linear-gradient(180deg, #d8e0ea 0%, #bcc6d2 100%);
+        border-bottom: 1px solid #8e99a8;
+    }
+    .station-toolbar-main {
+        padding: 14px 18px;
+        border-right: 1px solid #8e99a8;
+    }
+    .station-toolbar-side {
+        padding: 14px 18px;
+        background: linear-gradient(180deg, #c7d0db 0%, #b1bcc8 100%);
+    }
+    .station-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .station-subtitle {
+        margin-top: 4px;
+        font-size: 12px;
+        color: #334155;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .station-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .station-chip {
+        border: 1px solid #94a3b8;
+        background: rgba(255, 255, 255, 0.72);
+        color: #0f172a;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    .station-body {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        background: #d4dbe3;
+    }
+    .station-canvas-wrap {
+        padding: 18px;
+        border-right: 1px solid #8e99a8;
+        background:
+            linear-gradient(180deg, rgba(255,255,255,0.35), rgba(226,232,240,0.2)),
+            #c7d0db;
+    }
+    .station-canvas {
+        position: relative;
+        overflow: auto;
+        border: 1px solid #7c8796;
+        border-radius: 12px;
+        background:
+            linear-gradient(180deg, #eef3f7 0%, #dde5ed 100%);
+        min-height: 720px;
+        padding: 20px;
+    }
+    .station-canvas img {
+        display: block;
+        min-width: 1120px;
+        max-width: none;
+        margin: 0 auto;
+        border: 1px solid #94a3b8;
+        background: #ffffff;
+        box-shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
+    }
+    .station-overlay {
+        position: absolute;
+        inset: 20px;
+        pointer-events: none;
+    }
+    .station-point-badge {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        min-width: 0;
+        pointer-events: none;
+    }
+    .station-point-marker {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        border: 2px solid #f8fafc;
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.45), 0 0 18px rgba(15, 23, 42, 0.14);
+    }
+    .station-point-card {
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 210px;
+        padding: 4px 8px;
+        border-radius: 10px;
+        border: 1px solid #475569;
+        background: rgba(248, 250, 252, 0.97);
+        color: #0f172a;
+        font-size: 11px;
+        font-weight: 700;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+        white-space: nowrap;
+    }
+    .station-point-card::before {
+        content: "";
+        position: absolute;
+        width: var(--lead-x, 18px);
+        height: 1px;
+        background: #475569;
+        transform-origin: left center;
+        transform: rotate(var(--lead-rotate, 0deg));
+        left: var(--lead-left, -18px);
+        top: var(--lead-top, 50%);
+    }
+    .station-point-badge.offset-ne .station-point-card {
+        left: 14px;
+        top: -42px;
+        --lead-x: 22px;
+        --lead-left: -18px;
+        --lead-top: 34px;
+        --lead-rotate: -28deg;
+    }
+    .station-point-badge.offset-se .station-point-card {
+        left: 14px;
+        top: 12px;
+        --lead-x: 22px;
+        --lead-left: -18px;
+        --lead-top: 8px;
+        --lead-rotate: 28deg;
+    }
+    .station-point-badge.offset-nw .station-point-card {
+        right: 14px;
+        top: -42px;
+        --lead-x: 22px;
+        --lead-left: auto;
+        --lead-top: 34px;
+        --lead-rotate: 208deg;
+    }
+    .station-point-badge.offset-nw .station-point-card::before {
+        right: -18px;
+        left: auto;
+    }
+    .station-point-badge.offset-sw .station-point-card {
+        right: 14px;
+        top: 12px;
+        --lead-x: 22px;
+        --lead-left: auto;
+        --lead-top: 8px;
+        --lead-rotate: 152deg;
+    }
+    .station-point-badge.offset-sw .station-point-card::before {
+        right: -18px;
+        left: auto;
+    }
+    .station-point-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        flex: 0 0 auto;
+    }
+    .station-sidebar {
+        padding: 18px;
+        background: linear-gradient(180deg, #c1cad5 0%, #b1bbc8 100%);
+    }
+    .station-panel {
+        border: 1px solid #7c8796;
+        border-radius: 12px;
+        background: rgba(241, 245, 249, 0.92);
+        overflow: hidden;
+    }
+    .station-panel-head {
+        padding: 10px 12px;
+        border-bottom: 1px solid #94a3b8;
+        background: linear-gradient(180deg, #e2e8f0 0%, #cfd8e3 100%);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: #334155;
+        text-transform: uppercase;
+    }
+    .station-panel-body {
+        max-height: 280px;
+        overflow: auto;
+        padding: 10px;
+    }
+    .station-panel-legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+    .station-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.86);
+        font-size: 11px;
+        color: #334155;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .station-group-title {
+        margin: 10px 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #334155;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+    }
+    .station-point-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        padding: 9px 10px;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        background: rgba(255, 255, 255, 0.92);
+    }
+    .station-point-row + .station-point-row {
+        margin-top: 8px;
+    }
+    .station-point-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .station-point-meta {
+        margin-top: 2px;
+        font-size: 11px;
+        color: #475569;
+    }
+    .station-point-kind {
+        align-self: start;
+        border: 1px solid #93c5fd;
+        background: #dbeafe;
+        color: #1d4ed8;
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }
+    @media (max-width: 1280px) {
+        .station-toolbar,
+        .station-body {
+            grid-template-columns: 1fr;
+        }
+        .station-toolbar-main,
+        .station-canvas-wrap {
+            border-right: 0;
+        }
+        .station-toolbar-main,
+        .station-canvas-wrap {
+            border-bottom: 1px solid #8e99a8;
+        }
+    }
+</style>
+<div class="mx-auto max-w-[1800px] space-y-8">
+    <section class="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#fff7ed_55%,#eefbf4_100%)] p-8 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#162131_0%,#2b1f12_55%,#13241a_100%)]">
+        <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Graphic Inspect</p>
+                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.payload_title }}</h1>
+                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    {% if graphic_detail.equipment %}{{ graphic_detail.equipment.id }}{% else %}Unassigned graphic{% endif %}
+                    {% if graphic_detail.controller %} · Controller {{ graphic_detail.controller.id }}{% endif %}
+                    · {{ graphic_detail.binding_count }} bindings · {{ graphic_detail.element_count }} elements · {{ graphic_detail.asset_placement_count }} physical assets · {{ graphic_detail.asset_point_relation_count }} explicit relations
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="/project/{{ project.metadata.project_id }}/graphics" class="btn-secondary">Back To Graphics</a>
+                <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_detail.graphic_name }}/fullscreen" class="btn-secondary">Fullscreen</a>
+                <a href="{{ graphic_detail.json_url }}" target="_blank" class="btn-secondary">Open JSON</a>
+                {% if graphic_detail.svg_url %}
+                <a href="{{ graphic_detail.svg_url }}" target="_blank" class="btn-primary">Open SVG</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="grid gap-8 xl:grid-cols-[minmax(0,1.5fr)_440px]">
+        <div class="space-y-6">
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphic Preview</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Operator-style station page with on-canvas point callouts and station chrome.</p>
+                </div>
+                <div class="p-6 bg-[radial-gradient(circle_at_top,#f8fafc_0%,#eef2f7_65%,#dce4ee_100%)] dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_65%,#0b1220_100%)]">
+                    {% if graphic_detail.svg_url %}
+                    <div class="station-page-shell">
+                        <div class="station-toolbar">
+                            <div class="station-toolbar-main">
+                                <div class="station-title">{{ graphic_detail.payload_title }}</div>
+                                <div class="station-subtitle">
+                                    {% if graphic_detail.equipment %}{{ graphic_detail.equipment.id }}{% else %}Graphic{% endif %}
+                                    {% if graphic_detail.controller %} · {{ graphic_detail.controller.id }}{% endif %}
+                                    · {{ graphic_detail.summary.graphic_type or "equipment" }}
+                                </div>
+                                <div class="station-chip-row">
+                                    <span class="station-chip">{{ graphic_detail.binding_count }} points</span>
+                                    <span class="station-chip">{{ graphic_detail.asset_placement_count }} assets</span>
+                                    <span class="station-chip">{{ graphic_detail.summary.sequence_review_status }}</span>
+                                </div>
+                            </div>
+                            <div class="station-toolbar-side">
+                                <div class="station-subtitle">Station Status</div>
+                                <div class="station-chip-row">
+                                    <span class="station-chip">{{ graphic_detail.error_count }} errors</span>
+                                    <span class="station-chip">{{ graphic_detail.warning_count }} warnings</span>
+                                    {% if graphic_detail.preview_page %}
+                                    <span class="station-chip">{{ graphic_detail.preview_page.slotPath }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="station-body">
+                            <div class="station-canvas-wrap">
+                                <div class="station-canvas">
+                                    <img src="{{ graphic_detail.svg_url }}" alt="{{ graphic_detail.graphic_name }}" />
+                                    <div class="station-overlay">
+                                        {% for binding in graphic_detail.binding_details[:24] %}
+                                        {% set color = '#1d4ed8' %}
+                                        {% if binding.binding_type == 'status' %}
+                                            {% set color = '#059669' %}
+                                        {% elif binding.binding_type == 'alarm' %}
+                                            {% set color = '#dc2626' %}
+                                        {% elif binding.binding_type == 'command' %}
+                                            {% set color = '#b45309' %}
+                                        {% elif binding.binding_type == 'setpoint' %}
+                                            {% set color = '#7c3aed' %}
+                                        {% endif %}
+                                        <div class="station-point-badge {{ loop.cycle('offset-ne', 'offset-se', 'offset-nw', 'offset-sw') }}" style="left: {{ (binding.x or 0) * 100 }}%; top: {{ (binding.y or 0) * 100 }}%;">
+                                            <div class="station-point-marker" style="background: {{ color }};"></div>
+                                            <div class="station-point-card">
+                                                <span class="station-point-dot" style="background: {{ color }};"></span>
+                                                <span>{{ binding.display_label }}</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="station-sidebar space-y-4">
+                                <div class="station-panel">
+                                    <div class="station-panel-head">Legend</div>
+                                    <div class="station-panel-body">
+                                        <div class="station-panel-legend">
+                                            <div class="station-legend-item"><span class="station-point-dot" style="background:#1d4ed8;"></span> Analog</div>
+                                            <div class="station-legend-item"><span class="station-point-dot" style="background:#059669;"></span> Status</div>
+                                            <div class="station-legend-item"><span class="station-point-dot" style="background:#b45309;"></span> Command</div>
+                                            <div class="station-legend-item"><span class="station-point-dot" style="background:#7c3aed;"></span> Setpoint</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="station-panel">
+                                    <div class="station-panel-head">Point Matrix</div>
+                                    <div class="station-panel-body">
+                                        {% for group_name, group_type in [('Analog', 'value'), ('Status', 'status'), ('Command', 'command'), ('Setpoint', 'setpoint'), ('Alarm', 'alarm')] %}
+                                        {% set ns = namespace(count=0) %}
+                                        <div class="station-group-title">{{ group_name }}</div>
+                                        {% for binding in graphic_detail.binding_details[:24] if binding.binding_type == group_type %}
+                                        {% set ns.count = ns.count + 1 %}
+                                        <div class="station-point-row">
+                                            <div>
+                                                <div class="station-point-name">{{ binding.display_label }}</div>
+                                                <div class="station-point-meta">
+                                                    {{ binding.point_name }}
+                                                    {% if binding.units %} · {{ binding.units }}{% endif %}
+                                                    {% if binding.direction %} · {{ binding.direction }}{% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="station-point-kind">{{ binding.binding_type }}</div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if ns.count == 0 %}
+                                        <div class="station-point-meta">No {{ group_name|lower }} points on this graphic.</div>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% if not graphic_detail.binding_details %}
+                                        <div class="text-sm text-gray-500">No bound points on this graphic.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="station-panel">
+                                    <div class="station-panel-head">Graphic Status</div>
+                                    <div class="station-panel-body text-sm text-slate-700 space-y-2">
+                                        <div><strong>Equipment:</strong> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Unassigned" }}</div>
+                                        <div><strong>Controller:</strong> {{ graphic_detail.controller.id if graphic_detail.controller else "Unassigned" }}</div>
+                                        <div><strong>Relations:</strong> {{ graphic_detail.asset_point_relation_count }}</div>
+                                        <div><strong>Layers:</strong> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
+                                        {% if graphic_detail.summary.graphic_sections %}
+                                        <div><strong>Sections:</strong> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="rounded-[20px] border border-dashed border-gray-300 px-6 py-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No SVG preview is available for this graphic.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Physical Asset Assembly</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Placed equipment assets, their physical role in the graphic, and the points most closely tied to each one.</p>
+                </div>
+                <div class="p-5">
+                    <div class="space-y-4">
+                        {% for asset in graphic_detail.asset_placement_details %}
+                        <div class="rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#f8fbff_0%,#fdfbf6_55%,#eef8f1_100%)] p-5 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#162131_0%,#231f16_55%,#12231b_100%)]">
+                            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                                <div class="space-y-2">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ asset.asset_label }}</p>
+                                        {% if asset.asset_category %}
+                                        <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">{{ asset.asset_category }}</span>
+                                        {% endif %}
+                                        <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ asset.role_label }}</span>
+                                    </div>
+                                    <p class="text-sm text-gray-700 dark:text-gray-200">{{ asset.asset_description }}</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-300">{{ asset.role_description }}</p>
+                                </div>
+                                <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
+                                    <div><span class="font-semibold text-gray-900 dark:text-white">Frame:</span> x {{ asset.x }}, y {{ asset.y }}, w {{ asset.width }}, h {{ asset.height }}</div>
+                                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Equipment:</span> {{ asset.equipment_id or "unassigned" }}</div>
+                                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Asset ID:</span> {{ asset.asset_id }}</div>
+                                </div>
+                            </div>
+
+                            {% if asset.metadata_items %}
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                {% for item in asset.metadata_items %}
+                                <span class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{{ item.label }}: {{ item.value }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <div class="mt-4 grid gap-4 xl:grid-cols-2">
+                                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Asset Targets</p>
+                                    <div class="mt-3 space-y-2">
+                                        {% for target in asset.target_descriptions %}
+                                        <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900/50">
+                                            <p class="font-semibold text-gray-900 dark:text-white">{{ target.label }}</p>
+                                            <p class="mt-1 text-gray-600 dark:text-gray-300">{{ target.description }}</p>
+                                        </div>
+                                        {% endfor %}
+                                        {% if not asset.target_descriptions %}
+                                        <div class="rounded-xl border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No specific binding targets are defined for this asset yet.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-gray-200 bg-white/80 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+                                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Connected Points</p>
+                                    <div class="mt-3 space-y-2">
+                                        {% for point in asset.related_points %}
+                                        <div class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm dark:border-blue-800 dark:bg-blue-950/20">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <p class="font-semibold text-blue-900 dark:text-blue-100">{{ point.display_label }}</p>
+                                                <span class="rounded-full border border-blue-200 bg-white px-2 py-0.5 text-[11px] uppercase tracking-[0.16em] text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ point.binding_type }}</span>
+                                            </div>
+                                            <p class="mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.point_name }}{% if point.units %} · {{ point.units }}{% endif %}</p>
+                                            <p class="mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.description }}</p>
+                                            {% if point.component or point.target_key or point.anchor_key %}
+                                            <p class="mt-1 text-[12px] uppercase tracking-[0.14em] text-blue-800/75 dark:text-blue-200/75">
+                                                {% if point.component %}Component {{ point.component }}{% endif %}
+                                                {% if point.target_key %} · Target {{ point.target_key }}{% endif %}
+                                                {% if point.anchor_key %} · Anchor {{ point.anchor_key }}{% endif %}
+                                                {% if point.visual_hint %} · Visual {{ point.visual_hint }}{% endif %}
+                                            </p>
+                                            {% endif %}
+                                            {% if point.relation_x is not none and point.relation_y is not none %}
+                                            <p class="mt-1 text-[12px] text-blue-900/75 dark:text-blue-100/75">Relation Anchor: x {{ point.relation_x }}, y {{ point.relation_y }}</p>
+                                            {% endif %}
+                                        </div>
+                                        {% endfor %}
+                                        {% if not asset.related_points %}
+                                        <div class="rounded-xl border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No explicit point relationships were mapped to this asset yet.</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if not graphic_detail.asset_placement_details %}
+                        <div class="rounded-[24px] border border-dashed border-gray-300 px-5 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">This graphic does not yet expose any placed physical assets.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </article>
+
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Elements And Bindings</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Every generated element and every point connection included in this graphic payload.</p>
+                </div>
+                <div class="grid gap-0 xl:grid-cols-2">
+                    <div class="border-b border-gray-200 p-5 dark:border-gray-700 xl:border-b-0 xl:border-r">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Elements</p>
+                        <div class="mt-4 space-y-3">
+                            {% for element in graphic_detail.element_details %}
+                            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900/40">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="font-semibold text-gray-900 dark:text-white">{{ element.display_label }}</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300">{{ element.role }}</p>
+                                    </div>
+                                    <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ element.layer }}</span>
+                                </div>
+                                <p class="mt-2 text-gray-600 dark:text-gray-300">x {{ element.x }}, y {{ element.y }}, w {{ element.width }}, h {{ element.height }}</p>
+                                <p class="mt-2 text-gray-700 dark:text-gray-200">{{ element.program_explanation }}</p>
+                                {% if element.text %}
+                                <p class="mt-1 text-gray-600 dark:text-gray-300">Text: {{ element.text }}</p>
+                                {% endif %}
+                                {% if element.symbol_name %}
+                                <p class="mt-1 text-gray-600 dark:text-gray-300">Symbol: {{ element.symbol_name }}</p>
+                                {% endif %}
+                                {% if element.stroke %}
+                                <p class="mt-1 text-gray-600 dark:text-gray-300">Stroke: {{ element.stroke }}</p>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Bindings</p>
+                        <div class="mt-4 space-y-3">
+                            {% for binding in graphic_detail.binding_details %}
+                            <div class="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <p class="font-semibold text-blue-900 dark:text-blue-100">{{ binding.display_label }}</p>
+                                        <p class="mt-1 text-xs text-blue-900/80 dark:text-blue-100/85">{{ binding.description }}</p>
+                                    </div>
+                                    <span class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ binding.binding_type }}</span>
+                                </div>
+                                <p class="mt-2 text-blue-900/80 dark:text-blue-100/90">
+                                    {% if binding.equipment_id %}{{ binding.equipment_id }} · {% endif %}
+                                    {{ binding.kind or "point" }}{% if binding.units %} · {{ binding.units }}{% endif %}{% if binding.direction %} · {{ binding.direction }}{% endif %}
+                                </p>
+                                <p class="mt-1 text-blue-900/80 dark:text-blue-100/90">x {{ binding.x }}, y {{ binding.y }}{% if binding.label %} · Label {{ binding.label }}{% endif %}{% if binding.format %} · Format {{ binding.format }}{% endif %}</p>
+                            </div>
+                            {% endfor %}
+                            {% if not graphic_detail.binding_details %}
+                            <div class="rounded-2xl border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No explicit bindings were found in this graphic.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="overflow-hidden rounded-[24px] border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-6 py-4 dark:border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Graphic Payload</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ graphic_detail.json_path.name }}</p>
+                </div>
+                <div class="bg-gray-950 p-5 text-[12px] leading-5 text-gray-200">
+                    <pre class="max-h-[420px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.payload_excerpt }}{% if graphic_detail.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
+                </div>
+            </article>
+        </div>
+
+        <aside class="space-y-5">
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Graphic Summary</p>
+                <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Graphic Type:</span> {{ graphic_detail.summary.graphic_type or "unknown" }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Review:</span> {{ graphic_detail.summary.sequence_review_status }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Layers:</span> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Connected Points:</span> {{ graphic_detail.binding_point_names|length }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Physical Assets:</span> {{ graphic_detail.asset_placement_count }}</div>
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Explicit Relations:</span> {{ graphic_detail.asset_point_relation_count }}</div>
+                    {% if graphic_detail.summary.sequence_reference %}
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Reference:</span> {{ graphic_detail.summary.sequence_reference }}</div>
+                    {% endif %}
+                    {% if graphic_detail.summary.graphic_sections %}
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Sections:</span> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
+                    {% endif %}
+                    {% if graphic_detail.navigation_targets %}
+                    <div><span class="font-semibold text-gray-900 dark:text-white">Navigation:</span> {{ graphic_detail.navigation_targets|join(', ') }}</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Connected Points</p>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    {% for point_name in graphic_detail.binding_point_names %}
+                    <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">{{ point_name }}</span>
+                    {% endfor %}
+                    {% if not graphic_detail.binding_point_names %}
+                    <span class="text-sm text-gray-500 dark:text-gray-400">No bound points were detected.</span>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Validation Findings</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.validation_findings|length }}</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ graphic_detail.error_count }} errors · {{ graphic_detail.warning_count }} warnings</p>
+                <div class="mt-4 space-y-2">
+                    {% for finding in graphic_detail.validation_findings[:8] %}
+                    <a href="{{ finding.object_url }}" class="block rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }}</p>
+                            <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if finding.severity == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% elif finding.severity == 'warning' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300{% endif %}">{{ finding.severity }}</span>
+                        </div>
+                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ finding.message }}</p>
+                    </a>
+                    {% endfor %}
+                    {% if not graphic_detail.validation_findings %}
+                    <div class="rounded-2xl border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No linked validation findings for this graphic.</div>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Station Readiness</p>
+                <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ station_delivery.score_pct }}%</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ station_delivery.station_plan.items|length }} sync plan items · {{ station_delivery.station_connection.last_test_status or "not tested" }}</p>
+                {% if graphic_detail.preview_page %}
+                <div class="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
+                    <div><span class="font-semibold text-gray-900 dark:text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
+                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Bindings:</span> {{ graphic_detail.preview_page.bindings|length }} · <span class="font-semibold text-gray-900 dark:text-white">Components:</span> {{ graphic_detail.preview_page.components.root.children|length if graphic_detail.preview_page.components and graphic_detail.preview_page.components.root else 0 }}</div>
+                </div>
+                {% endif %}
+            </article>
+        </aside>
+    </section>
+</div>
+{% endblock %}

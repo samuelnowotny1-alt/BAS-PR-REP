@@ -1,41 +1,100 @@
 {% extends "base.html" %}
 
-{% block page_title %}Validate - {{ project.metadata.name }}{% endblock %}
+{% block page_title %}{% if issues_mode %}Issues Center{% else %}Validate{% endif %} - {{ project.metadata.name }}{% endblock %}
 
 {% block content %}
 {% set summary = validation_summary if validation_summary is defined else validation_report.summary %}
 {% set findings = validation_findings if validation_findings is defined else [] %}
 <div class="mx-auto max-w-7xl space-y-8" id="validation-page">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Validation Report</h1>
-            <p class="mt-1 text-gray-500 dark:text-gray-400">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
-            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Checked {{ summary.total_objects }} objects across {{ summary.total_rules }} rules.
-            </p>
+    <section class="overflow-hidden rounded-[2rem] border border-slate-200 bg-[radial-gradient(circle_at_top_left,_rgba(15,23,42,0.08),_transparent_34%),linear-gradient(135deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.98))] px-6 py-7 shadow-sm dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.08),_transparent_34%),linear-gradient(135deg,_rgba(15,23,42,0.98),_rgba(2,6,23,0.98))]">
+        <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div class="max-w-3xl">
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Engineering Review</p>
+                <h1 class="mt-3 text-4xl font-bold tracking-tight text-slate-900 dark:text-white">{% if issues_mode %}Issues Center{% else %}Validation Report{% endif %}</h1>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+                {% if issues_mode %}
+                <p class="mt-3 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    This is the engineering triage surface. Findings here usually mean missing or inconsistent project data, not that the app itself is broken.
+                </p>
+                {% else %}
+                <p class="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Checked {{ summary.total_objects }} objects across {{ summary.total_rules }} rules.
+                </p>
+                {% endif %}
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <a href="/project/{{ project.metadata.project_id }}/gaps" class="rounded-2xl border border-white/70 bg-white/85 px-4 py-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-orange-200 hover:bg-orange-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:border-orange-900/40 dark:hover:bg-orange-900/10">
+                    <i class="fas fa-search mr-2 text-orange-500"></i>
+                    Gap Analysis
+                </a>
+                <a href="/project/{{ project.metadata.project_id }}/validate/report.json" class="rounded-2xl border border-white/70 bg-white/85 px-4 py-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <i class="fas fa-download mr-2 text-slate-500"></i>
+                    JSON
+                </a>
+                <a href="/project/{{ project.metadata.project_id }}/validate/report.csv" class="rounded-2xl border border-white/70 bg-white/85 px-4 py-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <i class="fas fa-file-csv mr-2 text-slate-500"></i>
+                    CSV
+                </a>
+                <button
+                    hx-post="/project/{{ project.metadata.project_id }}/validate"
+                    hx-target="body"
+                    class="rounded-2xl bg-slate-900 px-4 py-4 text-left text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                    type="button"
+                >
+                    <i class="fas fa-rotate-right mr-2"></i>
+                    Re-run Validation
+                </button>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-3">
-            <a href="/project/{{ project.metadata.project_id }}/gaps" class="btn-secondary">
-                <i class="fas fa-search mr-2"></i>
-                Open Gap Analysis
-            </a>
-            <a href="/project/{{ project.metadata.project_id }}/validate/report.json" class="btn-secondary">
-                <i class="fas fa-download mr-2"></i>
-                Download JSON
-            </a>
-            <a href="/project/{{ project.metadata.project_id }}/validate/report.csv" class="btn-secondary">
-                <i class="fas fa-file-csv mr-2"></i>
-                Download CSV
-            </a>
-            <button
-                hx-post="/project/{{ project.metadata.project_id }}/validate"
-                hx-target="body"
-                class="btn-primary"
-                type="button"
-            >
-                <i class="fas fa-rotate-right mr-2"></i>
-                Re-run Validation
-            </button>
+    </section>
+
+    {% if issue_taxonomy %}
+    <div class="grid gap-4 md:grid-cols-3">
+        {% for stream in issue_taxonomy %}
+        <a href="{{ stream.url }}" class="rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">{{ stream.label }}</p>
+            <p class="mt-3 text-2xl font-bold text-gray-900 dark:text-white">{{ stream.count }}</p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">{{ stream.description }}</p>
+            <p class="mt-3 text-xs text-gray-500 dark:text-gray-400">{{ stream.error_count }} errors · {{ stream.warning_count }} warnings{% if stream.secondary_label %} · {{ stream.secondary_count }} {{ stream.secondary_label }}{% endif %}</p>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+        <div class="card rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">How To Read This</p>
+            <div class="mt-4 grid gap-4 md:grid-cols-3">
+                <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-4 dark:border-red-900/30 dark:bg-red-900/20">
+                    <p class="text-sm font-semibold text-red-800 dark:text-red-200">Errors</p>
+                    <p class="mt-2 text-sm text-red-700 dark:text-red-300">Data blockers that should be fixed before exports, review release, or handoff.</p>
+                </div>
+                <div class="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-4 dark:border-yellow-900/30 dark:bg-yellow-900/20">
+                    <p class="text-sm font-semibold text-yellow-800 dark:text-yellow-200">Warnings</p>
+                    <p class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">Gaps or inconsistencies that may still need engineering judgment.</p>
+                </div>
+                <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 dark:border-blue-900/30 dark:bg-blue-900/20">
+                    <p class="text-sm font-semibold text-blue-800 dark:text-blue-200">Info</p>
+                    <p class="mt-2 text-sm text-blue-700 dark:text-blue-300">Non-blocking checks and traceability context.</p>
+                </div>
+            </div>
+        </div>
+        <div class="card rounded-[1.75rem] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Review Sequence</p>
+            <div class="mt-4 grid gap-3">
+                <div class="rounded-2xl border border-red-100 bg-red-50 px-4 py-4 dark:border-red-900/30 dark:bg-red-900/20">
+                    <p class="text-sm font-semibold text-red-900 dark:text-red-100">1. Start with errors</p>
+                    <p class="mt-1 text-sm text-red-800 dark:text-red-200">These are the highest-confidence blockers to delivery outputs.</p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-700 dark:bg-slate-900">
+                    <p class="text-sm font-semibold text-slate-900 dark:text-white">2. Use the fix path</p>
+                    <p class="mt-1 text-sm text-slate-700 dark:text-slate-300">Each finding carries a remediation bucket and an inline suggested repair.</p>
+                </div>
+                <div class="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 dark:border-blue-900/30 dark:bg-blue-900/20">
+                    <p class="text-sm font-semibold text-blue-900 dark:text-blue-100">3. Open the object</p>
+                    <p class="mt-1 text-sm text-blue-800 dark:text-blue-200">Jump to the exact equipment, point, or controller record and fix it at the source.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -65,6 +124,47 @@
     </div>
 
     {% if findings %}
+    {% if validation_triage.fix_groups or validation_triage.categories %}
+    <div class="grid gap-4 xl:grid-cols-2">
+        <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Priority Fix Paths</h2>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Start with the most common remediation bucket.</p>
+                </div>
+                <a href="/project/{{ project.metadata.project_id }}/ingestion" class="text-sm font-semibold text-primary-600 hover:text-primary-700">Import Health</a>
+            </div>
+            <div class="mt-4 space-y-3">
+                {% for group in validation_triage.fix_groups[:4] %}
+                <a href="{{ group.url }}" class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 transition hover:border-primary-300 hover:bg-primary-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-700 dark:hover:bg-primary-900/10">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ group.fix_group.replace('_', ' ')|title }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ group.entity_type|title }} records</p>
+                    </div>
+                    <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">{{ group.count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Issue Categories</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Use these to jump into the part of the model that needs cleanup.</p>
+            </div>
+            <div class="mt-4 grid gap-3">
+                {% for category in validation_triage.categories[:4] %}
+                <a href="{{ category.url }}" class="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 transition hover:border-primary-300 hover:bg-primary-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-primary-700 dark:hover:bg-primary-900/10">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ category.category.replace('_', ' ')|title }}</p>
+                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ category.entity_type|title }}</p>
+                    </div>
+                    <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">{{ category.count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
     <div class="grid gap-8 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
         <div class="card overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div class="border-b border-gray-200 px-6 py-5 dark:border-gray-700">
@@ -73,7 +173,7 @@
                         <div>
                             <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Findings Explorer</h2>
                             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Filter by severity, group by category or object type, and inspect details inline.
+                                Filter by severity, group by fix path or object type, and inspect details with suggested fixes inline.
                             </p>
                         </div>
                         <div class="grid gap-3 md:grid-cols-4">
@@ -184,6 +284,7 @@
                         <tr
                             class="table-row validation-row cursor-pointer"
                             data-severity="{{ finding.severity }}"
+                            data-issue-stream="{{ finding.issue_stream }}"
                             data-object-type="{{ finding.object_type }}"
                             data-object-id="{{ finding.object_id }}"
                             data-rule-id="{{ finding.rule_id }}"
@@ -193,6 +294,10 @@
                             data-remediation="{{ finding.remediation }}"
                             data-fix-group="{{ finding.fix_group }}"
                             data-object-url="{{ finding.object_url }}"
+                            data-fix-target-url="{{ finding.fix_target_url }}"
+                            data-fix-target-label="{{ finding.fix_target_label }}"
+                            data-source-target-url="{{ finding.source_target_url }}"
+                            data-source-target-label="{{ finding.source_target_label }}"
                             data-title="{{ finding.title }}"
                             data-search="{{ search_text }}"
                         >
@@ -213,6 +318,7 @@
                                 <p class="font-medium text-gray-800 dark:text-white">{{ finding.object_id }}</p>
                                 <div class="mt-1 flex flex-wrap items-center gap-2">
                                     <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ finding.object_type }}</p>
+                                    <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ finding.issue_stream_label }}</span>
                                     {% if finding.sequence_related == 'true' %}
                                     <span class="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-purple-700 dark:bg-purple-900/30 dark:text-purple-200">Sequence</span>
                                     {% endif %}
@@ -248,7 +354,7 @@
                 </div>
                 <div id="validation-detail-empty" class="py-10 text-center">
                     <i class="fas fa-circle-info text-3xl text-gray-300 dark:text-gray-600"></i>
-                    <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Select any finding row to inspect its details inline.</p>
+                    <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Select any issue row to see what it means and how to fix it.</p>
                 </div>
                 <div id="validation-detail-panel" class="hidden space-y-4">
                     <div>
@@ -285,7 +391,9 @@
                             <p id="validation-detail-remediation"></p>
                         </div>
                     </div>
-                    <div>
+                    <div class="grid gap-3">
+                        <a id="validation-detail-fix-link" href="#" class="hidden text-sm font-semibold text-orange-700 hover:text-orange-800 dark:text-orange-300 dark:hover:text-orange-200">Fix here</a>
+                        <a id="validation-detail-source-link" href="#" class="hidden text-sm font-semibold text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200">Review source</a>
                         <a id="validation-detail-object-link" href="#" class="text-sm font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200">Open object detail</a>
                     </div>
                 </div>
@@ -298,8 +406,18 @@
             <i class="fas fa-check text-2xl"></i>
         </div>
         <h2 class="mt-4 text-2xl font-semibold text-gray-800 dark:text-white">No validation findings</h2>
-        <p class="mt-2 text-gray-500 dark:text-gray-400">This project currently validates cleanly.</p>
+        <p class="mt-2 text-gray-500 dark:text-gray-400">
+            {% if issues_mode %}
+            This project currently validates cleanly. If something still feels off, check Import Health for upload/parser signals instead of searching through the dashboard.
+            {% else %}
+            This project currently validates cleanly.
+            {% endif %}
+        </p>
         <div class="mt-6 flex flex-wrap justify-center gap-3">
+            <a href="/project/{{ project.metadata.project_id }}/ingestion" class="btn-secondary">
+                <i class="fas fa-upload mr-2"></i>
+                Import Health
+            </a>
             <a href="/project/{{ project.metadata.project_id }}/validate/report.json" class="btn-secondary">
                 <i class="fas fa-download mr-2"></i>
                 Download JSON
@@ -357,6 +475,8 @@
         const detailField = document.getElementById("validation-detail-field");
         const detailMessage = document.getElementById("validation-detail-message");
         const detailRemediation = document.getElementById("validation-detail-remediation");
+        const detailFixLink = document.getElementById("validation-detail-fix-link");
+        const detailSourceLink = document.getElementById("validation-detail-source-link");
         const detailObjectLink = document.getElementById("validation-detail-object-link");
 
         const state = {
@@ -389,7 +509,7 @@
         };
 
         const setSelectedRow = (row) => {
-            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage || !detailRemediation || !detailObjectLink) {
+            if (!detailPanel || !detailEmpty || !detailBadge || !detailObject || !detailObjectType || !detailCategory || !detailRule || !detailField || !detailMessage || !detailRemediation || !detailObjectLink || !detailFixLink || !detailSourceLink) {
                 return;
             }
 
@@ -415,6 +535,12 @@
             detailField.textContent = row.dataset.field || "—";
             detailMessage.textContent = row.dataset.message || "";
             detailRemediation.textContent = row.dataset.remediation || "Review this finding and correct the source data before generation.";
+            detailFixLink.href = row.dataset.fixTargetUrl || "#";
+            detailFixLink.textContent = row.dataset.fixTargetLabel || "Fix here";
+            detailFixLink.classList.toggle("hidden", !(row.dataset.fixTargetUrl));
+            detailSourceLink.href = row.dataset.sourceTargetUrl || "#";
+            detailSourceLink.textContent = row.dataset.sourceTargetLabel || "Review source";
+            detailSourceLink.classList.toggle("hidden", !(row.dataset.sourceTargetUrl));
             detailObjectLink.href = row.dataset.objectUrl || "#";
             detailObjectLink.classList.toggle("hidden", !(row.dataset.objectUrl));
 

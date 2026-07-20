@@ -273,10 +273,10 @@
 
     <!-- Quick Actions -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <a href="/project/{{ project_view.project_id }}/import" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/ingestion" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-upload text-3xl text-orange-500 mb-2"></i>
-            <h3 class="font-semibold text-gray-800 dark:text-white">Import Data</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">CSV upload for equipment, points, controllers</p>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Import Health</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Uploads, parser outcomes, and source-data recovery steps</p>
         </a>
         <a href="/project/{{ project_view.project_id }}/documents" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-folder-open text-3xl text-sky-500 mb-2"></i>
@@ -293,10 +293,10 @@
             <h3 class="font-semibold text-gray-800 dark:text-white">Status</h3>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Development readiness, sequence debt, and delivery health</p>
         </a>
-        <a href="/project/{{ project_view.project_id }}/validate" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
+        <a href="/project/{{ project_view.project_id }}/issues" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-check-circle text-3xl text-blue-500 mb-2"></i>
-            <h3 class="font-semibold text-gray-800 dark:text-white">Validate</h3>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Run validation rules</p>
+            <h3 class="font-semibold text-gray-800 dark:text-white">Issues Center</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Review data issues and suggested fixes</p>
         </a>
         <a href="/project/{{ project_view.project_id }}/gaps" class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg transition-shadow">
             <i class="fas fa-search text-3xl text-orange-500 mb-2"></i>
@@ -379,13 +379,53 @@
                                 <input
                                     type="text"
                                     name="graphic_sections"
-                                    value="{{ equip.graphic_sections }}"
+                                    value="{{ graphic_sections_for(project.get_equipment(equip.id)) }}"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     placeholder="outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge"
                                 >
+                                <div class="grid gap-2 md:grid-cols-2">
+                                    <input
+                                        type="text"
+                                        name="graphics_manufacturer"
+                                        value="{{ graphic_manufacturer_for(project.get_equipment(equip.id)) }}"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        placeholder="Manufacturer family, e.g. Trane"
+                                    >
+                                    <input
+                                        type="text"
+                                        name="graphics_model_family"
+                                        value="{{ graphic_model_family_for(project.get_equipment(equip.id)) }}"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        placeholder="Model family, e.g. Precedent"
+                                    >
+                                </div>
+                                <div class="grid gap-2 md:grid-cols-2">
+                                    <select
+                                        name="duct_profile"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    >
+                                        {% for option in graphic_duct_profiles_for(project.get_equipment(equip.id)) %}
+                                        <option value="{{ option.value }}" {% if graphic_duct_profile_for(project.get_equipment(equip.id)) == option.value %}selected{% endif %}>{{ option.label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input
+                                        type="text"
+                                        name="duct_source"
+                                        value="{{ graphic_manual_source_for(project.get_equipment(equip.id)) }}"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                        placeholder="Manual / submittal source note"
+                                    >
+                                </div>
+                                <input
+                                    type="text"
+                                    name="public_reference"
+                                    value="{{ graphic_public_reference_for(project.get_equipment(equip.id)) }}"
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    placeholder="Public reference URL or document ID"
+                                >
                                 <div class="flex items-center justify-between gap-3">
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                                        Comma-separated section order for preview and Niagara PX export.
+                                        Store section order plus manual-backed duct profile context used to shape the graphic.
                                     </p>
                                     <button type="submit" class="btn-secondary text-sm whitespace-nowrap">Save</button>
                                 </div>
@@ -532,7 +572,10 @@
         <div class="card p-6">
             <div class="flex items-center justify-between gap-3">
                 <h2 class="text-lg font-semibold text-gray-800 dark:text-white">Import & Parser Signals</h2>
-                <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ project_view.import_activity.task_count }} tracked tasks</span>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs uppercase tracking-[0.16em] text-gray-400">{{ project_view.import_activity.task_count }} tracked tasks</span>
+                    <a href="/project/{{ project_view.project_id }}/ingestion" class="text-xs font-semibold uppercase tracking-[0.16em] text-primary-600">Open Import Health</a>
+                </div>
             </div>
             <div class="mt-4 grid grid-cols-3 gap-3">
                 <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
@@ -583,22 +626,47 @@
                     <p class="mt-2 text-sm {% if item.severity == 'error' %}text-rose-800 dark:text-rose-200{% else %}text-amber-800 dark:text-amber-200{% endif %}">{{ item.message }}</p>
                 </div>
                 {% else %}
+                {% if project_view.validation_status == 'valid' and project_view.import_activity.warning_count == 0 and project_view.import_activity.error_count == 0 %}
+                <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-900/40 dark:bg-emerald-900/20">
+                    <p class="text-sm font-semibold text-emerald-900 dark:text-emerald-100">No active ingestion noise</p>
+                    <p class="mt-2 text-sm text-emerald-800 dark:text-emerald-100">There are no current parser warnings or import errors recorded for this project.</p>
+                </div>
+                {% else %}
                 <p class="text-sm text-gray-500 dark:text-gray-400">No parser warnings or import errors recorded.</p>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Validation Status -->
-    {% if project_view.validation_status != 'valid' %}
-    <div class="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-        <div class="flex items-center">
-            <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+    <div class="mt-8 rounded-2xl border border-gray-200 bg-white/80 px-5 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/80">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-                <h3 class="font-semibold text-yellow-800 dark:text-yellow-200">Validation Issues Found</h3>
-                <p class="text-yellow-700 dark:text-yellow-300">Project has validation issues. <a href="/project/{{ project_view.project_id }}/validate" class="underline">View details</a> or <a href="/project/{{ project_view.project_id }}/gaps" class="underline">run gap analysis</a>.</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Project Review</p>
+                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                    {% if project_view.validation_status == 'valid' and project_view.import_activity.warning_count == 0 and project_view.import_activity.error_count == 0 %}
+                    The workspace is clean right now. Use Import Health for new uploads and Issues Center only when you want a deeper rule review.
+                    {% elif project_view.validation_status == 'valid' %}
+                    Validation is currently clean. Use Import Health for upload/parser signals and Issues Center if you want to inspect rule coverage.
+                    {% else %}
+                    Data issues are tracked in Issues Center so they do not interrupt the main workspace.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+                <a href="/project/{{ project_view.project_id }}/ingestion" class="btn-secondary">
+                    <i class="fas fa-upload mr-2"></i>
+                    Import Health
+                </a>
+                <a href="/project/{{ project_view.project_id }}/issues" class="btn-secondary">
+                    <i class="fas fa-list-check mr-2"></i>
+                    Open Issues Center
+                </a>
+                <a href="/project/{{ project_view.project_id }}/gaps" class="btn-secondary">
+                    <i class="fas fa-search mr-2"></i>
+                    Gap Analysis
+                </a>
             </div>
         </div>
     </div>
-    {% endif %}
 {% endblock %}

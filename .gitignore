@@ -6,6 +6,8 @@ __pycache__/
 config/bas-assistant.env
 uploads/
 data/*.db
+data/projects/
+output/
 logs/*.log
 logs/checkpoint_push.lock
 UI_VERIFICATION_REPORT.json
@@ -16,6 +18,7 @@ examples/sample-hvac-output/
 examples/sample-hvac-validation.json
 src/*.egg-info/
 ui/output/
+ui/data/projects/generated-review-debug/
 test_checkout/
 test_export/
 test_graphics/

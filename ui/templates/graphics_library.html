@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block page_title %}Known Unit Graphics - {{ project.metadata.name }}{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl space-y-8">
+    <section class="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,#f6fbff_0%,#fff8ef_55%,#f6fff8_100%)] p-8 shadow-sm dark:border-slate-700 dark:bg-[linear-gradient(135deg,#132132_0%,#2c2015_55%,#132219_100%)]">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Known Unit Graphics</p>
+                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Historical And Reusable Unit Library</h1>
+                <p class="mt-2 max-w-3xl text-sm text-gray-600 dark:text-gray-300">
+                    This page is separate from active project graphics. Use it to review known unit symbols and reusable graphic structures without mixing them into the live device view.
+                </p>
+            </div>
+            <div class="flex gap-3">
+                <a href="/project/{{ project.metadata.project_id }}/graphics" class="btn-secondary">Back To Active Graphics</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Isometric Asset Library</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">These are the reusable building blocks for realistic active graphics: cabinets, duct sections, terminal units, and connection-aware equipment modules.</p>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {% for symbol in graphics_symbol_library %}
+            <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+                <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
+                        <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
+                    </div>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                        {{ symbol.category }}
+                    </span>
+                </div>
+                <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
+                    {{ symbol.svg|safe }}
+                </div>
+                <div class="space-y-3 px-5 py-4 text-xs text-gray-500 dark:text-gray-400">
+                    <p>{{ symbol.description }}</p>
+                    <div class="flex items-center justify-between">
+                        <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
+                        <span>{{ symbol.anchor_count }} anchors · {{ symbol.binding_target_count }} targets</span>
+                    </div>
+                    {% if symbol.equipment_types %}
+                    <p>Equipment: {{ symbol.equipment_types|join(", ") }}</p>
+                    {% endif %}
+                    {% if symbol.tags %}
+                    <div class="flex flex-wrap gap-2">
+                        {% for tag in symbol.tags %}
+                        <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if legacy_symbol_library %}
+    <section class="rounded-[24px] border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Legacy Flat Symbol Reference</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">These older symbols remain available for backfill and compatibility, but the active direction is the isometric asset library above.</p>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {% for symbol in legacy_symbol_library %}
+            <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+                <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
+                        <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
+                    </div>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                        {{ symbol.element_count }} elems
+                    </span>
+                </div>
+                <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
+                    {{ symbol.svg|safe }}
+                </div>
+                <div class="flex items-center justify-between px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
+                    <span>Legacy Symbol</span>
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

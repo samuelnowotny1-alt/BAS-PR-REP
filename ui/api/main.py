@@ -8,6 +8,7 @@ import re
 import shutil
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 from typing import Optional, List
@@ -30,7 +31,7 @@ from bas_assistant.models import (
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
     ApprovalReviewDecision, GapReviewDecision, MappingReviewDecision, ReviewAssumptionRecord,
     ControllerNetworkAddress, ControllerIOCapacity, StationConnectionConfig,
-    StationSyncProtocol
+    StationSyncProtocol, default_isometric_asset_library
 )
 from bas_assistant.models.equipment import EquipmentTemplateRef
 from bas_assistant.importers import CSVImporter, create_sample_csvs
@@ -62,6 +63,7 @@ from bas_assistant.runtime import (
     build_health_report,
     configure_logging,
     ensure_runtime_directories,
+    generate_demo_outputs,
     provision_demo_project,
 )
 from bas_assistant.services import ArtifactEntityLink
@@ -762,23 +764,17 @@ def build_export_output_descriptors(project: Project, results: dict[str, dict[st
     return outputs
 
 
-def register_persisted_generated_outputs(project: Project) -> list[dict[str, object]]:
-    """Backfill generated artifact files into the project document library."""
+def persisted_generated_output_descriptors(project: Project) -> list[dict[str, object]]:
+    """Describe generated outputs that should be discoverable for a project."""
     project_id = project.metadata.project_id
-    generated_documents: list[dict[str, object]] = []
+    outputs: list[dict[str, object]] = []
 
     checkout_dir = OUTPUT_DIR / project_id / "checkout"
     checkout_result = {
         "markdown": sorted((checkout_dir / "checkout_md").glob("*.md")) if (checkout_dir / "checkout_md").exists() else [],
         "excel": checkout_dir / "checkout_sheets.xlsx",
     }
-    generated_documents.extend(
-        register_generation_outputs_if_missing(
-            project=project,
-            generator_name="checkout_generator",
-            outputs=build_checkout_output_descriptors(project, checkout_result),
-        )
-    )
+    outputs.extend(build_checkout_output_descriptors(project, checkout_result))
 
     reports_dir = OUTPUT_DIR / project_id / "reports"
     report_result = {
@@ -788,36 +784,18 @@ def register_persisted_generated_outputs(project: Project) -> list[dict[str, obj
         "controller_schedule": reports_dir / "03_Controller_Schedule.xlsx",
         "validation": reports_dir / "04_Validation_Report.md",
     }
-    generated_documents.extend(
-        register_generation_outputs_if_missing(
-            project=project,
-            generator_name="report_generator",
-            outputs=build_report_output_descriptors(project, report_result),
-        )
-    )
+    outputs.extend(build_report_output_descriptors(project, report_result))
 
     graphics_result = load_generated_graphics_result(project)
     if graphics_result is not None:
-        generated_documents.extend(
-            register_generation_outputs_if_missing(
-                project=project,
-                generator_name="graphics_generator",
-                outputs=build_graphics_output_descriptors(project, graphics_result),
-            )
-        )
+        outputs.extend(build_graphics_output_descriptors(project, graphics_result))
 
     logic_dir = OUTPUT_DIR / project_id / "logic"
     logic_result = {
         "json": sorted((logic_dir / "logic_json").glob("*.json")) if (logic_dir / "logic_json").exists() else [],
         "niagara": sorted((logic_dir / "logic_niagara").glob("*.json")) if (logic_dir / "logic_niagara").exists() else [],
     }
-    generated_documents.extend(
-        register_generation_outputs_if_missing(
-            project=project,
-            generator_name="logic_generator",
-            outputs=build_logic_output_descriptors(project, logic_result),
-        )
-    )
+    outputs.extend(build_logic_output_descriptors(project, logic_result))
 
     export_dir = OUTPUT_DIR / project_id / "exports"
     export_result = {
@@ -827,15 +805,159 @@ def register_persisted_generated_outputs(project: Project) -> list[dict[str, obj
         for vendor in ("niagara", "bacnet", "tridium", "jci", "siemens", "honeywell")
         if (export_dir / vendor).exists()
     }
-    generated_documents.extend(
-        register_generation_outputs_if_missing(
-            project=project,
-            generator_name="export_generator",
-            outputs=build_export_output_descriptors(project, export_result),
-        )
-    )
+    outputs.extend(build_export_output_descriptors(project, export_result))
+    return outputs
 
+
+def register_persisted_generated_outputs(project: Project) -> list[dict[str, object]]:
+    """Backfill generated artifact files into the project document library."""
+    generator_names = {
+        "generated_checkout_markdown": "checkout_generator",
+        "generated_checkout_workbook": "checkout_generator",
+        "generated_equipment_schedule": "report_generator",
+        "generated_point_schedule": "report_generator",
+        "generated_controller_schedule": "report_generator",
+        "generated_project_summary": "report_generator",
+        "generated_validation_report": "report_generator",
+        "generated_graphic_json": "graphics_generator",
+        "generated_graphic_svg": "graphics_generator",
+        "generated_graphics_niagara": "graphics_generator",
+        "generated_logic_json": "logic_generator",
+        "generated_logic_niagara": "logic_generator",
+    }
+    generated_documents: list[dict[str, object]] = []
+    grouped_outputs: dict[str, list[dict[str, object]]] = {}
+    for output in persisted_generated_output_descriptors(project):
+        document_type = str(output.get("document_type") or "")
+        generator_name = generator_names.get(document_type)
+        if generator_name is None and document_type.startswith("generated_export_"):
+            generator_name = "export_generator"
+        if generator_name is None:
+            continue
+        grouped_outputs.setdefault(generator_name, []).append(output)
+
+    for generator_name, outputs in grouped_outputs.items():
+        generated_documents.extend(
+            register_generation_outputs_if_missing(
+                project=project,
+                generator_name=generator_name,
+                outputs=outputs,
+            )
+        )
     return generated_documents
+
+
+def _utc_datetime(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.astimezone(timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
+def _format_generated_output_names(names: list[str], *, limit: int = 3) -> str:
+    visible = [name for name in names if name][:limit]
+    if not visible:
+        return ""
+    if len(names) <= limit:
+        return ", ".join(visible)
+    return f"{', '.join(visible)} +{len(names) - limit} more"
+
+
+def build_generated_output_review(project: Project) -> dict[str, object]:
+    """Summarize generated artifact drift, missing files, and registration gaps."""
+    project_id = project.metadata.project_id
+    documents_view = container.project_queries.documents_view(project_id, mode="generated") or {"documents": [], "filtered_count": 0}
+    generated_url, generated_label = generated_output_review_target(project_id)
+    documents = list(documents_view.get("documents") or [])
+    expected_outputs = persisted_generated_output_descriptors(project)
+    expected_paths = {
+        str(path): descriptor
+        for descriptor in expected_outputs
+        if isinstance((path := descriptor.get("path")), Path)
+    }
+    registered_paths = {
+        str(document.get("file_path") or ""): document
+        for document in documents
+        if document.get("file_path")
+    }
+    findings: list[dict[str, object]] = []
+
+    missing_registered_docs = [
+        document for document in documents
+        if not document.get("file_path") or not Path(str(document.get("file_path"))).exists()
+    ]
+    if missing_registered_docs:
+        missing_names = [str(document.get("name") or "") for document in missing_registered_docs]
+        findings.append(
+            {
+                "severity": "error",
+                "title": "Registered generated documents are missing on disk",
+                "detail": f"{len(missing_registered_docs)} generated records point to files that no longer exist: {_format_generated_output_names(missing_names)}.",
+                "action_url": generated_url,
+                "action_label": generated_label,
+            }
+        )
+
+    unregistered_paths = [path for path in expected_paths if Path(path).exists() and path not in registered_paths]
+    if unregistered_paths:
+        unregistered_names = [Path(path).name for path in unregistered_paths]
+        findings.append(
+            {
+                "severity": "warning",
+                "title": "Generated files exist but are not registered in the library",
+                "detail": f"{len(unregistered_paths)} output files are on disk but missing from Document Library: {_format_generated_output_names(unregistered_names)}.",
+                "action_url": generated_url,
+                "action_label": generated_label,
+            }
+        )
+
+    project_updated_at = _utc_datetime(project.metadata.updated_at)
+    latest_generated_at = max(
+        (datetime.fromtimestamp(Path(path).stat().st_mtime, tz=timezone.utc) for path in expected_paths if Path(path).exists()),
+        default=None,
+    )
+    if project_updated_at and latest_generated_at and project_updated_at > latest_generated_at:
+        findings.append(
+            {
+                "severity": "warning",
+                "title": "Generated outputs look stale against the current project data",
+                "detail": (
+                    f"Project data was updated at {project_updated_at.isoformat()} but the newest generated artifact is from "
+                    f"{latest_generated_at.isoformat()}."
+                ),
+                "action_url": generated_url,
+                "action_label": generated_label,
+            }
+        )
+
+    if not documents and any(Path(path).exists() for path in expected_paths):
+        findings.append(
+            {
+                "severity": "warning",
+                "title": "Generated outputs are present but the library view is empty",
+                "detail": "Output files exist on disk, but no generated documents are currently visible in the project library.",
+                "action_url": generated_url,
+                "action_label": generated_label,
+            }
+        )
+
+    error_count = sum(1 for finding in findings if finding["severity"] == "error")
+    warning_count = sum(1 for finding in findings if finding["severity"] == "warning")
+    status = "blocked" if error_count else ("caution" if warning_count else "ready")
+    return {
+        "status": status,
+        "count": len(findings),
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "documents_count": int(documents_view.get("filtered_count", 0) or 0),
+        "findings": findings,
+        "expected_count": len(expected_paths),
+        "latest_generated_at": latest_generated_at,
+        "project_updated_at": project_updated_at,
+        "url": generated_url,
+        "action_label": generated_label,
+    }
 
 
 def get_assumption_tracker(project_id: str) -> AssumptionTracker:
@@ -1319,7 +1441,7 @@ def build_project_next_actions(project: Project, project_view: dict[str, object]
         actions.append({
             "title": "Review import and parser signals",
             "detail": f"{import_activity.get('warning_count', 0)} warnings and {import_activity.get('error_count', 0)} errors were recorded in recent ingestion tasks.",
-            "url": f"/project/{project.metadata.project_id}/activity",
+            "url": f"/project/{project.metadata.project_id}/ingestion",
         })
     return actions[:5]
 
@@ -1678,6 +1800,46 @@ def equipment_graphic_sections(equipment: Equipment) -> str:
     return ""
 
 
+def equipment_graphic_parameter(equipment: Equipment, key: str) -> str:
+    if equipment.template and equipment.template.parameters:
+        return str(equipment.template.parameters.get(key) or "").strip()
+    return ""
+
+
+def equipment_graphic_duct_profile(equipment: Equipment) -> str:
+    return equipment_graphic_parameter(equipment, "duct_profile")
+
+
+def equipment_graphic_manual_source(equipment: Equipment) -> str:
+    return equipment_graphic_parameter(equipment, "duct_source")
+
+
+def equipment_graphic_manufacturer(equipment: Equipment) -> str:
+    return equipment_graphic_parameter(equipment, "graphics_manufacturer")
+
+
+def equipment_graphic_model_family(equipment: Equipment) -> str:
+    return equipment_graphic_parameter(equipment, "graphics_model_family")
+
+
+def equipment_graphic_public_reference(equipment: Equipment) -> str:
+    return equipment_graphic_parameter(equipment, "public_reference")
+
+
+def available_duct_profiles(equipment: Equipment) -> list[dict[str, str]]:
+    if equipment.type in {EquipmentType.AHU, EquipmentType.RTU}:
+        return [
+            {"value": "", "label": "Auto / inferred"},
+            {"value": "draw_through_horizontal", "label": "Draw-through horizontal"},
+            {"value": "blow_through_horizontal", "label": "Blow-through horizontal"},
+            {"value": "horizontal_left", "label": "Horizontal discharge left"},
+            {"value": "horizontal_right", "label": "Horizontal discharge right"},
+            {"value": "vertical_upflow", "label": "Vertical upflow"},
+            {"value": "vertical_downflow", "label": "Vertical downflow"},
+        ]
+    return [{"value": "", "label": "Auto / inferred"}]
+
+
 def equipment_graphic_section_errors(equipment: Equipment) -> list[str]:
     sections = equipment_graphic_sections(equipment)
     if not sections or equipment.type != EquipmentType.AHU:
@@ -1774,6 +1936,40 @@ def graphics_symbol_library() -> list[dict[str, object]]:
     return library
 
 
+def graphics_isometric_library() -> list[dict[str, object]]:
+    library: list[dict[str, object]] = []
+    for asset in default_isometric_asset_library():
+        library.append(
+            {
+                "key": asset.asset_id,
+                "label": asset.label,
+                "category": asset.category,
+                "variant": asset.variant or "",
+                "description": asset.description,
+                "element_count": len(asset.anchor_points),
+                "anchor_count": len(asset.anchor_points),
+                "binding_target_count": len(asset.binding_targets),
+                "width": asset.width,
+                "height": asset.height,
+                "equipment_types": asset.compatible_equipment_types,
+                "tags": asset.tags,
+                "svg": asset.preview_svg,
+            }
+        )
+    return library
+
+
+def active_graphic_detail_records(project: Project, graphics_result: dict[str, object] | None) -> list[dict[str, object]]:
+    if graphics_result is None:
+        return []
+    active_equipment_ids = {equipment.id for equipment in project.equipment}
+    return [
+        record
+        for record in build_graphic_detail_records(project, graphics_result)
+        if record.get("equipment") is not None and str(record["equipment"].id) in active_equipment_ids
+    ]
+
+
 def _enrich_recent_upload_views(recent_uploads: list[dict[str, object]]) -> list[dict[str, object]]:
     return [
         {
@@ -1794,14 +1990,163 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
             "project": project,
             "recent_upload_views": [],
             "import_status_view": None,
+            "import_review": build_import_review(None, project.metadata.project_id),
+            "issue_taxonomy": build_issue_taxonomy(project, None),
             "inline_editors": build_import_editor_views(project),
         }
     return {
         "project": project,
         "recent_upload_views": _enrich_recent_upload_views(workspace_view["recent_uploads"]),
         "import_status_view": workspace_view["import_status_view"],
+        "import_review": build_import_review(workspace_view["import_status_view"], project.metadata.project_id),
+        "issue_taxonomy": build_issue_taxonomy(project, workspace_view["import_status_view"]),
         "inline_editors": build_import_editor_views(project),
     }
+
+
+def build_import_review(import_status_view: dict[str, object] | None, project_id: str | None = None) -> dict[str, object]:
+    """Build a calmer review summary for ingestion and parser signals."""
+    remediation_by_task_type = {
+        "equipment_import": "Check required schedule columns and normalize equipment IDs before re-importing.",
+        "points_import": "Verify point names, equipment references, point kind, and direction fields.",
+        "controllers_import": "Verify controller IDs, served-equipment references, protocols, and network addressing.",
+        "artifact_ingestion": "Confirm the file format is supported and that the document contains parser-friendly content.",
+    }
+    label_by_task_type = {
+        "equipment_import": "Equipment imports",
+        "points_import": "Point imports",
+        "controllers_import": "Controller imports",
+        "artifact_ingestion": "Supporting documents",
+    }
+    empty_review = {
+        "status": "clean",
+        "headline": "No import or parser issues recorded",
+        "detail": "This workspace has not logged any current ingestion blockers. Uploads and parser outcomes will appear here when you start importing files.",
+        "task_groups": [],
+        "top_messages": [],
+        "has_issues": False,
+        "is_empty": True,
+    }
+    if import_status_view is None:
+        return empty_review
+
+    tasks = list(import_status_view.get("tasks") or [])
+    if not tasks:
+        return empty_review
+
+    task_groups: dict[str, dict[str, object]] = {}
+    top_messages: list[dict[str, str]] = []
+    for task in tasks:
+        task_type = str(task.get("task_type") or "artifact_ingestion")
+        group = task_groups.setdefault(
+            task_type,
+            {
+                "task_type": task_type,
+                "stream": "ingestion",
+                "label": label_by_task_type.get(task_type, task_type.replace("_", " ").title()),
+                "task_count": 0,
+                "warning_count": 0,
+                "error_count": 0,
+                "latest_status": str(task.get("status") or ""),
+                "latest_filename": str((task.get("outcome_summary") or {}).get("filename") or task_type),
+                "remediation": remediation_by_task_type.get(task_type, "Review the task details and re-run the import after correcting the source data."),
+                "target_url": import_issue_target(project_id, task_type)[0] if project_id else "",
+                "target_label": import_issue_target(project_id, task_type)[1] if project_id else "",
+            },
+        )
+        group["task_count"] = int(group["task_count"]) + 1
+        group["warning_count"] = int(group["warning_count"]) + len(task.get("warning_messages") or [])
+        group["error_count"] = int(group["error_count"]) + len(task.get("error_messages") or [])
+
+        filename = str((task.get("outcome_summary") or {}).get("filename") or task_type)
+        for message in list(task.get("error_messages") or [])[:2]:
+            top_messages.append(
+                {
+                    "severity": "error",
+                    "task_type": task_type,
+                    "label": group["label"],
+                    "filename": filename,
+                    "message": str(message),
+                    "remediation": str(group["remediation"]),
+                    "target_url": str(group["target_url"]),
+                    "target_label": str(group["target_label"]),
+                }
+            )
+        for message in list(task.get("warning_messages") or [])[:2]:
+            top_messages.append(
+                {
+                    "severity": "warning",
+                    "task_type": task_type,
+                    "label": group["label"],
+                    "filename": filename,
+                    "message": str(message),
+                    "remediation": str(group["remediation"]),
+                    "target_url": str(group["target_url"]),
+                    "target_label": str(group["target_label"]),
+                }
+            )
+
+    warning_count = int(import_status_view.get("warning_count", 0) or 0)
+    error_count = int(import_status_view.get("error_count", 0) or 0)
+    if error_count > 0:
+        status = "blocked"
+        headline = "Import and parser blockers need review"
+        detail = f"{error_count} error signals and {warning_count} warnings were recorded across recent ingestion tasks."
+    elif warning_count > 0:
+        status = "attention"
+        headline = "Imports completed with warnings"
+        detail = f"{warning_count} warning signals were recorded across recent ingestion tasks."
+    else:
+        status = "clean"
+        headline = "Recent imports are clean"
+        detail = "The latest ingestion tasks completed without current warning or error signals."
+
+    ordered_groups = sorted(
+        task_groups.values(),
+        key=lambda item: (-int(item["error_count"]), -int(item["warning_count"]), str(item["label"])),
+    )
+    ordered_messages = sorted(
+        top_messages,
+        key=lambda item: (0 if item["severity"] == "error" else 1, item["label"], item["filename"]),
+    )[:6]
+    return {
+        "status": status,
+        "headline": headline,
+        "detail": detail,
+        "task_groups": ordered_groups,
+        "top_messages": ordered_messages,
+        "has_issues": error_count > 0 or warning_count > 0,
+        "is_empty": False,
+    }
+
+
+def import_editor_anchor(project_id: str, entity_type: str) -> str:
+    """Return a direct import-editor anchor for a structured entity type."""
+    normalized = entity_type.strip().lower()
+    if normalized == "point":
+        normalized = "points"
+    elif normalized == "controller":
+        normalized = "controllers"
+    return f"/project/{project_id}/ingestion#{normalized}-editor-section"
+
+
+def import_issue_target(project_id: str, task_type: str) -> tuple[str, str]:
+    """Return the best direct fix target for an ingestion task type."""
+    normalized = task_type.strip().lower()
+    if normalized == "equipment_import":
+        return import_editor_anchor(project_id, "equipment"), "Open Equipment Editor"
+    if normalized == "points_import":
+        return import_editor_anchor(project_id, "points"), "Open Point Editor"
+    if normalized == "controllers_import":
+        return import_editor_anchor(project_id, "controllers"), "Open Controller Editor"
+    if normalized == "artifact_ingestion":
+        return f"/project/{project_id}/documents?mode=uploaded", "Open Uploaded Documents"
+    return f"/project/{project_id}/ingestion", "Open Import Health"
+
+
+def generated_output_review_target(project_id: str) -> tuple[str, str]:
+    """Return the review target for generated-output consistency checks."""
+    return f"/project/{project_id}/documents?mode=generated", "Review Generated Outputs"
 
 
 def timed_page_context(label: str, builder):
@@ -2061,6 +2406,26 @@ def update_equipment_graphic_sections_value(equipment: Equipment, raw_value: str
     equipment.template.parameters["graphic_sections"] = normalized
 
 
+def update_equipment_graphic_parameter(
+    equipment: Equipment,
+    key: str,
+    raw_value: str | object,
+) -> None:
+    value = raw_value.strip() if isinstance(raw_value, str) else ""
+    if not value:
+        if equipment.template and equipment.template.parameters:
+            equipment.template.parameters.pop(key, None)
+            if not equipment.template.parameters:
+                equipment.template = None
+        return
+
+    if equipment.template is None:
+        equipment.template = EquipmentTemplateRef(template_name="graphic_layout", parameters={})
+    elif not equipment.template.template_name:
+        equipment.template.template_name = "graphic_layout"
+    equipment.template.parameters[key] = value
+
+
 def validate_equipment_graphic_sections(equipment: Equipment, raw_value: str) -> tuple[str, list[str]]:
     if equipment.type != EquipmentType.AHU:
         return normalize_graphic_sections(raw_value), []
@@ -2122,14 +2487,41 @@ def validation_object_url(project_id: str, finding) -> str:
     return f"/project/{project_id}/validate"
 
 
+def validation_fix_target(project_id: str, finding, fix_group: str) -> tuple[str, str]:
+    """Return the most direct fix target for a validation finding."""
+    normalized_group = fix_group.strip().lower()
+    if normalized_group.startswith("sequence") or normalized_group in {"provenance", "knowledge"}:
+        return f"/project/{project_id}/knowledge", "Review Knowledge"
+    object_type = str(finding.object_type).strip().lower()
+    if object_type == "equipment":
+        return import_editor_anchor(project_id, "equipment"), "Edit Equipment Row"
+    if object_type == "point":
+        return import_editor_anchor(project_id, "points"), "Edit Point Row"
+    if object_type == "controller":
+        return import_editor_anchor(project_id, "controllers"), "Edit Controller Row"
+    return f"/project/{project_id}/issues", "Open Issues Center"
+
+
+def validation_source_target(project_id: str, finding, fix_group: str) -> tuple[str, str]:
+    """Return the best source-review target for a validation finding."""
+    normalized_group = fix_group.strip().lower()
+    if normalized_group.startswith("sequence") or normalized_group in {"provenance", "knowledge"}:
+        return f"/project/{project_id}/documents?mode=uploaded", "Review Source Documents"
+    return validation_object_url(project_id, finding), "Open Object Detail"
+
+
 def serialize_validation_findings(report, project_id: str | None = None) -> list[dict[str, str]]:
     findings = []
     for finding in report.errors + report.warnings + report.infos:
         remediation, fix_group = validation_remediation_for_rule(finding.rule_id, finding.field or "")
         rule_family = finding.rule_id.split("-", 1)[0].lower()
+        fix_target_url, fix_target_label = validation_fix_target(project_id, finding, fix_group) if project_id else ("", "")
+        source_target_url, source_target_label = validation_source_target(project_id, finding, fix_group) if project_id else ("", "")
         findings.append(
             {
                 "severity": finding.severity.value,
+                "issue_stream": "validation",
+                "issue_stream_label": "Validation",
                 "object_type": finding.object_type,
                 "object_id": finding.object_id,
                 "rule_id": finding.rule_id,
@@ -2142,6 +2534,10 @@ def serialize_validation_findings(report, project_id: str | None = None) -> list
                 "rule_family": rule_family,
                 "sequence_related": "true" if fix_group.startswith("sequence") else "false",
                 "object_url": validation_object_url(project_id, finding) if project_id else "",
+                "fix_target_url": fix_target_url,
+                "fix_target_label": fix_target_label,
+                "source_target_url": source_target_url,
+                "source_target_label": source_target_label,
             }
         )
     return findings
@@ -2154,6 +2550,7 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
     release = review_release_state(project)
     sequence_workspace = build_sequence_workspace(project)
     sequence_summary = sequence_workspace["summary"]
+    generated_output_review = build_generated_output_review(project)
     blockers: list[str] = []
     cautions: list[str] = []
 
@@ -2175,6 +2572,11 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
         cautions.append(
             f"{sequence_summary['not_indexed']} sequence-reviewed equipment items do not have indexed sequence context yet."
         )
+    for generated_finding in generated_output_review["findings"]:
+        if generated_finding["severity"] == "error":
+            blockers.append(str(generated_finding["detail"]))
+        else:
+            cautions.append(str(generated_finding["detail"]))
 
     can_generate = not blockers
     status = "blocked" if blockers else ("caution" if cautions else "ready")
@@ -2187,7 +2589,54 @@ def build_generation_readiness(project: Project) -> dict[str, object]:
         "release_review": release,
         "validation_findings": findings,
         "sequence_summary": sequence_summary,
+        "generated_output_review": generated_output_review,
     }
+
+
+def build_issue_taxonomy(project: Project, import_status_view: dict[str, object] | None = None) -> list[dict[str, object]]:
+    """Separate validation, ingestion, and generated-output review into distinct streams."""
+    validation_report = ValidationEngine().validate(project)
+    generation = build_generation_readiness(project)
+    generated_review = dict(generation.get("generated_output_review") or {})
+    generated_count = int(generated_review.get("documents_count", 0) or 0)
+    import_warning_count = int((import_status_view or {}).get("warning_count", 0) or 0)
+    import_error_count = int((import_status_view or {}).get("error_count", 0) or 0)
+    generated_signal_count = int(generated_review.get("count", 0) or 0)
+    generated_url, generated_label = generated_output_review_target(project.metadata.project_id)
+    return [
+        {
+            "stream": "validation",
+            "label": "Validation Issues",
+            "description": "Rule-based model checks against equipment, points, controllers, and mappings.",
+            "count": len(validation_report.errors) + len(validation_report.warnings) + len(validation_report.infos),
+            "error_count": len(validation_report.errors),
+            "warning_count": len(validation_report.warnings),
+            "url": f"/project/{project.metadata.project_id}/issues",
+            "action_label": "Open Issues Center",
+        },
+        {
+            "stream": "ingestion",
+            "label": "Import & Parser Signals",
+            "description": "Upload, parser, and re-import problems coming from source files or unsupported formats.",
+            "count": import_warning_count + import_error_count,
+            "error_count": import_error_count,
+            "warning_count": import_warning_count,
+            "url": f"/project/{project.metadata.project_id}/ingestion",
+            "action_label": "Open Import Health",
+        },
+        {
+            "stream": "generated_output",
+            "label": "Generated Output Review",
+            "description": "Generated artifact drift, missing files, and library registration gaps separate from source-data validation.",
+            "count": generated_signal_count,
+            "error_count": int(generated_review.get("error_count", 0) or 0),
+            "warning_count": int(generated_review.get("warning_count", 0) or 0),
+            "secondary_count": generated_count,
+            "secondary_label": "generated docs",
+            "url": generated_url,
+            "action_label": generated_label,
+        },
+    ]
 
 
 def build_graphics_summaries(project: Project) -> list[dict[str, object]]:
@@ -2337,12 +2786,15 @@ def build_graphic_detail_records(project: Project, graphics_result: dict[str, ob
     report = engine.validate(project)
     findings = serialize_validation_findings(report, project.metadata.project_id)
     preview_pages = graphics_preview_pages(project)
+    asset_library = {asset.asset_id: asset for asset in default_isometric_asset_library()}
     preview_by_equipment = {
         str(page.get("slotPath", "")).split("/")[-1]: page
         for page in preview_pages
         if str(page.get("slotPath", "")).startswith("/Px/Equipment/")
     }
     svg_paths = {path.stem: path for path in graphics_result.get("svg", [])}
+    project_output_dir = OUTPUT_DIR / project.metadata.project_id
+    point_lookup = {point.name: point for point in project.points}
     records: list[dict[str, object]] = []
     for index, summary in enumerate(graphics_result.get("summaries", [])):
         json_paths = graphics_result.get("json", [])
@@ -2350,29 +2802,446 @@ def build_graphic_detail_records(project: Project, graphics_result: dict[str, ob
             continue
         json_path = json_paths[index]
         graphic_name = json_path.stem
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+        elements = list(payload.get("elements") or [])
+        bindings = list(payload.get("bindings") or [])
+        asset_placements = list((payload.get("metadata") or {}).get("asset_placements") or [])
+        asset_point_relations = list((payload.get("metadata") or {}).get("asset_point_relations") or [])
+        binding_point_names = sorted(
+            {
+                str(binding.get("point_name") or "").strip()
+                for binding in bindings
+                if str(binding.get("point_name") or "").strip()
+            }
+        )
         equipment_id = str(summary.get("equipment_id") or "")
         equipment = project.get_equipment(equipment_id) if equipment_id else None
         controller_id = project.effective_equipment_controller_id(equipment) if equipment is not None else None
-        related_points = sorted(point.name for point in project.points if point.equipment_id == equipment_id)
+        related_points = sorted(
+            {
+                *[point.name for point in project.points if point.equipment_id == equipment_id],
+                *binding_point_names,
+            }
+        )
         related_ids = {equipment_id, controller_id or "", *related_points}
         related_findings = [finding for finding in findings if finding["object_id"] in related_ids]
         preview_page = preview_by_equipment.get(equipment_id)
+        svg_path = svg_paths.get(graphic_name)
+        json_url = f"/output/{project.metadata.project_id}/{json_path.relative_to(project_output_dir).as_posix()}"
+        svg_url = (
+            f"/output/{project.metadata.project_id}/{svg_path.relative_to(project_output_dir).as_posix()}"
+            if svg_path is not None
+            else None
+        )
+        binding_details = []
+        for binding in bindings:
+            point_name = str(binding.get("point_name") or "")
+            point = point_lookup.get(point_name)
+            binding_details.append(
+                {
+                    "point_name": point_name,
+                    "display_label": str(binding.get("label") or point_name),
+                    "binding_type": str(binding.get("binding_type") or ""),
+                    "label": str(binding.get("label") or ""),
+                    "format": str(binding.get("format") or ""),
+                    "x": binding.get("x"),
+                    "y": binding.get("y"),
+                    "units": point.units if point is not None else "",
+                    "kind": point.kind.value if point is not None else "",
+                    "direction": point.direction.value if point is not None else "",
+                    "equipment_id": point.equipment_id if point is not None else "",
+                    "description": describe_graphic_binding(
+                        point_name=point_name,
+                        binding_type=str(binding.get("binding_type") or ""),
+                        point=point,
+                    ),
+                }
+            )
+        element_details = [
+            describe_graphic_element(element, equipment_id=equipment_id, sections=list(summary.get("graphic_sections") or []))
+            for element in elements
+        ]
+        asset_placement_details = [
+            describe_graphic_asset_placement(
+                placement,
+                asset_library=asset_library,
+                binding_details=binding_details,
+                asset_point_relations=asset_point_relations,
+                point_lookup=point_lookup,
+                equipment_id=equipment_id,
+            )
+            for placement in asset_placements
+        ]
         records.append(
             {
                 "graphic_name": graphic_name,
                 "json_path": json_path,
-                "svg_path": svg_paths.get(graphic_name),
+                "json_url": json_url,
+                "svg_path": svg_path,
+                "svg_url": svg_url,
                 "summary": summary,
                 "equipment": equipment,
                 "controller": project.get_controller(controller_id) if controller_id else None,
                 "point_names": related_points,
+                "binding_point_names": binding_point_names,
+                "binding_details": binding_details,
+                "element_details": element_details,
+                "asset_placement_details": asset_placement_details,
+                "asset_placement_count": len(asset_placement_details),
+                "asset_point_relation_count": len(asset_point_relations),
+                "element_count": len(element_details),
+                "binding_count": len(binding_details),
+                "layer_names": sorted({detail["layer"] for detail in element_details if detail["layer"]}),
+                "navigation_targets": list(payload.get("navigation") or []),
+                "payload_title": str(payload.get("name") or graphic_name),
+                "payload_excerpt": json.dumps(payload, indent=2)[:3200] if payload else "",
                 "validation_findings": related_findings,
                 "error_count": sum(1 for finding in related_findings if finding["severity"] == "error"),
                 "warning_count": sum(1 for finding in related_findings if finding["severity"] == "warning"),
                 "preview_page": preview_page,
             }
-        )
+    )
     return records
+
+
+def describe_graphic_asset_placement(
+    placement: dict[str, object],
+    *,
+    asset_library: dict[str, object],
+    binding_details: list[dict[str, object]],
+    asset_point_relations: list[dict[str, object]],
+    point_lookup: dict[str, Point],
+    equipment_id: str,
+) -> dict[str, object]:
+    asset_id = str(placement.get("asset_id") or "")
+    asset = asset_library.get(asset_id)
+    role = str(placement.get("role") or "assembly")
+    placement_metadata = placement.get("metadata")
+    if not isinstance(placement_metadata, dict):
+        placement_metadata = {}
+
+    explicit_relations = [
+        relation
+        for relation in asset_point_relations
+        if str(relation.get("asset_id") or "") == asset_id
+        and str(relation.get("asset_role") or "") == role
+        and str(relation.get("equipment_id") or equipment_id) == str(placement.get("equipment_id") or equipment_id)
+    ]
+
+    related_points = []
+    if explicit_relations:
+        for relation in explicit_relations:
+            point_name = str(relation.get("point_name") or "")
+            point = point_lookup.get(point_name)
+            related_points.append(
+                {
+                    "point_name": point_name,
+                    "display_label": str(relation.get("label") or point_name),
+                    "binding_type": str(relation.get("binding_type") or ""),
+                    "units": point.units if point is not None else str(relation.get("units") or ""),
+                    "description": describe_graphic_relation(relation),
+                    "component": str(relation.get("component") or ""),
+                    "target_key": str(relation.get("target_key") or ""),
+                    "anchor_key": str(relation.get("anchor_key") or ""),
+                    "visual_hint": str(relation.get("visual_hint") or ""),
+                    "relation_kind": str(relation.get("relation_kind") or ""),
+                    "relation_x": relation.get("relation_x"),
+                    "relation_y": relation.get("relation_y"),
+                }
+            )
+    else:
+        related_bindings = [
+            binding
+            for binding in binding_details
+            if binding_matches_asset_role(binding, role, equipment_id=equipment_id)
+        ]
+        for binding in related_bindings:
+            point_name = str(binding.get("point_name") or "")
+            point = point_lookup.get(point_name)
+            related_points.append(
+                {
+                    "point_name": point_name,
+                    "display_label": str(binding.get("display_label") or point_name),
+                    "binding_type": str(binding.get("binding_type") or ""),
+                    "units": point.units if point is not None else "",
+                    "description": str(binding.get("description") or ""),
+                    "component": "",
+                    "target_key": "",
+                    "anchor_key": "",
+                    "visual_hint": "",
+                    "relation_kind": "",
+                    "relation_x": None,
+                    "relation_y": None,
+                }
+            )
+
+    target_descriptions = []
+    if asset is not None:
+        for target in asset.binding_targets:
+            target_descriptions.append(
+                {
+                    "label": target.key.replace("_", " ").title(),
+                    "description": target.description or target.component.replace("_", " ").title(),
+                    "component": target.component,
+                }
+            )
+
+    return {
+        "asset_id": asset_id,
+        "asset_label": asset.label if asset is not None else asset_id.replace("_", " ").title(),
+        "asset_category": asset.category if asset is not None else "",
+        "asset_description": asset.description if asset is not None else "Reusable equipment asset used in this graphic assembly.",
+        "role": role,
+        "role_label": format_graphic_asset_role(role),
+        "role_description": describe_graphic_asset_role(role, metadata=placement_metadata),
+        "x": placement.get("x"),
+        "y": placement.get("y"),
+        "width": placement.get("width"),
+        "height": placement.get("height"),
+        "equipment_id": str(placement.get("equipment_id") or equipment_id),
+        "metadata": placement_metadata,
+        "metadata_items": [
+            {"label": key.replace("_", " ").title(), "value": ", ".join(value) if isinstance(value, list) else str(value)}
+            for key, value in placement_metadata.items()
+            if value not in ("", None, [], {})
+        ],
+        "target_descriptions": target_descriptions,
+        "related_points": related_points,
+        "relation_count": len(related_points),
+    }
+
+
+def format_graphic_asset_role(role: str) -> str:
+    if role.startswith("section:"):
+        return f"{role.split(':', 1)[1].replace('_', ' ').title()} Section"
+    return role.replace("_", " ").replace(":", " ").title()
+
+
+def describe_graphic_asset_role(role: str, *, metadata: dict[str, object]) -> str:
+    if role == "primary_equipment":
+        sections = metadata.get("sections")
+        if isinstance(sections, list) and sections:
+            section_text = ", ".join(str(section).replace("_", " ") for section in sections)
+            return f"This is the main assembled unit shell. It organizes the graphic around these physical sections: {section_text}."
+        return "This is the main assembled unit shell that defines the overall physical cabinet and airflow direction."
+    if role == "internal_supply_path":
+        return "This asset represents the main internal air path through the equipment so the operator can follow how supply air moves section to section."
+    if role.startswith("section:"):
+        section_name = role.split(":", 1)[1].replace("_", " ")
+        return f"This asset is the rendered {section_name} portion of the unit and acts as the physical home for related live points."
+    return "This asset is a placed physical assembly inside the generated equipment graphic."
+
+
+def binding_matches_asset_role(binding: dict[str, object], role: str, *, equipment_id: str) -> bool:
+    if equipment_id and str(binding.get("equipment_id") or "") not in {"", equipment_id}:
+        return False
+
+    point_name = str(binding.get("point_name") or "").lower()
+    description = str(binding.get("description") or "").lower()
+    binding_type = str(binding.get("binding_type") or "").lower()
+    text = " ".join([point_name, description, binding_type])
+
+    if role == "primary_equipment":
+        return True
+    if role == "internal_supply_path":
+        return any(keyword in text for keyword in ("supply", "sat", "airflow", "cfm", "static"))
+
+    role_key = role.split(":", 1)[1] if ":" in role else role
+    keyword_map = {
+        "outside_air": ("oat", "outside", "mixed", "return", "damper"),
+        "mixed_air": ("mixed", "outside", "return", "damper"),
+        "filter": ("filter", "dp"),
+        "cooling_coil": ("cool", "chw", "clg", "valve", "lat"),
+        "heating_coil": ("heat", "hw", "htg", "valve", "reheat"),
+        "supply_fan": ("fan", "vfd", "proof", "speed", "static"),
+        "return_fan": ("return fan", "rf", "fan"),
+        "relief_fan": ("relief fan", "exhaust", "fan"),
+        "discharge": ("discharge", "supply", "sat", "dat", "airflow", "cfm"),
+        "terminal_box": ("damper", "reheat", "flow", "discharge", "zone"),
+        "branch_takeoff": ("flow", "cfm", "branch"),
+        "distribution_trunk": ("static", "supply", "flow", "cfm"),
+    }
+    keywords = keyword_map.get(role_key, (role_key.replace("_", " "),))
+    return any(keyword in text for keyword in keywords)
+
+
+def describe_graphic_relation(relation: dict[str, object]) -> str:
+    component = str(relation.get("component") or "").replace("_", " ")
+    relation_kind = str(relation.get("relation_kind") or "").replace("_", " ")
+    visual_hint = str(relation.get("visual_hint") or "").replace("_", " ")
+    target_description = str(relation.get("target_description") or "")
+    target_key = str(relation.get("target_key") or "").replace("_", " ")
+    anchor_key = str(relation.get("anchor_key") or "").replace("_", " ")
+
+    parts = []
+    if component:
+        parts.append(f"Drives the {component} asset state.")
+    if relation_kind:
+        parts.append(f"Relation type: {relation_kind}.")
+    if target_description:
+        parts.append(target_description.rstrip(".") + ".")
+    elif target_key:
+        parts.append(f"Mapped to target {target_key}.")
+    if anchor_key:
+        parts.append(f"Anchored at {anchor_key}.")
+    if visual_hint:
+        parts.append(f"Visual response: {visual_hint}.")
+    return " ".join(parts) if parts else "Explicitly mapped to this asset."
+
+
+def describe_graphic_binding(*, point_name: str, binding_type: str, point: Point | None) -> str:
+    name = point_name.lower()
+    if binding_type == "value":
+        if "sat" in name or "supply" in name and "temp" in name:
+            return "Shows the live supply-air temperature serving this graphic."
+        if "dat" in name or "discharge" in name:
+            return "Shows the leaving-air temperature after the unit conditions the air."
+        if "rat" in name or "return" in name and "temp" in name:
+            return "Shows the return-air temperature coming back from the space."
+        if "oat" in name or "outside" in name:
+            return "Shows the outside-air condition feeding the sequence."
+        if "humidity" in name or "hum" in name:
+            return "Shows the live humidity reading used by this graphic."
+        if "static" in name or "pressure" in name:
+            return "Shows the pressure value the sequence is responding to."
+        if "flow" in name or "cfm" in name:
+            return "Shows the airflow value moving through this part of the system."
+        return "Shows a live sensor value on the graphic."
+    if binding_type == "setpoint":
+        return "Shows the target value the control sequence is trying to maintain."
+    if binding_type == "status":
+        return "Shows whether this device or state is currently on, off, open, or closed."
+    if binding_type == "alarm":
+        return "Shows an alarm-related condition the operator should watch."
+    if binding_type == "trend":
+        return "Shows a recent trend history for this point."
+    if binding_type == "override":
+        return "Shows a point that may be manually overridden by an operator."
+    if binding_type == "command":
+        return "Shows a commandable point the sequence can drive."
+    if point is not None:
+        if point.kind.value == "sensor":
+            return "Shows a live sensor reading used by the control logic."
+        if point.kind.value == "setpoint":
+            return "Shows a setpoint that guides sequence behavior."
+        if point.kind.value == "command":
+            return "Shows a command point used to change equipment state."
+        if point.kind.value == "status":
+            return "Shows the current operating state of the device."
+    return "Shows a point connected to this graphic."
+
+
+def describe_graphic_element(
+    element: dict[str, object],
+    *,
+    equipment_id: str,
+    sections: list[str],
+) -> dict[str, object]:
+    element_type = str(element.get("type") or "")
+    layer = str(element.get("layer") or "default")
+    x = element.get("x")
+    y = element.get("y")
+    width = element.get("width")
+    height = element.get("height")
+    stroke = str(element.get("stroke") or "")
+    fill = str(element.get("fill") or "")
+    text = str(element.get("text") or "")
+    symbol_name = str(element.get("symbol_name") or "")
+    role = "graphic element"
+    explanation = "Supports the generated BAS graphic layout."
+
+    if element_type == "line":
+        is_horizontal = abs(float(height or 0)) <= abs(float(width or 0))
+        line_location = float(y or 0)
+        line_span = float(width or 0)
+        if stroke in {"#1976d2", "#1565c0"}:
+            role = "supply air path" if is_horizontal else "supply branch connection"
+            explanation = (
+                "Shows the supply-side flow path in the program graphic. "
+                "This helps the operator see where conditioned air is leaving or moving through the equipment."
+            )
+        elif stroke in {"#ef6c00", "#e65100"}:
+            role = "return or heating path" if is_horizontal else "heating branch connection"
+            explanation = (
+                "Shows a return-air or heating-water connection in the program graphic. "
+                "It gives context for how heat or return flow is routed through the equipment."
+            )
+        elif stroke in {"#757575", "#333", "#546e7a", "#cbd5e1"}:
+            role = "equipment divider or boundary"
+            explanation = (
+                "Marks a physical section break or equipment boundary so the program can separate coils, fans, filters, or duct sections visually."
+            )
+        elif stroke in {"#009688", "#00695c"}:
+            role = "humidification or auxiliary process path"
+            explanation = (
+                "Indicates an auxiliary process path, typically used to show humidification or a secondary routed medium in the graphic."
+            )
+        elif stroke in {"#7b1fa2", "#c2185b", "#c62828"}:
+            role = "special process branch"
+            explanation = (
+                "Highlights a special branch or alternate process stream so the operator can distinguish it from the primary duct path."
+            )
+        elif layer == "piping":
+            role = "process connection line"
+            explanation = (
+                "Represents a process connection between major equipment sections. "
+                "In the program this line is used to show how air, water, or another medium moves through the sequence."
+            )
+
+        if is_horizontal and line_location < 0.15:
+            explanation += " This one sits near the top of the graphic, so it likely represents an entering or upstream connection."
+        elif is_horizontal and line_location > 0.8:
+            explanation += " This one sits near the bottom of the graphic, so it likely represents a lower return, drain, or exhaust-side connection."
+        elif not is_horizontal:
+            explanation += " Because it is vertical, it is likely tying one section of the graphic to another branch or coil connection."
+        elif line_span < 0.12:
+            explanation += " Its short span suggests it is a local connector rather than the main equipment trunk."
+        else:
+            explanation += " Its span suggests it is one of the main routed paths in the equipment drawing."
+    elif element_type == "rect":
+        role = "equipment section block"
+        explanation = (
+            "Defines a physical equipment section in the program graphic, such as a filter bank, coil section, fan section, or discharge segment."
+        )
+    elif element_type in {"circle", "ellipse"}:
+        role = "rotating device or process symbol"
+        explanation = (
+            "Represents a symbolic device shape, commonly used for fans, pumps, or rounded process symbols in the graphic."
+        )
+    elif element_type == "text":
+        role = "label"
+        explanation = (
+            "Provides operator-readable labeling so the graphic can identify equipment, sections, and process references."
+        )
+
+    if text:
+        explanation += f" The label `{text}` is what the operator sees on the rendered graphic."
+    elif symbol_name:
+        explanation += f" It is based on the `{symbol_name}` symbol template."
+    elif sections and element_type == "rect":
+        explanation += f" This graphic is using the configured sections: {', '.join(sections)}."
+
+    display_label = text.strip() if text.strip() else role.replace("_", " ").title()
+
+    return {
+        "display_label": display_label,
+        "type": element_type,
+        "layer": layer,
+        "x": x,
+        "y": y,
+        "width": width,
+        "height": height,
+        "text": text,
+        "symbol_name": symbol_name,
+        "stroke": stroke,
+        "fill": fill,
+        "role": role,
+        "program_explanation": explanation,
+        "equipment_id": equipment_id,
+    }
 
 
 def object_validation_context(project: Project, detail: dict[str, object]) -> dict[str, object]:
@@ -2842,12 +3711,14 @@ async def api_create_project(
 @app.get("/project/{project_id}", response_class=HTMLResponse)
 async def project_detail(request: Request, project_id: str):
     project = get_project(project_id)
+    live_validation_report = ValidationEngine().validate(project)
     project_view = timed_page_context(
         f"project_detail:{project_id}",
         lambda: container.project_queries.detail_view(project_id),
     )
     if project_view is None:
         raise HTTPException(status_code=404, detail="Project not found")
+    project_view["validation_status"] = live_validation_report.summary.get("status", project_view.get("validation_status"))
     project_view["development_status"] = build_project_development_status(project)
     project_view["next_actions"] = build_project_next_actions(project, project_view)
     project_view["validation_triage"] = build_validation_triage(project)
@@ -2855,6 +3726,13 @@ async def project_detail(request: Request, project_id: str):
         "project": project,
         "project_view": project_view,
         "graphic_presets_for": equipment_graphic_presets,
+        "graphic_duct_profiles_for": available_duct_profiles,
+        "graphic_sections_for": equipment_graphic_sections,
+        "graphic_manufacturer_for": equipment_graphic_manufacturer,
+        "graphic_model_family_for": equipment_graphic_model_family,
+        "graphic_manual_source_for": equipment_graphic_manual_source,
+        "graphic_public_reference_for": equipment_graphic_public_reference,
+        "graphic_duct_profile_for": equipment_graphic_duct_profile,
         "current_user": get_current_user(request),
     })
 
@@ -3345,6 +4223,7 @@ async def project_documents_page(
     linked_entity_type: str = "",
 ):
     project = get_project(project_id)
+    generated_output_review = build_generated_output_review(project)
     documents_view = timed_page_context(
         f"project_documents:{project_id}",
         lambda: container.project_queries.documents_view(
@@ -3362,6 +4241,7 @@ async def project_documents_page(
         context={
             "project": project,
             "documents_view": documents_view,
+            "generated_output_review": generated_output_review,
             "current_user": get_current_user(request),
         },
     )
@@ -3457,6 +4337,11 @@ async def update_equipment_graphics_config(
     project_id: str,
     equipment_id: str,
     graphic_sections: str = Form(""),
+    graphics_manufacturer: str = Form(""),
+    graphics_model_family: str = Form(""),
+    duct_profile: str = Form(""),
+    duct_source: str = Form(""),
+    public_reference: str = Form(""),
 ):
     project = get_project(project_id)
     equipment = project.get_equipment(equipment_id)
@@ -3469,6 +4354,11 @@ async def update_equipment_graphics_config(
             detail=f"Invalid graphic sections: {', '.join(invalid)}",
         )
     update_equipment_graphic_sections_value(equipment, normalized)
+    update_equipment_graphic_parameter(equipment, "graphics_manufacturer", graphics_manufacturer)
+    update_equipment_graphic_parameter(equipment, "graphics_model_family", graphics_model_family)
+    update_equipment_graphic_parameter(equipment, "duct_profile", duct_profile)
+    update_equipment_graphic_parameter(equipment, "duct_source", duct_source)
+    update_equipment_graphic_parameter(equipment, "public_reference", public_reference)
     save_project(project)
     return RedirectResponse(url=f"/project/{project_id}", status_code=303)
 
@@ -3492,15 +4382,18 @@ async def apply_equipment_graphics_preset(
 
 
 @app.get("/project/{project_id}/import", response_class=HTMLResponse)
+@app.get("/project/{project_id}/ingestion", response_class=HTMLResponse)
 async def import_page(request: Request, project_id: str):
     project = get_project(project_id)
+    context = timed_page_context(
+        f"import_page:{project_id}",
+        lambda: _import_page_context(project, project_id),
+    )
+    context["ingestion_mode"] = request.url.path.endswith("/ingestion")
     return templates.TemplateResponse(
         request=request,
         name="import.html",
-        context=timed_page_context(
-            f"import_page:{project_id}",
-            lambda: _import_page_context(project, project_id),
-        ),
+        context=context,
     )
 
 
@@ -3879,15 +4772,22 @@ async def import_data(
 
 @app.get("/project/{project_id}/validate", response_class=HTMLResponse)
 @app.post("/project/{project_id}/validate", response_class=HTMLResponse)
+@app.get("/project/{project_id}/issues", response_class=HTMLResponse)
 async def validate_page(request: Request, project_id: str):
     project = get_project(project_id)
     engine = ValidationEngine()
     report = engine.validate(project)
+    issues_mode = request.url.path.endswith("/issues")
+    import_status_view = container.project_queries.import_status_view(project_id)
     return templates.TemplateResponse(request=request, name="validate.html", context={
         "project": project,
         "validation_report": report,
         "validation_summary": report.summary,
         "validation_findings": serialize_validation_findings(report, project_id),
+        "validation_triage": build_validation_triage(project),
+        "import_review": build_import_review(import_status_view, project_id),
+        "issue_taxonomy": build_issue_taxonomy(project, import_status_view),
+        "issues_mode": issues_mode,
     })
 
 
@@ -4088,14 +4988,14 @@ async def graphics_page(request: Request, project_id: str):
     project = get_project(project_id)
     readiness = build_generation_readiness(project)
     persisted_graphics = load_generated_graphics_result(project)
+    persisted_active_records = active_graphic_detail_records(project, persisted_graphics)
     station_delivery = build_station_delivery_readiness(project, graphics_result=persisted_graphics)
     if request.method == "GET":
         return templates.TemplateResponse(request=request, name="graphics.html", context={
             "project": project,
             "graphics_result": persisted_graphics,
-            "graphic_detail_records": build_graphic_detail_records(project, persisted_graphics) if persisted_graphics else [],
+            "graphic_detail_records": persisted_active_records,
             "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
-            "graphics_symbol_library": graphics_symbol_library(),
             "readiness": readiness,
             "station_delivery": station_delivery,
         })
@@ -4103,9 +5003,8 @@ async def graphics_page(request: Request, project_id: str):
         return templates.TemplateResponse(request=request, name="graphics.html", context={
             "project": project,
             "graphics_result": persisted_graphics,
-            "graphic_detail_records": build_graphic_detail_records(project, persisted_graphics) if persisted_graphics else [],
+            "graphic_detail_records": persisted_active_records,
             "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
-            "graphics_symbol_library": graphics_symbol_library(),
             "readiness": readiness,
             "station_delivery": station_delivery,
         })
@@ -4124,12 +5023,25 @@ async def graphics_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="graphics.html", context={
         "project": project,
         "graphics_result": result,
-        "graphic_detail_records": build_graphic_detail_records(project, result),
+        "graphic_detail_records": active_graphic_detail_records(project, result),
         "niagara_preview_pages": niagara_preview,
-        "graphics_symbol_library": graphics_symbol_library(),
         "readiness": readiness,
         "station_delivery": station_delivery,
     })
+
+
+@app.get("/project/{project_id}/graphics/library", response_class=HTMLResponse)
+async def graphics_library_page(request: Request, project_id: str):
+    project = get_project(project_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="graphics_library.html",
+        context={
+            "project": project,
+            "graphics_symbol_library": graphics_isometric_library(),
+            "legacy_symbol_library": graphics_symbol_library(),
+        },
+    )
 
 
 @app.get("/project/{project_id}/graphics/{graphic_name}/fullscreen", response_class=HTMLResponse)
@@ -4146,6 +5058,28 @@ async def graphics_fullscreen_page(request: Request, project_id: str, graphic_na
     return templates.TemplateResponse(
         request=request,
         name="graphics_fullscreen.html",
+        context={
+            "project": project,
+            "graphic_detail": detail,
+            "station_delivery": station_delivery,
+        },
+    )
+
+
+@app.get("/project/{project_id}/graphics/{graphic_name}", response_class=HTMLResponse)
+async def graphics_detail_page(request: Request, project_id: str, graphic_name: str):
+    project = get_project(project_id)
+    graphics_result = load_generated_graphics_result(project)
+    if graphics_result is None:
+        raise HTTPException(status_code=404, detail="No generated graphics found")
+    detail_records = build_graphic_detail_records(project, graphics_result)
+    detail = next((record for record in detail_records if record["graphic_name"] == graphic_name), None)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Graphic not found")
+    station_delivery = build_station_delivery_readiness(project, graphics_result=graphics_result)
+    return templates.TemplateResponse(
+        request=request,
+        name="graphics_detail.html",
         context={
             "project": project,
             "graphic_detail": detail,
@@ -4515,7 +5449,11 @@ async def api_load_demo(request: Request):
             return Response(status_code=200, headers={"HX-Redirect": target})
         return RedirectResponse(url=target, status_code=303)
 
-    if container.projects.get(project_id) is not None:
+    existing_project = container.projects.get(project_id)
+    if existing_project is not None:
+        generate_demo_outputs(existing_project, OUTPUT_DIR)
+        register_persisted_generated_outputs(existing_project)
+        refresh_projects_cache()
         return redirect_response()
     project = provision_demo_project(
         container.projects,

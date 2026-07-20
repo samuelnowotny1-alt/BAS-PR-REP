@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import logging.config
+import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .config import Settings
-from .models import Project, ProjectMetadata, UnitSystem
+from .models import Project, ProjectMetadata, SourceDocument, UnitSystem
 
 
 def ensure_runtime_directories(settings: Settings) -> None:
@@ -117,6 +119,273 @@ def _demo_project_metadata(project_id: str, project_name: str) -> ProjectMetadat
     )
 
 
+def _upsert_source_document(
+    project: Project,
+    *,
+    document_id: str,
+    name: str,
+    document_type: str,
+    path: Path,
+    version: str | None = None,
+) -> None:
+    """Insert or replace a source document reference deterministically."""
+    record = SourceDocument(
+        id=document_id,
+        name=name,
+        type=document_type,
+        path=str(path),
+        version=version,
+        imported_at=datetime.now(),
+    )
+    existing_index = next(
+        (
+            index
+            for index, document in enumerate(project.source_documents)
+            if document.id == document_id or (document.name == name and document.type == document_type)
+        ),
+        None,
+    )
+    if existing_index is None:
+        project.source_documents.append(record)
+        return
+    project.source_documents[existing_index] = record
+
+
+def _write_demo_document(path: Path, content: str) -> Path:
+    """Write a generated demo source document and return its path."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _render_demo_submittal(project: Project) -> str:
+    """Create a synthetic submittal summary for the seeded demo station."""
+    lines = [
+        f"# {project.metadata.name} Simulated Mechanical Submittal",
+        "",
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"Project ID: {project.metadata.project_id}",
+        f"Client: {project.metadata.client or 'Demo Client'}",
+        f"Location: {project.metadata.location or 'Demo Building'}",
+        "",
+        "## Package Summary",
+        f"- Equipment count: {len(project.equipment)}",
+        f"- Point count: {len(project.points)}",
+        f"- Controller count: {len(project.controllers)}",
+        "",
+        "## Equipment Selections",
+    ]
+    for equipment in project.equipment:
+        lines.extend(
+            [
+                f"### {equipment.id}",
+                f"- Type: {equipment.type.value}",
+                f"- Subtype: {equipment.subtype or 'Standard'}",
+                f"- Controller: {equipment.controller_id or 'Pending'}",
+                f"- Design airflow: {equipment.design_cfm or 0} CFM",
+                f"- Design tonnage: {equipment.design_tonnage or 0}",
+                f"- Design water flow: {equipment.design_gpm or 0} GPM",
+                f"- Electrical: {equipment.voltage or 'TBD'}V / {equipment.phase or 'TBD'} ph",
+                f"- Served area: {equipment.served_area or 'General occupancy'}",
+                f"- Notes: {equipment.notes or 'Coordinate final trim and access clearances with field conditions.'}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _render_demo_sequence(project: Project) -> str:
+    """Create a synthetic sequence-of-operations document."""
+    lines = [
+        f"# {project.metadata.name} Simulated Sequence of Operations",
+        "",
+        "## General",
+        "The BAS shall command, monitor, alarm, and trend all scheduled points shown in the attached point schedule.",
+        "All alarms shall annunciate to the operator workstation and the simulated station alarm buffer.",
+        "",
+    ]
+    for equipment in project.equipment:
+        lines.append(f"## {equipment.id}")
+        if equipment.type.value == "AHU":
+            lines.extend(
+                [
+                    f"{equipment.id} shall enable on occupied schedule, prove supply fan status, and maintain discharge air temperature.",
+                    f"{equipment.id} shall modulate outside air, cooling coil, and heating coil outputs to maintain setpoint.",
+                    f"{equipment.id} shall alarm on dirty filter, fan failure, low discharge temperature, and smoke shutdown.",
+                    "",
+                ]
+            )
+        elif equipment.type.value == "VAV":
+            lines.extend(
+                [
+                    f"{equipment.id} shall maintain zone temperature by modulating the primary damper and terminal heat as required.",
+                    f"{equipment.id} shall reset airflow between minimum and cooling maximum based on zone demand.",
+                    "",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"{equipment.id} shall be commanded, monitored, and alarmed from the BAS per the assigned point schedule.",
+                    "",
+                ]
+            )
+    return "\n".join(lines)
+
+
+def _render_demo_manual(project: Project) -> str:
+    """Create a synthetic O&M style reference document."""
+    lines = [
+        f"# {project.metadata.name} Simulated O&M Notes",
+        "",
+        "## Service Expectations",
+        "Replace prefilters on pressure drop alarm or quarterly, whichever occurs first.",
+        "Verify coil entering and leaving conditions during seasonal startup.",
+        "Trend fan status, discharge temperature, and zone demand during occupied mode commissioning.",
+        "",
+        "## Controller Integration",
+    ]
+    for controller in project.controllers:
+        lines.extend(
+            [
+                f"### {controller.id}",
+                f"- Vendor: {controller.vendor or 'Generic'}",
+                f"- Model: {controller.model or 'TBD'}",
+                f"- Panel location: {controller.panel_location or 'Field verify'}",
+                f"- Serves: {', '.join(controller.serves_equipment_ids) or 'General equipment'}",
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _render_demo_point_schedule(project: Project) -> str:
+    """Create a synthetic point schedule source file."""
+    header = [
+        "Point Name",
+        "Equipment ID",
+        "Controller ID",
+        "Point Kind",
+        "Direction",
+        "Units",
+        "BACnet Object Type",
+        "BACnet Instance",
+        "Source",
+        "Source Reference",
+        "Description",
+    ]
+    lines = [",".join(header)]
+    for point in project.points:
+        lines.append(
+            ",".join(
+                [
+                    point.name,
+                    point.equipment_id or "",
+                    point.controller_id or "",
+                    point.kind.value,
+                    point.direction.value,
+                    point.units or "",
+                    point.bacnet_object_type or "",
+                    str(point.bacnet_instance or ""),
+                    point.source.value,
+                    point.source_reference or "",
+                    (point.description or "").replace(",", ";"),
+                ]
+            )
+        )
+    return "\n".join(lines) + "\n"
+
+
+def _attach_demo_source_documents(project: Project, project_id: str, examples_dir: Path) -> None:
+    """Attach realistic demo source documents so the seeded project resembles a station package."""
+    equipment_path = examples_dir / "equipment_schedule.csv"
+    points_path = examples_dir / "point_list.csv"
+    controllers_path = examples_dir / "controller_schedule.csv"
+    document_dir = examples_dir / "demo_documents"
+
+    if equipment_path.exists():
+        _upsert_source_document(
+            project,
+            document_id=f"{project_id}_equipment",
+            name=equipment_path.name,
+            document_type="equipment_schedule",
+            path=equipment_path,
+        )
+    if points_path.exists():
+        _upsert_source_document(
+            project,
+            document_id=f"{project_id}_points",
+            name=points_path.name,
+            document_type="point_list",
+            path=points_path,
+        )
+    if controllers_path.exists():
+        _upsert_source_document(
+            project,
+            document_id=f"{project_id}_controllers",
+            name=controllers_path.name,
+            document_type="controller_schedule",
+            path=controllers_path,
+        )
+
+    generated_documents = [
+        (
+            f"{project_id}_submittal",
+            f"{project_id}_mechanical_submittal.md",
+            "submittal",
+            _render_demo_submittal(project),
+        ),
+        (
+            f"{project_id}_sequence",
+            f"{project_id}_sequence_of_operations.md",
+            "sequence",
+            _render_demo_sequence(project),
+        ),
+        (
+            f"{project_id}_manual",
+            f"{project_id}_om_manual.md",
+            "manual",
+            _render_demo_manual(project),
+        ),
+        (
+            f"{project_id}_point_schedule",
+            f"{project_id}_simulated_point_schedule.csv",
+            "point_schedule",
+            _render_demo_point_schedule(project),
+        ),
+    ]
+    for document_id, file_name, document_type, content in generated_documents:
+        path = _write_demo_document(document_dir / file_name, content)
+        _upsert_source_document(
+            project,
+            document_id=document_id,
+            name=file_name,
+            document_type=document_type,
+            path=path,
+            version="simulated-1",
+        )
+
+    fake_station_dir = examples_dir / "fake_station"
+    fake_station_files = [
+        ("controller_runtime", "controller_runtime.csv", "station_runtime"),
+        ("point_snapshot", "station_point_snapshot.csv", "station_snapshot"),
+        ("trends", "station_trends.csv", "trend_log"),
+        ("alarms", "station_alarms.csv", "alarm_log"),
+    ]
+    for suffix, file_name, document_type in fake_station_files:
+        path = fake_station_dir / file_name
+        if not path.exists():
+            continue
+        _upsert_source_document(
+            project,
+            document_id=f"{project_id}_{suffix}",
+            name=file_name,
+            document_type=document_type,
+            path=path,
+            version="simulated-1",
+        )
+
+
 def create_demo_project(project_id: str, project_name: str, examples_dir: Path) -> Project:
     """Create a demo project populated from the example CSV files."""
     from bas_assistant.importers import CSVImporter, create_sample_csvs
@@ -137,6 +406,7 @@ def create_demo_project(project_id: str, project_name: str, examples_dir: Path) 
     if controllers_path.exists():
         importer.import_controller_schedule(controllers_path, f"{project_id}_controllers")
 
+    _attach_demo_source_documents(project, project_id, examples_dir)
     return project
 
 
@@ -160,6 +430,8 @@ def generate_demo_outputs(project: Project, output_dir: Path) -> None:
     from bas_assistant.validation import ValidationEngine
 
     project_output_dir = output_dir / project.metadata.project_id
+    if project_output_dir.exists():
+        shutil.rmtree(project_output_dir)
     project_output_dir.mkdir(parents=True, exist_ok=True)
 
     engine = ValidationEngine()

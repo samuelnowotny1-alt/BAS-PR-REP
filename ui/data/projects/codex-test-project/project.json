@@ -3,18 +3,18 @@
     "project_id": "codex-test-project",
     "name": "Codex Test Project",
     "number": null,
-    "client": "Codex Demo Client",
-    "location": "Codex Test Building",
+    "client": "Demo Client",
+    "location": "Demo Building",
     "timezone": null,
     "unit_system": "IP",
-    "created_at": "2026-07-15T14:01:03.251689",
-    "updated_at": "2026-07-15T14:01:03.251694",
+    "created_at": "2026-07-16T17:26:50.165588",
+    "updated_at": "2026-07-16T17:26:50.165592",
     "design_phase": "Design Development",
     "naming_standard": "ASHRAE 135",
     "bacnet_network_number": null,
-    "engineer_of_record": "Codex Engineer",
-    "programmer": "Codex Programmer",
-    "commissioning_agent": "Codex CxA"
+    "engineer_of_record": "Demo Engineer",
+    "programmer": "Demo Programmer",
+    "commissioning_agent": "Demo CxA"
   },
   "equipment": [
     {
@@ -59,7 +59,7 @@
       "notes": "Main AHU for floor 1",
       "provenance": {
         "importer": "csv_equipment_schedule",
-        "source_doc_id": "equip_schedule_codex",
+        "source_doc_id": "codex-test-project_equipment",
         "source_name": "equipment_schedule.csv"
       }
     }
@@ -91,7 +91,7 @@
       ],
       "provenance": {
         "importer": "csv_point_list",
-        "source_doc_id": "point_list_codex",
+        "source_doc_id": "codex-test-project_points",
         "source_name": "point_list.csv"
       }
     }
@@ -148,19 +148,109 @@
       "notes": "Main plant controller",
       "provenance": {
         "importer": "csv_controller_schedule",
-        "source_doc_id": "ctrl_schedule_codex",
+        "source_doc_id": "codex-test-project_controllers",
         "source_name": "controller_schedule.csv"
       }
     }
   ],
   "source_documents": [
     {
-      "id": "ctrl_schedule_codex",
+      "id": "codex-test-project_controllers",
       "name": "controller_schedule.csv",
       "type": "controller_schedule",
-      "path": "/home/oem/.openclaw/workspace/bas-assistant/examples/controller_schedule.csv",
+      "path": "examples/controller_schedule.csv",
       "version": null,
-      "imported_at": "2026-07-15T14:01:03.270407",
+      "imported_at": "2026-07-16T17:26:50.174237",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_equipment",
+      "name": "equipment_schedule.csv",
+      "type": "equipment_schedule",
+      "path": "examples/equipment_schedule.csv",
+      "version": null,
+      "imported_at": "2026-07-16T17:26:50.174175",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_points",
+      "name": "point_list.csv",
+      "type": "point_list",
+      "path": "examples/point_list.csv",
+      "version": null,
+      "imported_at": "2026-07-16T17:26:50.174210",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_submittal",
+      "name": "codex-test-project_mechanical_submittal.md",
+      "type": "submittal",
+      "path": "examples/demo_documents/codex-test-project_mechanical_submittal.md",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174475",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_sequence",
+      "name": "codex-test-project_sequence_of_operations.md",
+      "type": "sequence",
+      "path": "examples/demo_documents/codex-test-project_sequence_of_operations.md",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174617",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_manual",
+      "name": "codex-test-project_om_manual.md",
+      "type": "manual",
+      "path": "examples/demo_documents/codex-test-project_om_manual.md",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174743",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_point_schedule",
+      "name": "codex-test-project_simulated_point_schedule.csv",
+      "type": "point_schedule",
+      "path": "examples/demo_documents/codex-test-project_simulated_point_schedule.csv",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174875",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_controller_runtime",
+      "name": "controller_runtime.csv",
+      "type": "station_runtime",
+      "path": "examples/fake_station/controller_runtime.csv",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174929",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_point_snapshot",
+      "name": "station_point_snapshot.csv",
+      "type": "station_snapshot",
+      "path": "examples/fake_station/station_point_snapshot.csv",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174959",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_trends",
+      "name": "station_trends.csv",
+      "type": "trend_log",
+      "path": "examples/fake_station/station_trends.csv",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.174985",
+      "hash": null
+    },
+    {
+      "id": "codex-test-project_alarms",
+      "name": "station_alarms.csv",
+      "type": "alarm_log",
+      "path": "examples/fake_station/station_alarms.csv",
+      "version": "simulated-1",
+      "imported_at": "2026-07-16T17:26:50.175010",
       "hash": null
     }
   ],
