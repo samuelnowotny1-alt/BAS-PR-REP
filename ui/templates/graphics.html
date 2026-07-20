@@ -165,11 +165,13 @@
                     </div>
                     <div class="relative z-10 min-w-0 space-y-5 bg-white p-5 dark:bg-gray-800">
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Bindings</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Critical Readouts</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">High-value signals stay visible on the canvas. Lower-priority points remain here so the page reads cleanly.</p>
+                            <div id="preview-summary" class="mt-3 grid gap-2 sm:grid-cols-2"></div>
                             <div id="binding-list" class="mt-3 max-h-[280px] space-y-2 overflow-auto pr-1"></div>
                         </div>
                         <div class="min-w-0">
-                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Component Tree</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Layout Elements</p>
                             <div id="component-list" class="mt-3 max-h-[320px] space-y-2 overflow-auto pr-1"></div>
                         </div>
                     </div>
@@ -308,9 +310,11 @@
     const previewSlotType = document.getElementById("preview-slot-type");
     const previewBindCount = document.getElementById("preview-bind-count");
     const previewCompCount = document.getElementById("preview-comp-count");
+    const previewSummary = document.getElementById("preview-summary");
     const bindingList = document.getElementById("binding-list");
     const componentList = document.getElementById("component-list");
     const telemetryState = { frame: 0, active: [], rafId: null };
+    const MAX_CANVAS_BINDINGS = 6;
 
     function componentColor(component) {
         const slotType = component.slotType || "";
@@ -386,6 +390,20 @@
         return { base: 1.0, amplitude: 0.2, phase: index * 0.3, units: units || "" };
     }
 
+    function bindingPriority(binding, units) {
+        const name = String(binding.fullLabel || binding.label || "").toLowerCase();
+        const normalizedUnits = String(units || "").toLowerCase();
+        if (name.includes("sat") || name.includes("discharge") || name.includes("supply") && name.includes("temp")) return 100;
+        if (name.includes("static") || normalizedUnits.includes("inwc") || normalizedUnits.includes("pa")) return 96;
+        if (name.includes("flow") || normalizedUnits.includes("cfm")) return 92;
+        if (name.includes("rat") || name.includes("mat") || name.includes("oat")) return 88;
+        if (binding.bindingType === "status") return 84;
+        if (name.includes("speed") || name.includes("fan") || name.includes("vfd")) return 82;
+        if (name.includes("cmd") || name.includes("pos") || name.includes("damper") || name.includes("valve")) return 78;
+        if (binding.bindingType === "setpoint") return 75;
+        return 60;
+    }
+
     function formatTelemetryValue(value, units, bindingType) {
         if (bindingType === "status") {
             return value >= 0.5 ? "ON" : "OFF";
@@ -411,7 +429,7 @@
 
     function buildTelemetryBindings(bindings, children) {
         const componentById = new Map(children.map((component) => [component.id, component]));
-        return bindings.map((binding, index) => {
+        const items = bindings.map((binding, index) => {
             const component = componentById.get(binding.widgetId);
             const units = component?.facets?.units || "";
             const profile = resolveTelemetryProfile(binding.fullLabel || binding.label, units, binding.bindingType, index);
@@ -425,8 +443,57 @@
                 amplitude: profile.amplitude,
                 phase: profile.phase,
                 value: profile.base,
+                priority: bindingPriority(binding, units),
+                canvasVisible: false,
             };
         });
+        items
+            .sort((a, b) => b.priority - a.priority || a.label.localeCompare(b.label))
+            .forEach((item, index) => {
+                item.canvasVisible = index < MAX_CANVAS_BINDINGS;
+            });
+        return items;
+    }
+
+    function summarizeTelemetry(items) {
+        const sensors = items.filter((item) => item.bindingType === "sensor").length;
+        const commands = items.filter((item) => item.bindingType === "actuator" || item.bindingType === "setpoint").length;
+        const statuses = items.filter((item) => item.bindingType === "status").length;
+        const onCanvas = items.filter((item) => item.canvasVisible).length;
+        return [
+            { label: "On Canvas", value: onCanvas },
+            { label: "Sensors", value: sensors },
+            { label: "Commands", value: commands },
+            { label: "Statuses", value: statuses },
+        ];
+    }
+
+    function renderPreviewSummary(items) {
+        if (!previewSummary) {
+            return;
+        }
+        previewSummary.innerHTML = "";
+        summarizeTelemetry(items).forEach((metric) => {
+            const card = document.createElement("div");
+            card.className = "rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+            card.innerHTML = `
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">${metric.label}</p>
+                <p class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">${metric.value}</p>
+            `;
+            previewSummary.appendChild(card);
+        });
+    }
+
+    function notableComponents(children) {
+        const important = children.filter((component) => {
+            const slotType = component.slotType || "";
+            if (slotType.includes("BoundLabel") || slotType.includes("LinkButton")) return true;
+            if (slotType.includes("Text") || slotType.includes("Label")) {
+                return Boolean(String(component.displayName || "").trim());
+            }
+            return false;
+        });
+        return important.length ? important.slice(0, 24) : children.slice(0, 24);
     }
 
     function computeBounds(children) {
@@ -481,6 +548,9 @@
         }
 
         if (slotType.includes("BoundLabel")) {
+            if (telemetry && !telemetry.canvasVisible) {
+                return "";
+            }
             const badgeX = x + width - 18;
             const badgeY = y - 10;
             const valueText = escapeHtml(telemetry ? formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType) : "--");
@@ -555,6 +625,13 @@
         const bindings = page.bindings || [];
         const telemetryBindings = buildTelemetryBindings(bindings, children);
         const telemetryByWidgetId = new Map(telemetryBindings.map((item) => [item.id, item]));
+        const visibleChildren = children.filter((component) => {
+            if ((component.slotType || "").includes("BoundLabel")) {
+                const telemetry = telemetryByWidgetId.get(component.id);
+                return !telemetry || telemetry.canvasVisible;
+            }
+            return true;
+        });
         const bounds = computeBounds(children);
         const width = Math.max(bounds.maxX - bounds.minX, 760);
         const height = Math.max(bounds.maxY - bounds.minY, 520);
@@ -563,10 +640,11 @@
         previewPath.textContent = page.slotPath || "";
         previewSlotType.textContent = page.slotType || "";
         previewBindCount.textContent = `${bindings.length} bindings`;
-        previewCompCount.textContent = `${children.length} components`;
+        previewCompCount.textContent = `${visibleChildren.length}/${children.length} shown`;
 
         previewCanvas.innerHTML = "";
         previewCanvas.style.aspectRatio = `${width} / ${height}`;
+        renderPreviewSummary(telemetryBindings);
 
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("viewBox", `${bounds.minX} ${bounds.minY} ${width} ${height}`);
@@ -585,20 +663,20 @@
                 <text x="${bounds.minX + 34}" y="${bounds.minY + 58}" font-size="20" font-family="Arial" fill="#0f172a" font-weight="700">${escapeHtml(page.displayName || page.name || "PX Preview")}</text>
             </g>
             <g>
-                ${children.map((component) => renderShape(component, telemetryByWidgetId.get(component.id))).join("")}
+                ${visibleChildren.map((component) => renderShape(component, telemetryByWidgetId.get(component.id))).join("")}
             </g>
         `;
         previewCanvas.appendChild(svg);
         telemetryState.active = telemetryBindings;
 
         bindingList.innerHTML = "";
-        bindings.forEach((binding) => {
+        telemetryBindings.forEach((telemetry) => {
+            const binding = bindings.find((item) => item.widgetId === telemetry.id) || {};
             const primaryLabel = binding.label || binding.widgetId;
             const fullLabel = binding.fullLabel && binding.fullLabel !== primaryLabel ? binding.fullLabel : "";
-            const telemetry = telemetryByWidgetId.get(binding.widgetId);
-            const initialValue = telemetry ? formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType) : "";
+            const initialValue = formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType);
             const item = document.createElement("div");
-            item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+            item.className = `min-w-0 overflow-hidden rounded-2xl border px-4 py-3 ${telemetry.canvasVisible ? "border-sky-200 bg-sky-50 dark:border-sky-900/40 dark:bg-sky-900/20" : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50"}`;
             item.innerHTML = `
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
@@ -610,7 +688,8 @@
                         <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
                             ${binding.bindingType || "binding"}
                         </span>
-                        ${telemetry ? `<div class="mt-2 text-xs font-semibold text-sky-700 dark:text-sky-300" data-binding-value="${telemetry.id}">${initialValue}</div>` : ""}
+                        <div class="mt-2 text-xs font-semibold text-sky-700 dark:text-sky-300" data-binding-value="${telemetry.id}">${initialValue}</div>
+                        <div class="mt-2 text-[11px] uppercase tracking-[0.16em] ${telemetry.canvasVisible ? "text-sky-600 dark:text-sky-300" : "text-gray-400 dark:text-gray-500"}">${telemetry.canvasVisible ? "On canvas" : "Readout only"}</div>
                     </div>
                 </div>
             `;
@@ -622,7 +701,7 @@
         }
 
         componentList.innerHTML = "";
-        children.forEach((component) => {
+        notableComponents(children).forEach((component) => {
             const item = document.createElement("div");
             item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
             const position = component.position || {};
