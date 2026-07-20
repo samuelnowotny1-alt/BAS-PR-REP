@@ -98,7 +98,10 @@ def test_seed_codex_demo_project_creates_project_and_outputs(tmp_path: Path) -> 
     assert {"submittal", "sequence", "manual", "point_schedule"} <= source_types
     assert {"station_runtime", "station_snapshot", "trend_log", "alarm_log"} <= source_types
     assert all(document.path for document in project.source_documents)
-    assert any(Path(document.path).exists() for document in project.source_documents if document.type == "submittal")
+    submittal_paths = [Path(document.path) for document in project.source_documents if document.type == "submittal"]
+    assert submittal_paths
+    assert all(path.exists() for path in submittal_paths)
+    assert all(path.is_relative_to(data_dir / "projects" / "codex-test-project" / "source_documents") for path in submittal_paths)
     assert (output_dir / "codex-test-project" / "checkout").exists()
     assert (output_dir / "codex-test-project" / "reports").exists()
     assert (output_dir / "codex-test-project" / "graphics").exists()

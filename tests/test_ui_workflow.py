@@ -117,6 +117,9 @@ def create_project(project_id: str = "pytest-project") -> str:
 def test_home_and_new_project_pages_load() -> None:
     home = run_async(main.index(request("/")))
     assert home.status_code == 200
+    home_text = response_text(home)
+    assert 'hx-post="/api/load-demo"' in home_text
+    assert "Load Demo Project" in home_text
 
     new_project = run_async(main.new_project_page(request("/project/new")))
 
@@ -1834,6 +1837,10 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
     assert (main.OUTPUT_DIR / "demo-hvac-project" / "graphics").exists()
     assert (main.OUTPUT_DIR / "demo-hvac-project" / "logic").exists()
     assert (main.OUTPUT_DIR / "demo-hvac-project" / "exports").exists()
+    demo_project = main.get_project("demo-hvac-project")
+    submittal_paths = [Path(document.path) for document in demo_project.source_documents if document.type == "submittal"]
+    assert submittal_paths
+    assert all(path.is_relative_to(main.DATA_DIR / "projects" / "demo-hvac-project" / "source_documents") for path in submittal_paths)
 
     documents_response = run_async(
         main.project_documents_page(
@@ -1859,6 +1866,41 @@ def test_load_demo_returns_htmx_redirect_header() -> None:
     ledger_text = response_text(ledger_response)
     assert "Demo project loaded with generated outputs" in ledger_text
     assert "demo-hvac-project" in ledger_text
+
+
+def test_demo_generated_pages_use_output_mount_links() -> None:
+    run_async(
+        main.api_load_demo(
+            request(
+                "/api/load-demo",
+                method="POST",
+                headers=[(b"hx-request", b"true")],
+            )
+        )
+    )
+
+    documents_response = run_async(
+        main.project_documents_page(
+            request("/project/demo-hvac-project/documents?mode=generated"),
+            "demo-hvac-project",
+            mode="generated",
+        )
+    )
+    graphics_response = run_async(
+        main.graphics_page(
+            request("/project/demo-hvac-project/graphics"),
+            "demo-hvac-project",
+        )
+    )
+
+    documents_text = response_text(documents_response)
+    graphics_text = response_text(graphics_response)
+
+    assert documents_response.status_code == 200
+    assert graphics_response.status_code == 200
+    assert "/output/demo-hvac-project/" in graphics_text
+    assert "/static/output/" not in documents_text
+    assert "/static/output/" not in graphics_text
 
 
 def test_duplicate_project_route_copies_data_outputs_and_generated_documents() -> None:

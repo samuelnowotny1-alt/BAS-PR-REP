@@ -296,12 +296,18 @@ def _render_demo_point_schedule(project: Project) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _attach_demo_source_documents(project: Project, project_id: str, examples_dir: Path) -> None:
+def _attach_demo_source_documents(
+    project: Project,
+    project_id: str,
+    examples_dir: Path,
+    *,
+    generated_documents_dir: Path | None = None,
+) -> None:
     """Attach realistic demo source documents so the seeded project resembles a station package."""
     equipment_path = examples_dir / "equipment_schedule.csv"
     points_path = examples_dir / "point_list.csv"
     controllers_path = examples_dir / "controller_schedule.csv"
-    document_dir = examples_dir / "demo_documents"
+    document_dir = generated_documents_dir or (examples_dir / "demo_documents")
 
     if equipment_path.exists():
         _upsert_source_document(
@@ -386,7 +392,13 @@ def _attach_demo_source_documents(project: Project, project_id: str, examples_di
         )
 
 
-def create_demo_project(project_id: str, project_name: str, examples_dir: Path) -> Project:
+def create_demo_project(
+    project_id: str,
+    project_name: str,
+    examples_dir: Path,
+    *,
+    generated_documents_dir: Path | None = None,
+) -> Project:
     """Create a demo project populated from the example CSV files."""
     from bas_assistant.importers import CSVImporter, create_sample_csvs
 
@@ -406,8 +418,21 @@ def create_demo_project(project_id: str, project_name: str, examples_dir: Path) 
     if controllers_path.exists():
         importer.import_controller_schedule(controllers_path, f"{project_id}_controllers")
 
-    _attach_demo_source_documents(project, project_id, examples_dir)
+    _attach_demo_source_documents(
+        project,
+        project_id,
+        examples_dir,
+        generated_documents_dir=generated_documents_dir,
+    )
     return project
+
+
+def demo_generated_documents_dir(projects_repo, project_id: str, examples_dir: Path) -> Path:
+    """Return the writable directory for generated demo source documents."""
+    project_dir = getattr(projects_repo, "project_dir", None)
+    if isinstance(project_dir, Path):
+        return project_dir / project_id / "source_documents"
+    return examples_dir / "demo_documents"
 
 
 def generate_demo_outputs(project: Project, output_dir: Path) -> None:
@@ -481,7 +506,12 @@ def provision_demo_project(
 ) -> Project:
     """Create, save, and generate artifacts for a demo project."""
     logger.info("Provisioning demo project '%s'", project_id)
-    project = create_demo_project(project_id, project_name, examples_dir)
+    project = create_demo_project(
+        project_id,
+        project_name,
+        examples_dir,
+        generated_documents_dir=demo_generated_documents_dir(projects_repo, project_id, examples_dir),
+    )
     projects_repo.save(project)
     generate_demo_outputs(project, output_dir)
     logger.info(
