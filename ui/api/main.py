@@ -1987,6 +1987,7 @@ def _enrich_recent_upload_views(recent_uploads: list[dict[str, object]]) -> list
 def _import_page_context(project: Project, project_id: str) -> dict[str, object]:
     workspace_view = container.project_queries.import_workspace_view(project_id)
     template_downloads = build_import_template_downloads(project_id)
+    mapping_review = build_mapping_review_summary(project)
     if workspace_view is None:
         return {
             "project": project,
@@ -1996,6 +1997,7 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
             "issue_taxonomy": build_issue_taxonomy(project, None),
             "inline_editors": build_import_editor_views(project),
             "template_downloads": template_downloads,
+            "mapping_review": mapping_review,
         }
     return {
         "project": project,
@@ -2005,6 +2007,7 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
         "issue_taxonomy": build_issue_taxonomy(project, workspace_view["import_status_view"]),
         "inline_editors": build_import_editor_views(project),
         "template_downloads": template_downloads,
+        "mapping_review": mapping_review,
     }
 
 
@@ -2223,6 +2226,21 @@ def import_template_content(template_type: str) -> tuple[str, str]:
         output_dir = Path(temp_dir)
         create_sample_csvs(output_dir)
         return filename, (output_dir / filename).read_text(encoding="utf-8")
+
+
+def build_mapping_review_summary(project: Project) -> dict[str, object]:
+    """Summarize unresolved mapping work for the import workspace."""
+    candidates = mapping_candidates_for_project(project)
+    unresolved = [candidate for candidate in candidates if not candidate.get("resolved_value")]
+    recommended = [candidate for candidate in unresolved if candidate.get("recommended_value")]
+    return {
+        "count": len(candidates),
+        "unresolved_count": len(unresolved),
+        "recommended_count": len(recommended),
+        "has_work": bool(candidates),
+        "needs_attention": bool(unresolved),
+        "url": f"/project/{project.metadata.project_id}/mappings",
+    }
 
 
 INLINE_EDITOR_FIELDS: dict[str, list[dict[str, object]]] = {

@@ -2530,6 +2530,37 @@ def test_project_import_template_download_returns_importer_aligned_csv() -> None
     assert "BACnet/IP,BACnet/MSTP" in body
 
 
+def test_import_page_surfaces_mapping_review_handoff() -> None:
+    project_id = create_project("import-mapping-review")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            type="MPC",
+            serves_equipment_ids=["AHU-1"],
+        )
+    )
+    project.add_point(
+        main.Point(
+            name="AHU-1 SAT",
+            equipment_id="UNRESOLVED-AHU",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+        )
+    )
+    main.save_project(project)
+
+    response = run_async(main.import_page(request(f"/project/{project_id}/import"), project_id))
+    text = response_text(response)
+
+    assert response.status_code == 200
+    assert "Relationship Cleanup" in text
+    assert "Open Mapping Review" in text
+    assert f"/project/{project_id}/mappings" in text
+    assert "Some imported relationships still need explicit review." in text
+
+
 def test_add_assumption_redirects_with_valid_category() -> None:
     project_id = create_project()
 
