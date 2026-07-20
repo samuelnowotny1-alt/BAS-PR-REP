@@ -27,7 +27,7 @@ from sqlalchemy import select
 from bas_assistant.auth import get_current_user, require_route_permission
 from bas_assistant.core import build_container
 from bas_assistant.database import DocumentRecord, ProjectRecord
-from bas_assistant.emulation import BasEmulationLab, ReadOnlyPointError
+from bas_assistant.emulation import BasEmulationLab, ReadOnlyPointError, WeatherWriteRequest
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
@@ -5776,6 +5776,49 @@ async def api_emulation_snapshot(project_id: str):
 @app.post("/api/project/{project_id}/emulation/step")
 async def api_emulation_step(project_id: str, steps: int = 1):
     return get_emulation_lab(project_id).step(steps=max(1, min(steps, 120))).model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/emulation/scenario")
+async def api_emulation_scenario(project_id: str, payload: dict[str, object]):
+    scenario = str(payload.get("scenario", "")).strip()
+    if not scenario:
+        raise HTTPException(status_code=400, detail="Payload must include 'scenario'.")
+    try:
+        return get_emulation_lab(project_id).set_scenario(scenario).model_dump(mode="json")
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown scenario {scenario}") from exc
+
+
+@app.post("/api/project/{project_id}/emulation/weather")
+async def api_emulation_weather(project_id: str, payload: dict[str, object]):
+    try:
+        request = WeatherWriteRequest.model_validate(payload)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=exc.errors()) from exc
+    return get_emulation_lab(project_id).set_weather(request).model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/emulation/controllers/{controller_id}")
+async def api_emulation_controller_state(project_id: str, controller_id: str, payload: dict[str, object]):
+    state = str(payload.get("state", "")).strip()
+    if not state:
+        raise HTTPException(status_code=400, detail="Payload must include 'state'.")
+    try:
+        return get_emulation_lab(project_id).set_controller_state(controller_id, state).model_dump(mode="json")
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown controller {controller_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid controller state {exc}") from exc
+
+
+@app.post("/api/project/{project_id}/emulation/reset")
+async def api_emulation_reset(project_id: str):
+    return get_emulation_lab(project_id).reset().model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/emulation/overrides/clear")
+async def api_emulation_clear_overrides(project_id: str):
+    return get_emulation_lab(project_id).clear_overrides().model_dump(mode="json")
 
 
 @app.post("/api/project/{project_id}/emulation/points/{point_name:path}")

@@ -154,6 +154,33 @@ def test_emulation_matches_space_delimited_airside_points() -> None:
     assert float(lab.get_point("AHU-1 OA HUM").present_value) >= 30.0
 
 
+def test_emulation_station_scenarios_and_overrides() -> None:
+    lab = BasEmulationLab(build_airside_project())
+
+    hot_snapshot = lab.set_scenario("hot_humid")
+    assert hot_snapshot.station["scenario_id"] == "hot_humid"
+    assert hot_snapshot.station["weather_mode"] == "scenario"
+
+    lab.write_point("AHU-1 SF CMD", 88.0)
+    assert "AHU-1 SF CMD" in lab.snapshot().station["overrides"]
+
+    reset_snapshot = lab.clear_overrides()
+    assert "AHU-1 SF CMD" not in reset_snapshot.station["overrides"]
+
+    freeze_snapshot = lab.set_scenario("freeze_alarm")
+    assert freeze_snapshot.weather["conditions"] == "freeze"
+    assert float(lab.get_point("AHU-1 SF CMD").present_value) == 0.0
+
+
+def test_emulation_controller_state_affects_station_summary() -> None:
+    lab = BasEmulationLab(build_airside_project())
+
+    degraded = lab.set_controller_state("MPC-1", "degraded")
+
+    assert degraded.station["controllers"][0]["state"] == "degraded"
+    assert degraded.station["controllers"][0]["health_pct"] == 62.0
+
+
 @pytest.mark.anyio
 async def test_emulation_api_supports_snapshot_and_writable_point_override() -> None:
     transport = httpx.ASGITransport(app=create_emulation_app(build_project()))
@@ -168,3 +195,24 @@ async def test_emulation_api_supports_snapshot_and_writable_point_override() -> 
 
         read_only_write = await client.post("/points/AHU-1_SAT", json={"value": 60.0})
         assert read_only_write.status_code == HTTP_BAD_REQUEST
+
+
+@pytest.mark.anyio
+async def test_emulation_api_supports_station_controls() -> None:
+    transport = httpx.ASGITransport(app=create_emulation_app(build_airside_project()))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        scenario = await client.post("/scenario", json={"scenario": "freeze_alarm"})
+        assert scenario.status_code == HTTP_OK
+        assert scenario.json()["station"]["scenario_id"] == "freeze_alarm"
+
+        weather = await client.post("/weather", json={"mode": "manual", "outdoor_air_temp": 77.5, "outdoor_air_humidity": 41.0})
+        assert weather.status_code == HTTP_OK
+        assert weather.json()["weather"]["outdoor_air_temp"] == 77.5
+
+        controller = await client.post("/controllers/MPC-1", json={"state": "offline"})
+        assert controller.status_code == HTTP_OK
+        assert controller.json()["station"]["controllers"][0]["state"] == "offline"
+
+        reset = await client.post("/reset")
+        assert reset.status_code == HTTP_OK
+        assert reset.json()["tick"] == 0
