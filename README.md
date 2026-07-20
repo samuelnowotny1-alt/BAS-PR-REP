@@ -64,6 +64,12 @@ bas --help
 5. Generate: **Checkout Sheets**, **Reports**, **Graphics**, **Logic Diagrams**
 6. Click **"Export"** → select all 6 vendors → download vendor-ready packages
 
+Fastest path for a first look:
+
+1. Open `/`
+2. Click **"Load Demo Project"**
+3. Open the demo project and inspect Documents, Graphics, Validation, Logic, and Export
+
 ## Project Structure
 
 ```
@@ -79,8 +85,8 @@ bas-assistant/
 │   ├── api/main.py          # All routes
 │   ├── templates/           # Jinja2 templates
 │   └── static/              # CSS/JS (minimal, CDN-based)
-├── examples/                # Sample CSV files + generated demo project
-├── tests/                   # Pytest suite (22 tests passing)
+├── examples/                # Sample CSV files + demo fixtures
+├── tests/                   # Pytest suite
 ├── docs/                    # Architecture, decisions, conventions
 └── bas-assistant-vault/     # Engineering wiki (Obsidian-compatible)
 ```
@@ -167,6 +173,11 @@ Environment variables:
 pytest tests/ -v
 # focused regression suite currently passes in CI/dev runs
 ```
+
+Current engineering snapshot:
+
+- project status: `docs/PROJECT_STATUS.md`
+- slice-by-slice audit: `docs/PROJECT_AUDIT.md`
 
 ## Legal Status
 

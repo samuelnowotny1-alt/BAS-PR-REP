@@ -126,10 +126,10 @@ Acceptance:
 - Example projects can run against simulated data for troubleshooting and demo workflows.
 
 ## Immediate Next Slices
-1. Add deterministic knowledge retrieval over stored chunks.
-2. Expose BAS object completeness and provenance more deeply in review pages.
-3. Normalize parser contracts so import paths behave consistently.
-4. Expand the project dashboard from counts to engineering status.
+1. Demo Ready Consolidation: align docs, queue state, runtime behavior, and demo review flow with what is already implemented.
+2. Graphics/Library Scope Review: decide which current workbench and lab assets are core product, supporting assets, or separate tooling.
+3. Import Ergonomics: inline editing and column mapping for real project intake.
+4. Deployment Standardization: document and enforce one production runtime model.
 
 ## Exit Criteria For Commercial Readiness
 - Authentication, persistence, and deployment are repeatable.
