@@ -1860,13 +1860,77 @@ def normalize_graphic_sections(raw_value: str) -> str:
     return ",".join(valid)
 
 
-def graphics_preview_pages(project: Project) -> list[dict[str, object]]:
+def build_preview_scene_from_record(record: dict[str, object]) -> dict[str, object]:
+    """Build a lightweight frontend scene payload from generated graphic asset placements."""
+    equipment = record.get("equipment")
+    asset_placements = list(record.get("asset_placement_details") or [])
+    primary = next((placement for placement in asset_placements if str(placement.get("role") or "") == "primary_equipment"), None)
+    sections = [
+        placement
+        for placement in asset_placements
+        if str(placement.get("role") or "").startswith("section:")
+    ]
+    sections.sort(key=lambda item: float(item.get("x") or 0))
+    return {
+        "equipmentId": equipment.id if equipment is not None else "",
+        "equipmentType": equipment.type.value if equipment is not None else "",
+        "graphicName": str(record.get("graphic_name") or ""),
+        "ductProfile": str((record.get("summary") or {}).get("duct_profile") or ""),
+        "sections": list((record.get("summary") or {}).get("graphic_sections") or []),
+        "primaryPlacement": {
+            "x": primary.get("x"),
+            "y": primary.get("y"),
+            "width": primary.get("width"),
+            "height": primary.get("height"),
+            "metadata": primary.get("metadata") or {},
+        } if primary else None,
+        "sectionPlacements": [
+            {
+                "role": str(placement.get("role") or ""),
+                "assetLabel": str(placement.get("asset_label") or ""),
+                "x": placement.get("x"),
+                "y": placement.get("y"),
+                "width": placement.get("width"),
+                "height": placement.get("height"),
+                "relatedPoints": [
+                    {
+                        "label": str(point.get("display_label") or point.get("point_name") or ""),
+                        "bindingType": str(point.get("binding_type") or ""),
+                        "units": str(point.get("units") or ""),
+                    }
+                    for point in list(placement.get("related_points") or [])[:4]
+                ],
+            }
+            for placement in sections
+        ],
+    }
+
+
+def graphics_preview_pages(
+    project: Project,
+    graphics_result: dict[str, object] | None = None,
+    *,
+    detail_records: list[dict[str, object]] | None = None,
+) -> list[dict[str, object]]:
     pages = NiagaraExporter(project).preview_pages()
+    if detail_records is None and graphics_result is not None:
+        detail_records = build_graphic_detail_records(project, graphics_result)
+    scene_by_equipment = {
+        str(record.get("equipment").id if record.get("equipment") is not None else ""): build_preview_scene_from_record(record)
+        for record in (detail_records or [])
+        if record.get("equipment") is not None
+    }
     equipment_pages = [
         page for page in pages
         if str(page.get("slotPath", "")).startswith("/Px/Equipment/")
     ]
-    return equipment_pages or pages
+    enriched = equipment_pages or pages
+    for page in enriched:
+        equipment_id = str(page.get("slotPath", "")).split("/")[-1]
+        scene = scene_by_equipment.get(equipment_id)
+        if scene is not None:
+            page["scene"] = scene
+    return enriched
 
 
 def _symbol_element_to_svg(element: dict[str, object], width: float, height: float) -> str:
@@ -5070,13 +5134,18 @@ async def graphics_page(request: Request, project_id: str):
     readiness = build_generation_readiness(project)
     persisted_graphics = load_generated_graphics_result(project)
     persisted_active_records = active_graphic_detail_records(project, persisted_graphics)
+    persisted_preview_pages = (
+        graphics_preview_pages(project, persisted_graphics, detail_records=persisted_active_records)
+        if persisted_graphics
+        else []
+    )
     station_delivery = build_station_delivery_readiness(project, graphics_result=persisted_graphics)
     if request.method == "GET":
         return templates.TemplateResponse(request=request, name="graphics.html", context={
             "project": project,
             "graphics_result": persisted_graphics,
             "graphic_detail_records": persisted_active_records,
-            "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
+            "niagara_preview_pages": persisted_preview_pages,
             "readiness": readiness,
             "station_delivery": station_delivery,
         })
@@ -5085,7 +5154,7 @@ async def graphics_page(request: Request, project_id: str):
             "project": project,
             "graphics_result": persisted_graphics,
             "graphic_detail_records": persisted_active_records,
-            "niagara_preview_pages": graphics_preview_pages(project) if persisted_graphics else [],
+            "niagara_preview_pages": persisted_preview_pages,
             "readiness": readiness,
             "station_delivery": station_delivery,
         })
@@ -5099,12 +5168,13 @@ async def graphics_page(request: Request, project_id: str):
         outputs=build_graphics_output_descriptors(project, result),
     )
     container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
-    niagara_preview = graphics_preview_pages(project)
+    detail_records = active_graphic_detail_records(project, result)
+    niagara_preview = graphics_preview_pages(project, result, detail_records=detail_records)
     station_delivery = build_station_delivery_readiness(project, graphics_result=result)
     return templates.TemplateResponse(request=request, name="graphics.html", context={
         "project": project,
         "graphics_result": result,
-        "graphic_detail_records": active_graphic_detail_records(project, result),
+        "graphic_detail_records": detail_records,
         "niagara_preview_pages": niagara_preview,
         "readiness": readiness,
         "station_delivery": station_delivery,

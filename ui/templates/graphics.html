@@ -523,6 +523,141 @@
         return important.length ? important.slice(0, 24) : children.slice(0, 24);
     }
 
+    function roleTitle(role) {
+        return String(role || "")
+            .replace("section:", "")
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    function sceneRect(placement, width, height) {
+        return {
+            x: Number(placement?.x || 0.12) * width,
+            y: Number(placement?.y || 0.26) * height,
+            width: Math.max(Number(placement?.width || 0.12) * width, 42),
+            height: Math.max(Number(placement?.height || 0.2) * height, 48),
+        };
+    }
+
+    function sectionTheme(role) {
+        const map = {
+            "section:outside_air": { front: "#dfe6ec", top: "#eef3f7", side: "#8e99a6", accent: "#1f2937", detail: "#94a3b8" },
+            "section:filter": { front: "#d9e1e8", top: "#eef2f7", side: "#8f99a5", accent: "#334155", detail: "#64748b" },
+            "section:cooling_coil": { front: "#d8e4ee", top: "#edf5fb", side: "#8aa0b5", accent: "#2563eb", detail: "#60a5fa" },
+            "section:heating_coil": { front: "#e9dfd7", top: "#f5ece5", side: "#a59485", accent: "#ea580c", detail: "#fb923c" },
+            "section:supply_fan": { front: "#d9dee5", top: "#ebf0f6", side: "#8a93a0", accent: "#10b981", detail: "#22c55e" },
+            "section:discharge": { front: "#d7dde4", top: "#eef2f7", side: "#8a95a1", accent: "#0f172a", detail: "#94a3b8" },
+        };
+        return map[role] || { front: "#dbe2e8", top: "#edf2f6", side: "#8f98a5", accent: "#475569", detail: "#94a3b8" };
+    }
+
+    function telemetryForSceneLabel(telemetryBindings, label) {
+        const normalized = String(label || "").toLowerCase().replaceAll("_", " ");
+        return telemetryBindings.find((item) => {
+            const candidate = String(item.fullLabel || item.label || "").toLowerCase().replaceAll("_", " ");
+            return candidate.includes(normalized) || normalized.includes(candidate);
+        }) || null;
+    }
+
+    function renderSceneSection(placement, telemetryBindings, width, height) {
+        const role = String(placement.role || "");
+        const rect = sceneRect(placement, width, height);
+        const depth = Math.max(14, Math.min(28, Math.round(rect.height * 0.14)));
+        const theme = sectionTheme(role);
+        const title = escapeHtml(roleTitle(role));
+        const callouts = (placement.relatedPoints || [])
+            .map((point) => {
+                const telemetry = telemetryForSceneLabel(telemetryBindings, point.label);
+                return {
+                    label: point.label,
+                    value: telemetry ? formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType) : (point.units || ""),
+                };
+            })
+            .slice(0, 2);
+        let internals = "";
+        if (role === "section:outside_air") {
+            internals = Array.from({ length: 4 }).map((_, index) => {
+                const lineY = rect.y + 12 + index * ((rect.height - 24) / 4);
+                return `<line x1="${rect.x + 10}" y1="${lineY}" x2="${rect.x + rect.width - 10}" y2="${lineY + 12}" stroke="${theme.accent}" stroke-width="5" stroke-linecap="round" opacity="0.88" />`;
+            }).join("");
+        } else if (role === "section:filter") {
+            internals = Array.from({ length: 4 }).map((_, index) => {
+                const cellX = rect.x + 10 + index * ((rect.width - 24) / 4);
+                return `<rect x="${cellX}" y="${rect.y + 14}" width="${Math.max((rect.width - 36) / 4, 10)}" height="${rect.height - 28}" rx="3" fill="rgba(255,255,255,0.34)" stroke="${theme.accent}" stroke-width="1.6" />`;
+            }).join("");
+        } else if (role === "section:cooling_coil" || role === "section:heating_coil") {
+            internals = Array.from({ length: 6 }).map((_, index) => {
+                const lineX = rect.x + 14 + index * ((rect.width - 28) / 6);
+                return `<line x1="${lineX}" y1="${rect.y + 10}" x2="${lineX}" y2="${rect.y + rect.height - 10}" stroke="${theme.detail}" stroke-width="3" opacity="0.95" />`;
+            }).join("") + Array.from({ length: 3 }).map((_, index) => {
+                const lineY = rect.y + 16 + index * ((rect.height - 32) / 3);
+                return `<line x1="${rect.x + 10}" y1="${lineY}" x2="${rect.x + rect.width - 10}" y2="${lineY}" stroke="${theme.accent}" stroke-width="1.4" opacity="0.7" />`;
+            }).join("");
+        } else if (role === "section:supply_fan") {
+            const cx = rect.x + rect.width * 0.58;
+            const cy = rect.y + rect.height * 0.5;
+            const rx = rect.width * 0.26;
+            const ry = rect.height * 0.28;
+            internals = `
+                <rect x="${rect.x + 10}" y="${rect.y + 12}" width="${rect.width - 20}" height="${rect.height - 24}" rx="10" fill="rgba(15,23,42,0.08)" stroke="rgba(15,23,42,0.14)" />
+                <ellipse cx="${cx}" cy="${cy}" rx="${rx + 10}" ry="${ry + 10}" fill="rgba(15,23,42,0.16)" />
+                <ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#204b7a" stroke="#1e293b" stroke-width="2" />
+                <ellipse cx="${cx}" cy="${cy}" rx="${rx * 0.62}" ry="${ry * 0.62}" fill="#22c55e" stroke="#1e293b" stroke-width="1.4" />
+                <ellipse cx="${cx}" cy="${cy}" rx="${rx * 0.18}" ry="${ry * 0.18}" fill="#e2e8f0" stroke="#64748b" stroke-width="1" />
+            `;
+        } else if (role === "section:discharge") {
+            internals = `<rect x="${rect.x + 10}" y="${rect.y + rect.height * 0.34}" width="${rect.width - 20}" height="${rect.height * 0.32}" rx="8" fill="rgba(255,255,255,0.24)" stroke="${theme.accent}" stroke-width="1.4" />`;
+        }
+        const calloutMarkup = callouts.map((item, index) => {
+            const chipY = rect.y - 24 - (index * 26);
+            return `
+                <g>
+                    <rect x="${rect.x + 8}" y="${chipY}" width="${Math.min(Math.max(rect.width - 16, 78), 164)}" height="20" rx="10" fill="rgba(255,255,255,0.96)" stroke="#cbd5e1" />
+                    <text x="${rect.x + 16}" y="${chipY + 13}" font-size="10" font-family="Arial" fill="#0f172a" font-weight="700">${escapeHtml(item.label)}</text>
+                    <text x="${rect.x + Math.min(Math.max(rect.width - 16, 78), 164) - 10}" y="${chipY + 13}" text-anchor="end" font-size="10" font-family="Arial" fill="#0f766e" font-weight="700">${escapeHtml(item.value)}</text>
+                </g>
+            `;
+        }).join("");
+        return `
+            <g>
+                <polygon points="${rect.x},${rect.y} ${rect.x + depth},${rect.y - depth} ${rect.x + rect.width + depth},${rect.y - depth} ${rect.x + rect.width},${rect.y}" fill="${theme.top}" stroke="#6b7280" stroke-width="1.2" />
+                <polygon points="${rect.x + rect.width},${rect.y} ${rect.x + rect.width + depth},${rect.y - depth} ${rect.x + rect.width + depth},${rect.y + rect.height - depth} ${rect.x + rect.width},${rect.y + rect.height}" fill="${theme.side}" stroke="#6b7280" stroke-width="1.2" />
+                <rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" rx="10" fill="${theme.front}" stroke="#475569" stroke-width="1.8" />
+                <rect x="${rect.x + 8}" y="${rect.y + 8}" width="${rect.width - 16}" height="${rect.height - 16}" rx="7" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.24)" />
+                ${internals}
+                <text x="${rect.x + rect.width / 2}" y="${rect.y + rect.height + 20}" text-anchor="middle" font-size="12" font-family="Arial" fill="#0f172a" font-weight="800">${title}</text>
+                ${calloutMarkup}
+            </g>
+        `;
+    }
+
+    function renderStructuredScene(scene, telemetryBindings, width, height) {
+        const primary = scene.primaryPlacement || { x: 0.08, y: 0.22, width: 0.84, height: 0.54 };
+        const frame = sceneRect(primary, width, height);
+        const sections = Array.isArray(scene.sectionPlacements) ? scene.sectionPlacements : [];
+        const depth = 24;
+        const sectionMarkup = sections.map((placement) => renderSceneSection(placement, telemetryBindings, width, height)).join("");
+        const duct = sections.find((placement) => String(placement.role || "") === "section:discharge");
+        const dischargeRect = duct ? sceneRect(duct, width, height) : null;
+        const dischargeMarkup = dischargeRect ? `
+            <g>
+                <polygon points="${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.22} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.16} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.84} ${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.78}" fill="#cfd6df" stroke="#64748b" stroke-width="1.4" />
+                <polygon points="${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.22} ${dischargeRect.x + dischargeRect.width + 16},${dischargeRect.y + dischargeRect.height * 0.02} ${dischargeRect.x + dischargeRect.width + 68},${dischargeRect.y - 10} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.16}" fill="#e8edf2" stroke="#94a3b8" stroke-width="1.2" />
+            </g>
+        ` : "";
+        return `
+            <g>
+                <polygon points="${frame.x},${frame.y} ${frame.x + depth},${frame.y - depth} ${frame.x + frame.width + depth},${frame.y - depth} ${frame.x + frame.width},${frame.y}" fill="#e2e8f0" stroke="#64748b" stroke-width="1.6" />
+                <polygon points="${frame.x + frame.width},${frame.y} ${frame.x + frame.width + depth},${frame.y - depth} ${frame.x + frame.width + depth},${frame.y + frame.height - depth} ${frame.x + frame.width},${frame.y + frame.height}" fill="#98a4b2" stroke="#64748b" stroke-width="1.6" />
+                <rect x="${frame.x}" y="${frame.y}" width="${frame.width}" height="${frame.height}" rx="12" fill="#d7dee6" stroke="#475569" stroke-width="2" />
+                <rect x="${frame.x + 8}" y="${frame.y + 8}" width="${frame.width - 16}" height="${frame.height - 16}" rx="10" fill="rgba(255,255,255,0.24)" stroke="rgba(255,255,255,0.32)" />
+                <rect x="${frame.x + 14}" y="${frame.y + frame.height * 0.42}" width="${frame.width - 28}" height="${Math.max(frame.height * 0.16, 22)}" rx="10" fill="rgba(59,130,246,0.10)" stroke="rgba(59,130,246,0.30)" stroke-width="1.6" />
+                ${sectionMarkup}
+                ${dischargeMarkup}
+            </g>
+        `;
+    }
+
     function computeBounds(children) {
         if (!children.length) {
             return { minX: 0, minY: 0, maxX: 760, maxY: 520 };
@@ -704,6 +839,7 @@
             }
             return true;
         });
+        const structuredScene = page.scene && page.scene.equipmentType === "AHU" && Array.isArray(page.scene.sectionPlacements) && page.scene.sectionPlacements.length;
         const bounds = computeBounds(children);
         const width = Math.max(bounds.maxX - bounds.minX, 760);
         const height = Math.max(bounds.maxY - bounds.minY, 520);
@@ -712,7 +848,7 @@
         previewPath.textContent = page.slotPath || "";
         previewSlotType.textContent = page.slotType || "";
         previewBindCount.textContent = `${bindings.length} bindings`;
-        previewCompCount.textContent = `${visibleChildren.length}/${children.length} shown`;
+        previewCompCount.textContent = structuredScene ? `${page.scene.sectionPlacements.length} sections` : `${visibleChildren.length}/${children.length} shown`;
 
         previewCanvas.innerHTML = "";
         previewCanvas.style.aspectRatio = `${width} / ${height}`;
@@ -739,7 +875,7 @@
                 <text x="${bounds.minX + 34}" y="${bounds.minY + 58}" font-size="20" font-family="Arial" fill="#0f172a" font-weight="700">${escapeHtml(page.displayName || page.name || "PX Preview")}</text>
             </g>
             <g filter="url(#px-preview-soft-shadow)">
-                ${visibleChildren.map((component) => renderShape(component, telemetryByWidgetId.get(component.id))).join("")}
+                ${structuredScene ? renderStructuredScene(page.scene, telemetryBindings, width, height) : visibleChildren.map((component) => renderShape(component, telemetryByWidgetId.get(component.id))).join("")}
             </g>
         `;
         previewCanvas.appendChild(svg);
@@ -777,25 +913,45 @@
         }
 
         componentList.innerHTML = "";
-        notableComponents(children).forEach((component) => {
-            const item = document.createElement("div");
-            item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
-            const position = component.position || {};
-            const slotType = component.slotType || "";
-            item.innerHTML = `
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                        <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${componentDisplayTitle(component)}</div>
-                        <div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">${slotType}</div>
+        if (structuredScene) {
+            page.scene.sectionPlacements.forEach((placement) => {
+                const item = document.createElement("div");
+                item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+                item.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${roleTitle(placement.role)}</div>
+                            <div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">${placement.assetLabel || placement.role}</div>
+                        </div>
+                        <div class="shrink-0 text-right text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                            <div>${(placement.relatedPoints || []).length} points</div>
+                            <div>${Math.round(Number(placement.width || 0) * 100)}% span</div>
+                        </div>
                     </div>
-                    <div class="shrink-0 text-right text-[11px] font-mono text-gray-500 dark:text-gray-400">
-                        <div>x ${position.x || 0}</div>
-                        <div>y ${position.y || 0}</div>
+                `;
+                componentList.appendChild(item);
+            });
+        } else {
+            notableComponents(children).forEach((component) => {
+                const item = document.createElement("div");
+                item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
+                const position = component.position || {};
+                const slotType = component.slotType || "";
+                item.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${componentDisplayTitle(component)}</div>
+                            <div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">${slotType}</div>
+                        </div>
+                        <div class="shrink-0 text-right text-[11px] font-mono text-gray-500 dark:text-gray-400">
+                            <div>x ${position.x || 0}</div>
+                            <div>y ${position.y || 0}</div>
+                        </div>
                     </div>
-                </div>
-            `;
-            componentList.appendChild(item);
-        });
+                `;
+                componentList.appendChild(item);
+            });
+        }
     }
 
     pageButtons.forEach((button) => {
