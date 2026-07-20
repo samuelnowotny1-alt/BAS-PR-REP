@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -1985,6 +1986,7 @@ def _enrich_recent_upload_views(recent_uploads: list[dict[str, object]]) -> list
 
 def _import_page_context(project: Project, project_id: str) -> dict[str, object]:
     workspace_view = container.project_queries.import_workspace_view(project_id)
+    template_downloads = build_import_template_downloads(project_id)
     if workspace_view is None:
         return {
             "project": project,
@@ -1993,6 +1995,7 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
             "import_review": build_import_review(None, project.metadata.project_id),
             "issue_taxonomy": build_issue_taxonomy(project, None),
             "inline_editors": build_import_editor_views(project),
+            "template_downloads": template_downloads,
         }
     return {
         "project": project,
@@ -2001,6 +2004,7 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
         "import_review": build_import_review(workspace_view["import_status_view"], project.metadata.project_id),
         "issue_taxonomy": build_issue_taxonomy(project, workspace_view["import_status_view"]),
         "inline_editors": build_import_editor_views(project),
+        "template_downloads": template_downloads,
     }
 
 
@@ -2171,6 +2175,54 @@ def _form_float(value: object) -> str:
 
 def _split_csv_values(value: str) -> list[str]:
     return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def build_import_template_downloads(project_id: str) -> list[dict[str, object]]:
+    """Describe the importer-aligned template downloads shown on the import page."""
+    return [
+        {
+            "template_type": "equipment",
+            "label": "Equipment Schedule",
+            "filename": "equipment_schedule.csv",
+            "url": f"/project/{project_id}/import/templates/equipment",
+            "required_columns": ["Equipment ID", "Equipment Type"],
+            "optional_highlights": ["Controller ID", "Graphic Sections", "Status"],
+        },
+        {
+            "template_type": "points",
+            "label": "Point List",
+            "filename": "point_list.csv",
+            "url": f"/project/{project_id}/import/templates/points",
+            "required_columns": ["Point Name", "Equipment ID", "Point Kind", "Direction"],
+            "optional_highlights": ["Controller ID", "BACnet Object Type", "Units"],
+        },
+        {
+            "template_type": "controllers",
+            "label": "Controller Schedule",
+            "filename": "controller_schedule.csv",
+            "url": f"/project/{project_id}/import/templates/controllers",
+            "required_columns": ["Controller ID"],
+            "optional_highlights": ["Protocols", "IP Address", "Serves Equipment"],
+        },
+    ]
+
+
+def import_template_content(template_type: str) -> tuple[str, str]:
+    """Return importer-aligned CSV template content and the exported filename."""
+    normalized = template_type.strip().lower()
+    filename_map = {
+        "equipment": "equipment_schedule.csv",
+        "points": "point_list.csv",
+        "controllers": "controller_schedule.csv",
+    }
+    filename = filename_map.get(normalized)
+    if filename is None:
+        raise HTTPException(status_code=404, detail="Unknown import template")
+
+    with tempfile.TemporaryDirectory(prefix="bas-import-templates-") as temp_dir:
+        output_dir = Path(temp_dir)
+        create_sample_csvs(output_dir)
+        return filename, (output_dir / filename).read_text(encoding="utf-8")
 
 
 INLINE_EDITOR_FIELDS: dict[str, list[dict[str, object]]] = {
@@ -4401,6 +4453,17 @@ async def import_page(request: Request, project_id: str):
 async def import_editor_section(request: Request, project_id: str, entity_type: str):
     project = get_project(project_id)
     return _render_import_editor_section(request, project, entity_type)
+
+
+@app.get("/project/{project_id}/import/templates/{template_type}")
+async def download_import_template(project_id: str, template_type: str):
+    get_project(project_id)
+    filename, content = import_template_content(template_type)
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.post("/project/{project_id}/import/editor/{entity_type}/save", response_class=HTMLResponse)

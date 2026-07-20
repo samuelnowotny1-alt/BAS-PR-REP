@@ -2500,6 +2500,36 @@ def test_sample_csv_api_generates_expected_templates(
     assert "BACnet/IP,BACnet/MSTP" in controller_template
 
 
+def test_import_page_exposes_real_project_template_downloads() -> None:
+    project_id = create_project("import-template-page")
+
+    response = run_async(main.import_page(request(f"/project/{project_id}/import"), project_id))
+    text = response_text(response)
+
+    assert response.status_code == 200
+    assert "Real Project Kickstart" in text
+    assert f"/project/{project_id}/import/templates/equipment" in text
+    assert f"/project/{project_id}/import/templates/points" in text
+    assert f"/project/{project_id}/import/templates/controllers" in text
+    assert "Equipment ID, Equipment Type" in text
+    assert "Point Name, Equipment ID, Point Kind, Direction" in text
+
+
+def test_project_import_template_download_returns_importer_aligned_csv() -> None:
+    project_id = create_project("import-template-download")
+
+    response = run_async(main.download_import_template(project_id, "controllers"))
+
+    assert response.status_code == 200
+    assert response.headers["content-disposition"] == 'attachment; filename="controller_schedule.csv"'
+    assert "text/csv" in response.media_type
+    body = response.body.decode()
+    assert "Controller ID" in body
+    assert "MS/TP MAC" in body
+    assert "Network Number" in body
+    assert "BACnet/IP,BACnet/MSTP" in body
+
+
 def test_add_assumption_redirects_with_valid_category() -> None:
     project_id = create_project()
 
