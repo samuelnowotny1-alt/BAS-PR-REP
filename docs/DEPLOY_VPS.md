@@ -1,12 +1,15 @@
 # Deploying BAS Assistant To a VPS
 
-This app already has a working Dockerfile and Compose setup. The safest production shape is:
+Current standard production shape:
 
-- BAS Assistant in Docker
+- BAS Assistant launched by `scripts/start_production.sh`
 - bound to `127.0.0.1:8000`
 - Nginx reverse proxy on `80/443`
-- TLS via Let's Encrypt
+- persistent runtime state in `data/`, `output/`, `uploads/`, and `logs/`
 - app auth enabled with bootstrap admin credentials and session-based login
+
+Note:
+Docker artifacts still exist in the repo for local and alternate deployment use, but the reviewed VPS path is the direct `uvicorn` runtime behind Nginx.
 
 ## Prerequisites
 
@@ -14,16 +17,13 @@ This app already has a working Dockerfile and Compose setup. The safest producti
 - A DNS record pointing your domain or subdomain to the VPS
 - SSH access with a sudo-capable user
 
-## 1. Install Docker and Nginx
+## 1. Install Runtime Prerequisites
 
 ```bash
 sudo apt update
-sudo apt install -y docker.io docker-compose-plugin nginx certbot python3-certbot-nginx apache2-utils
-sudo systemctl enable --now docker nginx
-sudo usermod -aG docker "$USER"
+sudo apt install -y python3 python3-venv python3-pip nginx certbot python3-certbot-nginx apache2-utils
+sudo systemctl enable --now nginx
 ```
-
-Log out and back in after adding yourself to the `docker` group.
 
 ## 2. Copy the project to the server
 
@@ -34,7 +34,7 @@ mkdir -p ~/apps
 cd ~/apps
 git clone <your-repo-url> bas-assistant
 cd bas-assistant
-mkdir -p data output
+mkdir -p data output uploads logs
 ```
 
 ## 3. Configure runtime environment
@@ -43,6 +43,9 @@ mkdir -p data output
 cp config/bas-assistant.env.example config/bas-assistant.env
 nano config/bas-assistant.env
 mkdir -p logs data output uploads
+python3 -m venv .venv
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -e .
 ```
 
 Set at minimum:
@@ -51,25 +54,23 @@ Set at minimum:
 - `BAS_DATABASE_URL`
 - `BAS_BOOTSTRAP_ADMIN_PASSWORD`
 
-## 4. Start the application container
+## 4. Start the application
 
-The production compose file binds the app only to localhost:
+Use the bundled production launcher:
 
 ```bash
-docker compose -f deploy/docker-compose.prod.yml up -d --build
-docker compose -f deploy/docker-compose.prod.yml ps
-curl -I http://127.0.0.1:8000/
+./scripts/start_production.sh
 ```
 
-If that `curl` returns `200 OK`, the app is running.
-
-You can also verify the new health endpoint:
+In another shell:
 
 ```bash
 curl http://127.0.0.1:8000/healthz
 ```
 
-If you are running outside Docker, initialize the database schema with:
+If you want the process to survive shell exit, run it under `systemd` as described below.
+
+Initialize the database schema if needed:
 
 ```bash
 .venv/bin/alembic upgrade head
@@ -144,22 +145,13 @@ Better options:
 - Put it behind Cloudflare Access or Tailscale
 - Run it on a private VPN-only host
 
-## 8. Optional systemd service for non-Docker deployments
-
-If you want the FastAPI app managed directly by `systemd` instead of Docker:
+## 8. Recommended systemd service
 
 ```bash
 sudo cp deploy/bas-assistant.service.example /etc/systemd/system/bas-assistant.service
-sudo nano /etc/systemd/system/bas-assistant.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now bas-assistant.service
 sudo systemctl status bas-assistant.service --no-pager
-```
-
-Use the bundled startup script for manual verification:
-
-```bash
-./scripts/start_production.sh
 ```
 
 ## 9. Updating the deployment
@@ -167,16 +159,11 @@ Use the bundled startup script for manual verification:
 ```bash
 cd ~/apps/bas-assistant
 git pull
-docker compose -f deploy/docker-compose.prod.yml up -d --build
+.venv/bin/pip install -e .
+sudo systemctl restart bas-assistant.service
 ```
 
 ## 10. Logs and troubleshooting
-
-Container logs:
-
-```bash
-docker compose -f deploy/docker-compose.prod.yml logs -f
-```
 
 Application logs:
 
@@ -193,7 +180,7 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 Health checks:
 
 ```bash
-curl -I http://127.0.0.1:8000/
+curl http://127.0.0.1:8000/healthz
 curl -I https://bas.example.com
 ```
 

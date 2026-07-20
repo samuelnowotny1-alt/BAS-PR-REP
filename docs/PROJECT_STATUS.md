@@ -72,4 +72,4 @@ Deferred until after this slice:
 1. Commit the current runtime/demo-storage and audit pass.
 2. Treat `docs/PROJECT_STATUS.md` and `docs/PROJECT_AUDIT.md` as the current planning baseline.
 3. Use `docs/DEMO_READY_CHECKLIST.md` as the acceptance gate for the current slice.
-4. Review the remaining graphics/library/lab-bench scope as the following release slice.
+4. Use `docs/GRAPHICS_LIBRARY_NEXT_SLICE.md` as the follow-on slice definition after demo-ready consolidation.

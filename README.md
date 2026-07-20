@@ -55,20 +55,27 @@ bas --help
 ## Demo in 30 Seconds
 
 1. Open http://localhost:8000
-2. Click **"New Project"** → fill in project ID/name → Create
-3. Click **"Import Data"** → upload the 3 sample CSVs from `examples/`
-   - `equipment_schedule.csv`
-   - `point_list.csv`
-   - `controller_schedule.csv`
-4. Click **"Validate"** → see 0 errors (green!)
-5. Generate: **Checkout Sheets**, **Reports**, **Graphics**, **Logic Diagrams**
-6. Click **"Export"** → select all 6 vendors → download vendor-ready packages
+2. Click **"Load Demo Project"**
+3. Open the demo project
+4. Inspect:
+   - **Documents** for generated artifacts
+   - **Validation** for findings and exports
+   - **Graphics** for workbench, detail, and fullscreen preview
+   - **Logic** for generated sequences
+   - **Export** for vendor packages
 
 Fastest path for a first look:
 
 1. Open `/`
 2. Click **"Load Demo Project"**
 3. Open the demo project and inspect Documents, Graphics, Validation, Logic, and Export
+
+Manual project flow is still available:
+
+1. Create a new project
+2. Import `equipment_schedule.csv`, `point_list.csv`, and `controller_schedule.csv`
+3. Validate and generate outputs
+4. Export to target vendors
 
 ## Project Structure
 
@@ -141,6 +148,15 @@ bas emulate project.json -o emulation --serve --host 0.0.0.0 --port 8787
 
 ## Production Runtime
 
+Current reviewed production mode:
+
+- app launched by `scripts/start_production.sh`
+- bound to `127.0.0.1:8000`
+- Nginx in front on `80/443`
+- persistent runtime state in `data/`, `output/`, `uploads/`, and `logs/`
+
+Docker deployment artifacts remain available, but the current VPS path is the direct app runtime behind Nginx.
+
 - Environment example: `config/bas-assistant.env.example`
 - Local launcher: `scripts/run_ui_server.sh`
 - Production launcher: `scripts/start_production.sh`
@@ -178,6 +194,8 @@ Current engineering snapshot:
 
 - project status: `docs/PROJECT_STATUS.md`
 - slice-by-slice audit: `docs/PROJECT_AUDIT.md`
+- demo-ready acceptance gate: `docs/DEMO_READY_CHECKLIST.md`
+- follow-on graphics/library slice: `docs/GRAPHICS_LIBRARY_NEXT_SLICE.md`
 
 ## Legal Status
 

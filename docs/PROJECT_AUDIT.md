@@ -44,5 +44,5 @@ This audit reflects the current BAS Assistant repo and live VPS state, not the o
 1. Keep the current release slice focused on demo-ready consolidation.
 2. Commit only reviewed state and keep runtime artifacts out of the repo.
 3. After consolidation, either:
-   - package graphics/library/lab-bench intentionally as the next slice, or
+   - package graphics/library/lab-bench intentionally as the next slice using `docs/GRAPHICS_LIBRARY_NEXT_SLICE.md`, or
    - pivot to real-project import ergonomics with inline editing and column mapping.

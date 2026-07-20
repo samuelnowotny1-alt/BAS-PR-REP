@@ -27,6 +27,7 @@ The wiki governs planning, implementation, testing, documentation, and generated
 - [Project Status](PROJECT_STATUS.md)
 - [Project Audit](PROJECT_AUDIT.md)
 - [Demo Ready Checklist](DEMO_READY_CHECKLIST.md)
+- [Graphics / Library / Lab Bench Slice](GRAPHICS_LIBRARY_NEXT_SLICE.md)
 
 ## Design Reasoning
 The wiki exists before application logic so the project has stable engineering boundaries from day one. Future code should conform to documented behavior. If code and documentation conflict, the discrepancy must be recorded and reviewed instead of silently changing behavior.
