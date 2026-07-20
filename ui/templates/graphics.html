@@ -310,6 +310,7 @@
     const previewCompCount = document.getElementById("preview-comp-count");
     const bindingList = document.getElementById("binding-list");
     const componentList = document.getElementById("component-list");
+    const telemetryState = { frame: 0, active: [], rafId: null };
 
     function componentColor(component) {
         const slotType = component.slotType || "";
@@ -341,6 +342,93 @@
         return slotType.includes("Label") || slotType.includes("Text");
     }
 
+    function componentDisplayTitle(component) {
+        const slotType = component.slotType || "";
+        if (slotType.includes("BoundLabel")) {
+            return component.annotations?.fullPointName || component.displayName || component.name || "Bound Label";
+        }
+        if (slotType.includes("Rect")) return "Rectangle";
+        if (slotType.includes("Ellipse") || slotType.includes("Circle")) return "Ellipse";
+        if (slotType.includes("Line")) return "Line";
+        return component.displayName || component.name || slotType.replace("px:", "");
+    }
+
+    function resolveTelemetryProfile(label, units, bindingType, index) {
+        const name = String(label || "").toLowerCase();
+        const normalizedUnits = String(units || "").toLowerCase();
+        if (name.includes("sat") || name.includes("supply") && name.includes("temp") || name.includes("discharge")) {
+            return { base: 55, amplitude: 3.6, phase: index * 0.8, units: units || "degF" };
+        }
+        if (name.includes("mat") || name.includes("mixed")) {
+            return { base: 68, amplitude: 4.1, phase: index * 0.7, units: units || "degF" };
+        }
+        if (name.includes("rat") || name.includes("return")) {
+            return { base: 74, amplitude: 3.1, phase: index * 0.6, units: units || "degF" };
+        }
+        if (name.includes("oat") || name.includes("outside")) {
+            return { base: 91, amplitude: 5.4, phase: index * 0.9, units: units || "degF" };
+        }
+        if (name.includes("flow") || normalizedUnits.includes("cfm")) {
+            return { base: 8450, amplitude: 1225, phase: index * 0.5, units: units || "cfm" };
+        }
+        if (name.includes("static") || normalizedUnits.includes("inwc") || normalizedUnits.includes("pa")) {
+            return { base: 1.72, amplitude: 0.34, phase: index * 0.4, units: units || "inWC" };
+        }
+        if (name.includes("speed") || name.includes("vfd") || name.includes("fan")) {
+            return { base: 62, amplitude: 14, phase: index * 0.55, units: units || "%" };
+        }
+        if (name.includes("cmd") || name.includes("pos") || name.includes("valve") || name.includes("damper")) {
+            return { base: 48, amplitude: 24, phase: index * 0.45, units: units || "%" };
+        }
+        if (bindingType === "status") {
+            return { base: 1, amplitude: 0, phase: index * 0.3, units: units || "state" };
+        }
+        return { base: 1.0, amplitude: 0.2, phase: index * 0.3, units: units || "" };
+    }
+
+    function formatTelemetryValue(value, units, bindingType) {
+        if (bindingType === "status") {
+            return value >= 0.5 ? "ON" : "OFF";
+        }
+        const normalizedUnits = String(units || "").toLowerCase();
+        if (normalizedUnits.includes("cfm") || normalizedUnits.includes("gpm")) {
+            return `${Math.round(value).toLocaleString()} ${units}`.trim();
+        }
+        if (normalizedUnits.includes("deg") || normalizedUnits.includes("°")) {
+            return `${value.toFixed(1)} ${units}`.trim();
+        }
+        if (normalizedUnits.includes("inwc") || normalizedUnits.includes("psi") || normalizedUnits.includes("pa") || normalizedUnits.includes("kpa")) {
+            return `${value.toFixed(2)} ${units}`.trim();
+        }
+        if (normalizedUnits === "%" || normalizedUnits.includes("percent")) {
+            return `${Math.round(value)}%`;
+        }
+        if (units) {
+            return `${value.toFixed(1)} ${units}`.trim();
+        }
+        return value.toFixed(1);
+    }
+
+    function buildTelemetryBindings(bindings, children) {
+        const componentById = new Map(children.map((component) => [component.id, component]));
+        return bindings.map((binding, index) => {
+            const component = componentById.get(binding.widgetId);
+            const units = component?.facets?.units || "";
+            const profile = resolveTelemetryProfile(binding.fullLabel || binding.label, units, binding.bindingType, index);
+            return {
+                id: binding.widgetId || binding.id || `binding-${index}`,
+                label: binding.label || binding.widgetId || `Point ${index + 1}`,
+                fullLabel: binding.fullLabel || binding.label || "",
+                bindingType: binding.bindingType || "binding",
+                units: profile.units,
+                base: profile.base,
+                amplitude: profile.amplitude,
+                phase: profile.phase,
+                value: profile.base,
+            };
+        });
+    }
+
     function computeBounds(children) {
         if (!children.length) {
             return { minX: 0, minY: 0, maxX: 760, maxY: 520 };
@@ -366,7 +454,7 @@
         return { minX, minY, maxX, maxY };
     }
 
-    function renderShape(component) {
+    function renderShape(component, telemetry) {
         const slotType = component.slotType || "";
         const position = component.position || {};
         const x = Number(position.x || 0);
@@ -388,7 +476,6 @@
             return `
                 <g>
                     <ellipse cx="${x + (width / 2)}" cy="${y + (height / 2)}" rx="${Math.max(width / 2, 2)}" ry="${Math.max(height / 2, 2)}" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
-                    <text x="${x + (width / 2)}" y="${y + (height / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>
                 </g>
             `;
         }
@@ -396,10 +483,13 @@
         if (slotType.includes("BoundLabel")) {
             const badgeX = x + width - 18;
             const badgeY = y - 10;
+            const valueText = escapeHtml(telemetry ? formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType) : "--");
             return `
                 <g>
-                    <rect x="${x}" y="${y}" width="${Math.max(width, 96)}" height="${Math.max(height, 26)}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
+                    <rect x="${x}" y="${y}" width="${Math.max(width, 144)}" height="${Math.max(height, 30)}" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
                     <text x="${x + 12}" y="${y + (Math.max(height, 26) / 2)}" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>
+                    <rect x="${x + Math.max(width, 144) - 82}" y="${y + 5}" width="72" height="${Math.max(height, 26) - 10}" rx="8" fill="#0f172a" opacity="0.9" />
+                    <text x="${x + Math.max(width, 144) - 46}" y="${y + (Math.max(height, 26) / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="Arial" fill="#f8fafc" font-weight="700" data-telemetry-value="${escapeHtml(telemetry?.id || "")}">${valueText}</text>
                     <circle cx="${badgeX}" cy="${badgeY + 8}" r="9" fill="#dbeafe" stroke="#60a5fa" stroke-width="1.5" />
                     <text x="${badgeX}" y="${badgeY + 8}" text-anchor="middle" dominant-baseline="middle" font-size="10" font-family="Arial" fill="#1d4ed8" font-weight="700">B</text>
                 </g>
@@ -422,9 +512,30 @@
         return `
             <g>
                 <rect x="${x}" y="${y}" width="${Math.max(width, 8)}" height="${Math.max(height, 8)}" rx="8" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
-                ${label ? `<text x="${x + (Math.max(width, 8) / 2)}" y="${y + (Math.max(height, 8) / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="600">${label}</text>` : ""}
             </g>
         `;
+    }
+
+    function tickTelemetry() {
+        telemetryState.frame += 1;
+        const t = telemetryState.frame / 60;
+        telemetryState.active.forEach((item, index) => {
+            if (item.bindingType === "status") {
+                item.value = Math.sin((t * 0.7) + item.phase) > -0.2 ? 1 : 0;
+            } else {
+                const wave = Math.sin(t + item.phase);
+                const wobble = Math.sin((t * 0.47) + index) * 0.18;
+                item.value = item.base + (wave * item.amplitude) + (wobble * item.amplitude);
+            }
+            const formatted = formatTelemetryValue(item.value, item.units, item.bindingType);
+            previewCanvas.querySelectorAll(`[data-telemetry-value="${CSS.escape(item.id)}"]`).forEach((node) => {
+                node.textContent = formatted;
+            });
+            bindingList.querySelectorAll(`[data-binding-value="${CSS.escape(item.id)}"]`).forEach((node) => {
+                node.textContent = formatted;
+            });
+        });
+        telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
     }
 
     function renderPage(index) {
@@ -442,6 +553,8 @@
         const root = page.components?.root || {};
         const children = root.children || [];
         const bindings = page.bindings || [];
+        const telemetryBindings = buildTelemetryBindings(bindings, children);
+        const telemetryByWidgetId = new Map(telemetryBindings.map((item) => [item.id, item]));
         const bounds = computeBounds(children);
         const width = Math.max(bounds.maxX - bounds.minX, 760);
         const height = Math.max(bounds.maxY - bounds.minY, 520);
@@ -472,15 +585,18 @@
                 <text x="${bounds.minX + 34}" y="${bounds.minY + 58}" font-size="20" font-family="Arial" fill="#0f172a" font-weight="700">${escapeHtml(page.displayName || page.name || "PX Preview")}</text>
             </g>
             <g>
-                ${children.map((component) => renderShape(component)).join("")}
+                ${children.map((component) => renderShape(component, telemetryByWidgetId.get(component.id))).join("")}
             </g>
         `;
         previewCanvas.appendChild(svg);
+        telemetryState.active = telemetryBindings;
 
         bindingList.innerHTML = "";
         bindings.forEach((binding) => {
             const primaryLabel = binding.label || binding.widgetId;
             const fullLabel = binding.fullLabel && binding.fullLabel !== primaryLabel ? binding.fullLabel : "";
+            const telemetry = telemetryByWidgetId.get(binding.widgetId);
+            const initialValue = telemetry ? formatTelemetryValue(telemetry.value, telemetry.units, telemetry.bindingType) : "";
             const item = document.createElement("div");
             item.className = "min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50";
             item.innerHTML = `
@@ -490,9 +606,12 @@
                         ${fullLabel ? `<div class="mt-1 truncate text-[11px] uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">${fullLabel}</div>` : ""}
                         <div class="mt-1 break-all text-xs font-mono text-gray-500 dark:text-gray-400">${binding.sourceOrd || binding.targetOrd || ""}</div>
                     </div>
-                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
-                        ${binding.bindingType || "binding"}
-                    </span>
+                    <div class="shrink-0 text-right">
+                        <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                            ${binding.bindingType || "binding"}
+                        </span>
+                        ${telemetry ? `<div class="mt-2 text-xs font-semibold text-sky-700 dark:text-sky-300" data-binding-value="${telemetry.id}">${initialValue}</div>` : ""}
+                    </div>
                 </div>
             `;
             bindingList.appendChild(item);
@@ -511,7 +630,7 @@
             item.innerHTML = `
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
-                        <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${component.displayName || component.name}</div>
+                        <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${componentDisplayTitle(component)}</div>
                         <div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">${slotType}</div>
                     </div>
                     <div class="shrink-0 text-right text-[11px] font-mono text-gray-500 dark:text-gray-400">
@@ -535,6 +654,9 @@
         0
     );
     renderPage(defaultPageIndex);
+    if (!telemetryState.rafId) {
+        telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
+    }
 </script>
 {% endif %}
 {% endblock %}
