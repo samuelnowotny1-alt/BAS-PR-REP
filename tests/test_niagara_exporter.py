@@ -264,10 +264,13 @@ def test_niagara_export_uses_section_based_ahu_layout(tmp_path: Path) -> None:
     bindings = {binding["label"]: binding for binding in ahu_page["bindings"]}
     cooling_valve_widget = next(
         component for component in children
-        if component["slotType"] == "px:BoundLabel" and component["displayName"] == "AHU-1_CCV_CMD"
+        if component["slotType"] == "px:BoundLabel" and component["annotations"].get("fullPointName") == "AHU-1_CCV_CMD"
     )
 
-    assert bindings["AHU-1_CCV_CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
+    assert bindings["CCV_CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
+    assert bindings["CCV_CMD"]["fullLabel"] == "AHU-1_CCV_CMD"
+    assert cooling_valve_widget["displayName"] == "CCV_CMD"
+    assert cooling_valve_widget["position"]["width"] < 240
     assert 460 <= cooling_valve_widget["position"]["x"] <= 560
     assert cooling_valve_widget["position"]["y"] < 180
     rect_count = sum(1 for component in children if component["slotType"] == "px:Rect")
@@ -287,6 +290,25 @@ def test_niagara_preview_components_include_rendering_style_metadata() -> None:
     assert line_component["style"]["strokeWidth"] >= 1
     assert text_component["style"]["fontSize"] >= 8
     assert text_component["style"]["fontFamily"] == "Arial"
+
+
+def test_niagara_preview_pages_use_compact_binding_labels() -> None:
+    exporter = NiagaraExporter(build_project())
+
+    pages = exporter.preview_pages()
+
+    ahu_page = next(page for page in pages if page.get("slotPath") == "/Px/Equipment/AHU-1")
+    labels = {binding["fullLabel"]: binding["label"] for binding in ahu_page["bindings"]}
+    bound_labels = {
+        component["annotations"].get("fullPointName"): component["displayName"]
+        for component in ahu_page["components"]["root"]["children"]
+        if component["slotType"] == "px:BoundLabel"
+    }
+
+    assert labels["AHU-1_SAT"] == "SAT"
+    assert labels["AHU-1_SAT_SP"] == "SAT SP"
+    assert bound_labels["AHU-1_SAT"] == "SAT"
+    assert bound_labels["AHU-1_SAT_SP"] == "SAT SP"
 
 
 def test_dashboard_preview_cards_clear_header_band() -> None:

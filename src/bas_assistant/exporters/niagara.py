@@ -158,6 +158,31 @@ class NiagaraExporter(BaseExporter):
         controller_name = self.project.effective_point_controller_id(point) or "Unassigned"
         return self._slot_path("Drivers", "BacnetNetwork", controller_name, "Points", point.name)
 
+    def _display_name_for_point(self, point: Point) -> str:
+        equipment_id = (point.equipment_id or "").strip()
+        name = point.name.strip()
+        if not equipment_id:
+            return name
+
+        normalized_name = name.replace("_", " ").strip()
+        normalized_equipment = equipment_id.replace("_", " ").strip()
+        if normalized_name == normalized_equipment:
+            return name
+        if normalized_name.startswith(normalized_equipment + " "):
+            trimmed = normalized_name[len(normalized_equipment):].strip(" -_/")
+            if trimmed:
+                return trimmed
+        return name
+
+    def _binding_label_for_point(self, point: Point) -> str:
+        display_name = self._display_name_for_point(point)
+        if point.kind == PointKind.ALARM:
+            return f"ALM {display_name}"
+        return display_name
+
+    def _binding_widget_width(self, label: str) -> int:
+        return max(120, min(190, 36 + len(label) * 10))
+
     def _equipment_slot_path(self, equip: Equipment) -> str:
         return self._slot_path(
             "Config",
@@ -669,18 +694,24 @@ class NiagaraExporter(BaseExporter):
         for point in points:
             family = self._binding_family(point)
             generated_binding = generated_bindings.get(point.name)
+            point_label = self._binding_label_for_point(point)
             if generated_binding:
                 position = {
                     "x": int(generated_binding.x * graphic.width),
                     "y": int(generated_binding.y * graphic.height),
-                    "width": 240,
+                    "width": self._binding_widget_width(point_label),
                     "height": 28,
                 }
             else:
                 base_x, base_y = grouped.get(family, (40, 390))
                 offset = counts.get(family, 0)
                 counts[family] = offset + 1
-                position = {"x": base_x, "y": base_y + offset * 34, "width": 260, "height": 28}
+                position = {
+                    "x": base_x,
+                    "y": base_y + offset * 34,
+                    "width": self._binding_widget_width(point_label),
+                    "height": 28,
+                }
             widget_id = self._uid("px:widget", f"{equip.id}:{point.name}:widget")
             components.append(
                 {
@@ -688,7 +719,7 @@ class NiagaraExporter(BaseExporter):
                     "name": self._sanitize_name(point.name),
                     "parentId": "root",
                     "slotType": "px:BoundLabel",
-                    "displayName": point.name,
+                    "displayName": point_label,
                     "position": position,
                     "facets": self._facet_block(
                         units=point.units,
@@ -696,7 +727,11 @@ class NiagaraExporter(BaseExporter):
                         writable=point.direction.value in ("output", "bidirectional"),
                         summary=point.description or point.name,
                     ),
-                    "annotations": {"equipmentId": equip.id, "pointOrd": self._point_ord(point)},
+                    "annotations": {
+                        "equipmentId": equip.id,
+                        "pointOrd": self._point_ord(point),
+                        "fullPointName": point.name,
+                    },
                 }
             )
             bindings.append(
@@ -704,7 +739,8 @@ class NiagaraExporter(BaseExporter):
                     "id": self._uid("binding", f"{equip.id}:{point.name}"),
                     "widgetId": widget_id,
                     "bindingType": family,
-                    "label": point.name,
+                    "label": point_label,
+                    "fullLabel": point.name,
                     "sourceOrd": self._point_ord(point),
                     "slotPath": self._point_slot_path(point),
                     "format": self._display_format(point),
