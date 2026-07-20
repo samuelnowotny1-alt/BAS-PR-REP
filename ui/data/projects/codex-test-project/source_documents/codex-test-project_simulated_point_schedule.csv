@@ -1,0 +1,48 @@
+Point Name,Equipment ID,Controller ID,Point Kind,Direction,Units,BACnet Object Type,BACnet Instance,Source,Source Reference,Description
+AHU-1 SAT,AHU-1,MPC-1,sensor,input,degF,AI,1,point_list,AHU-1 SAT,Supply air temperature
+AHU-1 DAT SP,AHU-1,MPC-1,setpoint,input,degF,AV,2,point_list,AHU-1 DAT SP,Discharge air temperature setpoint
+AHU-1 MAT,AHU-1,MPC-1,sensor,input,degF,AI,3,point_list,AHU-1 MAT,Mixed air temperature
+AHU-1 RAT,AHU-1,MPC-1,sensor,input,degF,AI,4,point_list,AHU-1 RAT,Return air temperature
+AHU-1 OAT,AHU-1,MPC-1,sensor,input,degF,AI,5,point_list,AHU-1 OAT,Outdoor air temperature
+AHU-1 OA HUM,AHU-1,MPC-1,sensor,input,%RH,AI,6,point_list,AHU-1 OA HUM,Outdoor air humidity
+AHU-1 SF CMD,AHU-1,MPC-1,actuator,output,%,AO,7,point_list,AHU-1 SF CMD,Supply fan speed command
+AHU-1 SF STATUS,AHU-1,MPC-1,status,input,,BI,8,point_list,AHU-1 SF STATUS,Supply fan proof
+AHU-1 SF VFD SPD,AHU-1,MPC-1,sensor,input,%,AI,9,point_list,AHU-1 SF VFD SPD,Supply fan VFD speed
+AHU-1 OA DAMPER,AHU-1,MPC-1,actuator,output,%,AO,10,point_list,AHU-1 OA DAMPER,Outside air damper command
+AHU-1 RA DAMPER,AHU-1,MPC-1,actuator,output,%,AO,11,point_list,AHU-1 RA DAMPER,Return air damper command
+AHU-1 EA DAMPER,AHU-1,MPC-1,actuator,output,%,AO,12,point_list,AHU-1 EA DAMPER,Exhaust air damper command
+AHU-1 CLG VALVE,AHU-1,MPC-1,actuator,output,%,AO,13,point_list,AHU-1 CLG VALVE,Cooling valve command
+AHU-1 HTG VALVE,AHU-1,MPC-1,actuator,output,%,AO,14,point_list,AHU-1 HTG VALVE,Heating valve command
+AHU-1 DUCT SP,AHU-1,MPC-1,sensor,input,inWC,AI,15,point_list,AHU-1 DUCT SP,Supply duct static pressure
+AHU-1 FILTER DP,AHU-1,MPC-1,sensor,input,inWC,AI,16,point_list,AHU-1 FILTER DP,Filter differential pressure
+AHU-1 FREEZE STAT,AHU-1,MPC-1,alarm,input,,BI,17,point_list,AHU-1 FREEZE STAT,Freeze protection status
+AHU-1 DUCT SMOKE,AHU-1,MPC-1,alarm,input,,BI,18,point_list,AHU-1 DUCT SMOKE,Duct smoke status
+AHU-1 SAF ALM,AHU-1,MPC-1,alarm,input,,BI,19,point_list,AHU-1 SAF ALM,Supply airflow alarm
+VAV-101 FLOW,VAV-101,VAV-101,sensor,input,CFM,AI,20,point_list,VAV-101 FLOW,Measured airflow
+VAV-101 FLOW SP,VAV-101,VAV-101,setpoint,input,CFM,AV,21,point_list,VAV-101 FLOW SP,Airflow setpoint
+VAV-101 DAMPER,VAV-101,VAV-101,actuator,output,%,AO,22,point_list,VAV-101 DAMPER,Damper command
+VAV-101 ZT,VAV-101,VAV-101,sensor,input,degF,AI,23,point_list,VAV-101 ZT,Zone temperature
+VAV-101 ZT SP,VAV-101,VAV-101,setpoint,input,degF,AV,24,point_list,VAV-101 ZT SP,Zone temperature setpoint
+VAV-101 REHEAT CMD,VAV-101,VAV-101,actuator,output,%,AO,25,point_list,VAV-101 REHEAT CMD,Reheat command
+VAV-101 OCC,VAV-101,VAV-101,status,input,,BI,26,point_list,VAV-101 OCC,Occupancy status
+VAV-102 FLOW,VAV-102,VAV-102,sensor,input,CFM,AI,27,point_list,VAV-102 FLOW,Measured airflow
+VAV-102 FLOW SP,VAV-102,VAV-102,setpoint,input,CFM,AV,28,point_list,VAV-102 FLOW SP,Airflow setpoint
+VAV-102 DAMPER,VAV-102,VAV-102,actuator,output,%,AO,29,point_list,VAV-102 DAMPER,Damper command
+VAV-102 ZT,VAV-102,VAV-102,sensor,input,degF,AI,30,point_list,VAV-102 ZT,Zone temperature
+VAV-102 ZT SP,VAV-102,VAV-102,setpoint,input,degF,AV,31,point_list,VAV-102 ZT SP,Zone temperature setpoint
+VAV-102 REHEAT CMD,VAV-102,VAV-102,actuator,output,%,AO,32,point_list,VAV-102 REHEAT CMD,Reheat command
+VAV-102 OCC,VAV-102,VAV-102,status,input,,BI,33,point_list,VAV-102 OCC,Occupancy status
+VAV-103 FLOW,VAV-103,VAV-103,sensor,input,CFM,AI,34,point_list,VAV-103 FLOW,Measured airflow
+VAV-103 FLOW SP,VAV-103,VAV-103,setpoint,input,CFM,AV,35,point_list,VAV-103 FLOW SP,Airflow setpoint
+VAV-103 DAMPER,VAV-103,VAV-103,actuator,output,%,AO,36,point_list,VAV-103 DAMPER,Damper command
+VAV-103 ZT,VAV-103,VAV-103,sensor,input,degF,AI,37,point_list,VAV-103 ZT,Zone temperature
+VAV-103 ZT SP,VAV-103,VAV-103,setpoint,input,degF,AV,38,point_list,VAV-103 ZT SP,Zone temperature setpoint
+VAV-103 REHEAT CMD,VAV-103,VAV-103,actuator,output,%,AO,39,point_list,VAV-103 REHEAT CMD,Reheat command
+VAV-103 OCC,VAV-103,VAV-103,status,input,,BI,40,point_list,VAV-103 OCC,Occupancy status
+VAV-104 FLOW,VAV-104,VAV-104,sensor,input,CFM,AI,41,point_list,VAV-104 FLOW,Measured airflow
+VAV-104 FLOW SP,VAV-104,VAV-104,setpoint,input,CFM,AV,42,point_list,VAV-104 FLOW SP,Airflow setpoint
+VAV-104 DAMPER,VAV-104,VAV-104,actuator,output,%,AO,43,point_list,VAV-104 DAMPER,Damper command
+VAV-104 ZT,VAV-104,VAV-104,sensor,input,degF,AI,44,point_list,VAV-104 ZT,Zone temperature
+VAV-104 ZT SP,VAV-104,VAV-104,setpoint,input,degF,AV,45,point_list,VAV-104 ZT SP,Zone temperature setpoint
+VAV-104 REHEAT CMD,VAV-104,VAV-104,actuator,output,%,AO,46,point_list,VAV-104 REHEAT CMD,Reheat command
+VAV-104 OCC,VAV-104,VAV-104,status,input,,BI,47,point_list,VAV-104 OCC,Occupancy status

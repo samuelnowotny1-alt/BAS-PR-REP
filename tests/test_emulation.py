@@ -66,6 +66,49 @@ def build_project() -> Project:
     return project
 
 
+def build_airside_project() -> Project:
+    project = Project(metadata=ProjectMetadata(project_id="EMU-AHU", name="Airside Emulator Test"))
+    project.add_controller(
+        Controller(
+            id="MPC-1",
+            name="Main Airside Controller",
+            vendor="Bench Vendor",
+            model="Bench-AHU",
+            protocols=[Protocol.BACNET_IP],
+            network_addresses=[
+                ControllerNetworkAddress(
+                    protocol=Protocol.BACNET_IP,
+                    address="10.10.10.21",
+                    network_number=2001,
+                )
+            ],
+        )
+    )
+    for name, kind, direction, units, object_type in [
+        ("AHU-1 SAT", PointKind.SENSOR, PointDirection.INPUT, "degF", "AI"),
+        ("AHU-1 DAT SP", PointKind.SETPOINT, PointDirection.BIDIRECTIONAL, "degF", "AV"),
+        ("AHU-1 OAT", PointKind.SENSOR, PointDirection.INPUT, "degF", "AI"),
+        ("AHU-1 OA HUM", PointKind.SENSOR, PointDirection.INPUT, "%RH", "AI"),
+        ("AHU-1 SF CMD", PointKind.ACTUATOR, PointDirection.OUTPUT, "%", "AO"),
+        ("AHU-1 SF STATUS", PointKind.STATUS, PointDirection.INPUT, "", "BI"),
+        ("AHU-1 OA DAMPER", PointKind.ACTUATOR, PointDirection.OUTPUT, "%", "AO"),
+        ("AHU-1 CLG VALVE", PointKind.ACTUATOR, PointDirection.OUTPUT, "%", "AO"),
+        ("AHU-1 HTG VALVE", PointKind.ACTUATOR, PointDirection.OUTPUT, "%", "AO"),
+    ]:
+        project.add_point(
+            Point(
+                name=name,
+                equipment_id="AHU-1",
+                controller_id="MPC-1",
+                kind=kind,
+                direction=direction,
+                units=units,
+                bacnet_object_type=object_type,
+            )
+        )
+    return project
+
+
 def test_emulation_lab_builds_gateway_and_controller_manifest() -> None:
     lab = BasEmulationLab(build_project(), gateway_name="JACE-EMU")
 
@@ -92,6 +135,23 @@ def test_emulation_step_changes_read_only_sensor_but_not_writable_setpoint() -> 
     assert lab.tick == STEP_COUNT
     assert lab.get_point("AHU-1_SAT").present_value != baseline_sensor
     assert lab.get_point("AHU-1_SAT-SP").present_value == baseline_setpoint
+    assert "outdoor_air_temp" in lab.snapshot().weather
+
+
+def test_emulation_matches_space_delimited_airside_points() -> None:
+    lab = BasEmulationLab(build_airside_project())
+
+    lab.write_point("AHU-1 SF CMD", 72.0)
+    lab.write_point("AHU-1 OA DAMPER", 36.0)
+    lab.write_point("AHU-1 CLG VALVE", 64.0)
+    lab.write_point("AHU-1 HTG VALVE", 0.0)
+    lab.write_point("AHU-1 DAT SP", 55.0)
+    lab.step()
+
+    assert lab.get_point("AHU-1 SF STATUS").present_value is True
+    assert float(lab.get_point("AHU-1 SAT").present_value) < 57.0
+    assert float(lab.get_point("AHU-1 OAT").present_value) >= 70.0
+    assert float(lab.get_point("AHU-1 OA HUM").present_value) >= 30.0
 
 
 @pytest.mark.anyio

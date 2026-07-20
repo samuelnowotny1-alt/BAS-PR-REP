@@ -165,6 +165,13 @@
                     </div>
                     <div class="relative z-10 min-w-0 space-y-5 bg-white p-5 dark:bg-gray-800">
                         <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Emulator Lab</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Weather, controller commands, and writable points from the simulated station.</p>
+                            <div id="emulation-status" class="mt-3 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800 dark:border-orange-900/40 dark:bg-orange-900/20 dark:text-orange-200"></div>
+                            <div id="emulation-weather" class="mt-3 grid gap-2 sm:grid-cols-2"></div>
+                            <div id="emulation-controls" class="mt-3 max-h-[260px] space-y-2 overflow-auto pr-1"></div>
+                        </div>
+                        <div class="min-w-0">
                             <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Critical Readouts</p>
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">High-value signals stay visible on the canvas. Lower-priority points remain here so the page reads cleanly.</p>
                             <div id="preview-summary" class="mt-3 grid gap-2 sm:grid-cols-2"></div>
@@ -313,7 +320,12 @@
     const previewSummary = document.getElementById("preview-summary");
     const bindingList = document.getElementById("binding-list");
     const componentList = document.getElementById("component-list");
-    const telemetryState = { frame: 0, active: [], rafId: null };
+    const emulationStatus = document.getElementById("emulation-status");
+    const emulationWeather = document.getElementById("emulation-weather");
+    const emulationControls = document.getElementById("emulation-controls");
+    const emulationWriteBaseUrl = "/api/project/{{ project.metadata.project_id }}/emulation/points/";
+    const emulationStepUrl = "/api/project/{{ project.metadata.project_id }}/emulation/step";
+    const telemetryState = { frame: 0, active: [], rafId: null, emulationTimerId: null, mode: "synthetic" };
     const MAX_CANVAS_BINDINGS = 6;
 
     function componentColor(component) {
@@ -437,6 +449,7 @@
                 id: binding.widgetId || binding.id || `binding-${index}`,
                 label: binding.label || binding.widgetId || `Point ${index + 1}`,
                 fullLabel: binding.fullLabel || binding.label || "",
+                pointName: binding.fullLabel || binding.label || "",
                 bindingType: binding.bindingType || "binding",
                 units: profile.units,
                 base: profile.base,
@@ -495,6 +508,112 @@
         ];
     }
 
+    function syncTelemetryDom(items) {
+        items.forEach((item) => {
+            const formatted = formatTelemetryValue(item.value, item.units, item.bindingType);
+            previewCanvas.querySelectorAll(`[data-telemetry-value="${CSS.escape(item.id)}"]`).forEach((node) => {
+                node.textContent = formatted;
+            });
+            bindingList.querySelectorAll(`[data-binding-value="${CSS.escape(item.id)}"]`).forEach((node) => {
+                node.textContent = formatted;
+            });
+        });
+    }
+
+    function formatEmulationValue(value, units) {
+        if (typeof value === "boolean") {
+            return value ? "ON" : "OFF";
+        }
+        if (typeof value === "number") {
+            return formatTelemetryValue(value, units || "", typeof value === "boolean" ? "status" : "sensor");
+        }
+        return String(value ?? "");
+    }
+
+    function renderEmulationPanel(snapshot) {
+        if (!emulationStatus || !emulationWeather || !emulationControls) {
+            return;
+        }
+
+        const devices = snapshot.devices || [];
+        const points = devices.flatMap((device) => device.points || []);
+        const writablePoints = points.filter((point) => point.writable).slice(0, 10);
+        const weather = snapshot.weather || {};
+
+        emulationStatus.innerHTML = `
+            <div class="flex items-center justify-between gap-3">
+                <div>
+                    <div class="text-[11px] font-semibold uppercase tracking-[0.18em]">Station State</div>
+                    <div class="mt-1 text-sm font-semibold">Tick ${snapshot.tick ?? 0} · ${telemetryState.mode === "emulated" ? "Emulated telemetry" : "Fallback telemetry"}</div>
+                </div>
+                <div class="text-right text-xs">
+                    <div>${devices.length} devices</div>
+                    <div>${points.length} points</div>
+                </div>
+            </div>
+        `;
+
+        const weatherCards = [
+            { label: "OAT", value: formatEmulationValue(weather.outdoor_air_temp, "degF") },
+            { label: "Humidity", value: formatEmulationValue(weather.outdoor_air_humidity, "%") },
+            { label: "Wind", value: formatEmulationValue(weather.wind_mph, "mph") },
+            { label: "Conditions", value: String(weather.conditions || "unknown") },
+        ];
+        emulationWeather.innerHTML = weatherCards.map((card) => `
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400">${card.label}</p>
+                <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-white">${escapeHtml(card.value)}</p>
+            </div>
+        `).join("");
+
+        if (!writablePoints.length) {
+            emulationControls.innerHTML = '<div class="rounded-2xl border border-dashed border-gray-300 px-4 py-4 text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No writable test points were found on this simulated station.</div>';
+            return;
+        }
+
+        emulationControls.innerHTML = writablePoints.map((point) => {
+            const pointName = String(point.point_name || "");
+            const encodedPoint = encodeURIComponent(pointName);
+            const value = point.present_value;
+            if (typeof value === "boolean") {
+                return `
+                    <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${escapeHtml(pointName)}</div>
+                                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">${escapeHtml(point.controller_id || "")} · ${escapeHtml(point.units || "cmd")}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">${value ? "ON" : "OFF"}</div>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <button type="button" class="btn-secondary text-xs" data-emulation-point="${encodedPoint}" data-emulation-value="true">Force ON</button>
+                            <button type="button" class="btn-secondary text-xs" data-emulation-point="${encodedPoint}" data-emulation-value="false">Force OFF</button>
+                        </div>
+                    </div>
+                `;
+            }
+            return `
+                <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold text-gray-900 dark:text-white">${escapeHtml(pointName)}</div>
+                            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">${escapeHtml(point.controller_id || "")} · ${escapeHtml(point.units || "")}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-xs font-semibold text-sky-700 dark:text-sky-300">${escapeHtml(formatEmulationValue(value, point.units || ""))}</div>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex items-center gap-2">
+                        <input type="number" step="0.1" value="${Number(value)}" data-emulation-input="${encodedPoint}" class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white" />
+                        <button type="button" class="btn-primary text-xs" data-emulation-apply="${encodedPoint}">Apply</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+    }
+
     function renderPreviewSummary(items) {
         if (!previewSummary) {
             return;
@@ -521,6 +640,21 @@
             return false;
         });
         return important.length ? important.slice(0, 24) : children.slice(0, 24);
+    }
+
+    function shouldRenderComponentOnCanvas(component, telemetryByWidgetId) {
+        const slotType = component.slotType || "";
+        if (slotType.includes("BoundLabel")) {
+            const telemetry = telemetryByWidgetId.get(component.id);
+            return !telemetry || telemetry.canvasVisible;
+        }
+        if (slotType.includes("LinkButton")) {
+            return true;
+        }
+        if (slotType.includes("Label") || slotType.includes("Text")) {
+            return false;
+        }
+        return true;
     }
 
     function roleTitle(role) {
@@ -794,6 +928,10 @@
     }
 
     function tickTelemetry() {
+        if (telemetryState.mode !== "synthetic") {
+            telemetryState.rafId = null;
+            return;
+        }
         telemetryState.frame += 1;
         const t = telemetryState.frame / 60;
         telemetryState.active.forEach((item, index) => {
@@ -804,15 +942,117 @@
                 const wobble = Math.sin((t * 0.47) + index) * 0.18;
                 item.value = item.base + (wave * item.amplitude) + (wobble * item.amplitude);
             }
-            const formatted = formatTelemetryValue(item.value, item.units, item.bindingType);
-            previewCanvas.querySelectorAll(`[data-telemetry-value="${CSS.escape(item.id)}"]`).forEach((node) => {
-                node.textContent = formatted;
-            });
-            bindingList.querySelectorAll(`[data-binding-value="${CSS.escape(item.id)}"]`).forEach((node) => {
-                node.textContent = formatted;
-            });
         });
+        syncTelemetryDom(telemetryState.active);
         telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
+    }
+
+    function applyEmulationSnapshot(snapshot) {
+        const pointByName = new Map();
+        for (const device of snapshot.devices || []) {
+            for (const point of device.points || []) {
+                pointByName.set(String(point.point_name || "").toUpperCase(), point);
+            }
+        }
+        let matched = 0;
+        telemetryState.active.forEach((item) => {
+            const point = pointByName.get(String(item.pointName || "").toUpperCase());
+            if (!point) {
+                return;
+            }
+            matched += 1;
+            item.value = point.present_value;
+            item.units = point.units || item.units;
+            if (typeof point.present_value === "boolean" || point.kind === "status" || point.kind === "alarm") {
+                item.bindingType = "status";
+            } else if (point.kind === "actuator") {
+                item.bindingType = "actuator";
+            } else if (point.kind === "setpoint") {
+                item.bindingType = "setpoint";
+            } else {
+                item.bindingType = "sensor";
+            }
+        });
+        if (!matched) {
+            return false;
+        }
+        telemetryState.mode = "emulated";
+        syncTelemetryDom(telemetryState.active);
+        renderEmulationPanel(snapshot);
+        return true;
+    }
+
+    async function writeEmulationPoint(pointName, value) {
+        const response = await fetch(`${emulationWriteBaseUrl}${pointName}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+        });
+        if (!response.ok) {
+            throw new Error(`Write HTTP ${response.status}`);
+        }
+        await refreshEmulationTelemetry();
+    }
+
+    async function refreshEmulationTelemetry() {
+        try {
+            const response = await fetch(`${emulationStepUrl}?steps=1`, { method: "POST" });
+            if (!response.ok) {
+                throw new Error(`Emulation HTTP ${response.status}`);
+            }
+            const snapshot = await response.json();
+            const applied = applyEmulationSnapshot(snapshot);
+            if (!applied && telemetryState.mode !== "synthetic") {
+                telemetryState.mode = "synthetic";
+                if (!telemetryState.rafId) {
+                    telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
+                }
+            }
+        } catch (_error) {
+            if (telemetryState.mode !== "synthetic") {
+                telemetryState.mode = "synthetic";
+                if (!telemetryState.rafId) {
+                    telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
+                }
+            }
+        }
+    }
+
+    function ensureTelemetryDriver() {
+        if (telemetryState.emulationTimerId === null) {
+            telemetryState.emulationTimerId = window.setInterval(refreshEmulationTelemetry, 4000);
+        }
+        refreshEmulationTelemetry();
+        if (telemetryState.mode === "synthetic" && !telemetryState.rafId) {
+            telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
+        }
+    }
+
+    if (emulationControls) {
+        emulationControls.addEventListener("click", async (event) => {
+            const target = event.target.closest("[data-emulation-point],[data-emulation-apply]");
+            if (!target) {
+                return;
+            }
+            try {
+                if (target.dataset.emulationPoint) {
+                    const rawValue = target.dataset.emulationValue;
+                    const value = rawValue === "true" ? true : rawValue === "false" ? false : rawValue;
+                    await writeEmulationPoint(target.dataset.emulationPoint, value);
+                    return;
+                }
+                if (target.dataset.emulationApply) {
+                    const pointName = target.dataset.emulationApply;
+                    const input = emulationControls.querySelector(`[data-emulation-input="${CSS.escape(pointName)}"]`);
+                    const numericValue = Number(input?.value ?? "0");
+                    await writeEmulationPoint(pointName, numericValue);
+                }
+            } catch (_error) {
+                if (emulationStatus) {
+                    emulationStatus.innerHTML = '<div class="text-sm font-semibold text-red-700 dark:text-red-300">Write failed. Check that the point is writable in the emulator.</div>';
+                }
+            }
+        });
     }
 
     function renderPage(index) {
@@ -832,13 +1072,7 @@
         const bindings = page.bindings || [];
         const telemetryBindings = buildTelemetryBindings(bindings, children);
         const telemetryByWidgetId = new Map(telemetryBindings.map((item) => [item.id, item]));
-        const visibleChildren = children.filter((component) => {
-            if ((component.slotType || "").includes("BoundLabel")) {
-                const telemetry = telemetryByWidgetId.get(component.id);
-                return !telemetry || telemetry.canvasVisible;
-            }
-            return true;
-        });
+        const visibleChildren = children.filter((component) => shouldRenderComponentOnCanvas(component, telemetryByWidgetId));
         const structuredScene = page.scene && page.scene.equipmentType === "AHU" && Array.isArray(page.scene.sectionPlacements) && page.scene.sectionPlacements.length;
         const bounds = computeBounds(children);
         const width = Math.max(bounds.maxX - bounds.minX, 760);
@@ -880,6 +1114,7 @@
         `;
         previewCanvas.appendChild(svg);
         telemetryState.active = telemetryBindings;
+        telemetryState.mode = "synthetic";
 
         bindingList.innerHTML = "";
         telemetryBindings.forEach((telemetry) => {
@@ -965,9 +1200,7 @@
         0
     );
     renderPage(defaultPageIndex);
-    if (!telemetryState.rafId) {
-        telemetryState.rafId = window.requestAnimationFrame(tickTelemetry);
-    }
+    ensureTelemetryDriver();
 </script>
 {% endif %}
 {% endblock %}

@@ -27,6 +27,7 @@ from sqlalchemy import select
 from bas_assistant.auth import get_current_user, require_route_permission
 from bas_assistant.core import build_container
 from bas_assistant.database import DocumentRecord, ProjectRecord
+from bas_assistant.emulation import BasEmulationLab, ReadOnlyPointError
 from bas_assistant.models import (
     Project, ProjectMetadata, Equipment, EquipmentType, Point, PointKind,
     PointDirection, PointSource, Controller, Protocol, UnitSystem,
@@ -85,6 +86,7 @@ OUTPUT_DIR = Path(os.environ.get("BAS_OUTPUT_DIR", SETTINGS.output_dir))
 projects: dict[str, Project] = {}
 assumption_trackers: dict[str, AssumptionTracker] = {}
 station_sync_passwords: dict[str, str] = {}
+emulation_labs: dict[str, tuple[datetime, BasEmulationLab]] = {}
 
 
 def refresh_projects_cache() -> dict[str, Project]:
@@ -172,6 +174,17 @@ def get_project(project_id: str) -> Project:
         raise HTTPException(status_code=404, detail="Project not found")
     projects[project_id] = project
     return project
+
+
+def get_emulation_lab(project_id: str) -> BasEmulationLab:
+    project = get_project(project_id)
+    cached = emulation_labs.get(project_id)
+    updated_at = project.metadata.updated_at
+    if cached is None or cached[0] != updated_at:
+        cached_lab = BasEmulationLab(project=project)
+        emulation_labs[project_id] = (updated_at, cached_lab)
+        return cached_lab
+    return cached[1]
 
 
 def build_unique_project_id(base_project_id: str) -> str:
@@ -5753,6 +5766,29 @@ async def api_points_list(project_id: str):
 @app.get("/api/project/{project_id}/controllers")
 async def api_controllers_list(project_id: str):
     return container.project_queries.controllers_list(project_id)["rows"]
+
+
+@app.get("/api/project/{project_id}/emulation/snapshot")
+async def api_emulation_snapshot(project_id: str):
+    return get_emulation_lab(project_id).snapshot().model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/emulation/step")
+async def api_emulation_step(project_id: str, steps: int = 1):
+    return get_emulation_lab(project_id).step(steps=max(1, min(steps, 120))).model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/emulation/points/{point_name:path}")
+async def api_emulation_write_point(project_id: str, point_name: str, payload: dict[str, object]):
+    if "value" not in payload:
+        raise HTTPException(status_code=400, detail="Payload must include 'value'.")
+    try:
+        point = get_emulation_lab(project_id).write_point(point_name, payload["value"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=f"Unknown point {point_name}") from exc
+    except ReadOnlyPointError as exc:
+        raise HTTPException(status_code=400, detail=f"Point {exc} is read-only in the emulator") from exc
+    return point.model_dump(mode="json")
 
 
 @app.get("/api/project/{project_id}/knowledge/search")

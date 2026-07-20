@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -67,6 +68,7 @@ class EmulationSnapshot(BaseModel):
     generated_at: datetime
     tick: int
     project_id: str
+    weather: dict[str, bool | float | int | str] = Field(default_factory=dict)
     devices: list[EmulatedDevice]
 
 
@@ -84,6 +86,11 @@ def _stable_instance(*parts: str) -> int:
     seed = "::".join(parts).encode("utf-8")
     digest = hashlib.sha1(seed).hexdigest()
     return int(digest[:8], 16) % BACNET_MAX_INSTANCE + 1
+
+
+def _normalize_token(value: str) -> str:
+    """Collapse BAS point labels into a delimiter-agnostic token."""
+    return re.sub(r"[^A-Z0-9]+", "", value.upper())
 
 
 def _protocol_for_controller(project: Project, controller_id: str) -> str:
@@ -172,6 +179,13 @@ class BasEmulationLab:
         self.gateway_name = gateway_name
         self.tick = 0
         self.gateway, self.controllers = self._build_devices()
+        self.weather = {
+            "outdoor_air_temp": 91.0,
+            "outdoor_air_humidity": 58.0,
+            "wind_mph": 7.5,
+            "cloud_cover_pct": 24.0,
+            "conditions": "sunny",
+        }
 
     def _build_devices(self) -> tuple[EmulatedDevice, list[EmulatedDevice]]:
         project_id = self.project.metadata.project_id
@@ -248,12 +262,14 @@ class BasEmulationLab:
             generated_at=datetime.now(UTC),
             tick=self.tick,
             project_id=self.project.metadata.project_id,
+            weather=dict(self.weather),
             devices=devices,
         )
 
     def step(self, steps: int = 1) -> EmulationSnapshot:
         for _ in range(max(steps, 0)):
             self.tick += 1
+            self._step_weather()
             for device in self.controllers:
                 for point in device.points:
                     if point.writable:
@@ -261,18 +277,120 @@ class BasEmulationLab:
                     point.present_value = self._next_value(point)
         return self.snapshot()
 
+    def _step_weather(self) -> None:
+        diurnal = math.sin(self.tick / 18.0)
+        humidity_wave = math.sin((self.tick + 5) / 23.0)
+        wind_wave = math.sin((self.tick + 9) / 11.0)
+        cloud_wave = math.sin((self.tick + 17) / 14.0)
+        outdoor_air_temp = round(88.0 + (diurnal * 9.0), 1)
+        outdoor_air_humidity = round(54.0 + (humidity_wave * 11.0), 1)
+        wind_mph = round(max(1.5, 6.5 + (wind_wave * 4.5)), 1)
+        cloud_cover_pct = round(max(0.0, min(100.0, 35.0 + (cloud_wave * 38.0))), 1)
+        if cloud_cover_pct > 72:
+            conditions = "overcast"
+        elif outdoor_air_humidity > 66 and cloud_cover_pct > 48:
+            conditions = "humid"
+        elif outdoor_air_temp > 92:
+            conditions = "hot"
+        else:
+            conditions = "sunny"
+        self.weather = {
+            "outdoor_air_temp": outdoor_air_temp,
+            "outdoor_air_humidity": outdoor_air_humidity,
+            "wind_mph": wind_mph,
+            "cloud_cover_pct": cloud_cover_pct,
+            "conditions": conditions,
+        }
+
     def _next_value(self, point: EmulatedPoint) -> bool | float | int | str:
+        equipment_points = self._equipment_points(point.equipment_id)
+        point_name = _normalize_token(point.point_name)
+        baseline_numeric = float(point.baseline_value) if isinstance(point.baseline_value, (int, float)) else 0.0
+        fan_enabled = self._point_value(equipment_points, ("SF-CMD", "SUPPLY FAN CMD"), default=False) or (
+            self._point_value(equipment_points, ("SF-VFD-SPD", "SUPPLY FAN SPD"), default=0.0) > 5
+        )
+        cooling_cmd = float(self._point_value(equipment_points, ("CHW-VLV-CMD", "CC_V", "COOL"), default=0.0))
+        heating_cmd = float(self._point_value(equipment_points, ("HW-VLV-CMD", "HC_V", "HEAT"), default=0.0))
+        oa_cmd = float(self._point_value(equipment_points, ("OA-DMP-CMD", "OAD_P", "OUTSIDE AIR DAMPER"), default=18.0))
+        dat_sp = float(self._point_value(equipment_points, ("DAT-SP", "SAT-SP", "SUPPLY TEMP SP"), default=55.0))
+        zone_sp = float(self._point_value(equipment_points, ("ZN-T-SP", "ZONE TEMP SP"), default=72.0))
+        outdoor_air_temp = float(self.weather["outdoor_air_temp"])
+        outdoor_air_humidity = float(self.weather["outdoor_air_humidity"])
+        return_air_temp = round(zone_sp + 2.2 + math.sin((self.tick + (point.object_instance % 9)) / 7.0), 2)
+        mixed_air_temp = round(((outdoor_air_temp * (oa_cmd / 100.0)) + (return_air_temp * (1.0 - (oa_cmd / 100.0)))), 2)
+        supply_air_temp = round(
+            dat_sp
+            - (cooling_cmd * 0.065)
+            + (heating_cmd * 0.055)
+            + (0.4 if fan_enabled else 1.4),
+            2,
+        )
+
         if isinstance(point.baseline_value, bool):
+            if "SFSTS" in point_name or "SFSTATUS" in point_name or "FANSTATUS" in point_name:
+                return bool(fan_enabled)
+            if "ALM" in point_name or point.kind == "alarm":
+                alarm_trip = cooling_cmd > 92 and outdoor_air_humidity > 66 and fan_enabled
+                return bool(alarm_trip or ((self.tick + point.object_instance) % 37 == 0))
+            if "DMPR" in point_name and ("STS" in point_name or "PROOF" in point_name):
+                return oa_cmd > 5
             if point.kind in {"alarm", "status"}:
                 return bool((self.tick + point.object_instance) % 10 == 0)
             return point.baseline_value
         if isinstance(point.baseline_value, (int, float)):
+            if "OAT" in point_name or "OUTSIDEAIRTEMP" in point_name:
+                return outdoor_air_temp
+            if "OAH" in point_name or "OAHUM" in point_name or "OUTSIDEAIRHUM" in point_name:
+                return outdoor_air_humidity
+            if "RAT" in point_name or "RETURNAIRTEMP" in point_name:
+                return return_air_temp
+            if "MAT" in point_name or "MIXEDAIRTEMP" in point_name:
+                return mixed_air_temp
+            if "SAT" in point_name or "DAT" in point_name or "DISCHARGEAIRTEMP" in point_name:
+                return supply_air_temp
+            if "ZONETEMP" in point_name or "ZNT" in point_name or "SPACETEMP" in point_name:
+                zone_load = math.sin((self.tick + (point.object_instance % 13)) / 8.0) * 1.6
+                return round(zone_sp + zone_load, 2)
+            if "CFM" in point_name or "AIRFLOW" in point_name or "FLOW" in point_name:
+                return round((self._point_value(equipment_points, ("DMPR_P", "DMPR-CMD"), default=48.0) / 100.0) * 1850.0, 0)
+            if "RHV" in point_name or "REHEAT" in point_name:
+                return round(max(0.0, min(100.0, heating_cmd)), 1)
+            if "OAD" in point_name or "OADMP" in point_name:
+                return round(max(5.0, min(100.0, oa_cmd)), 1)
+            if "SPD" in point_name or "VFD" in point_name:
+                return round(self._point_value(equipment_points, ("SF-VFD-SPD",), default=45.0), 1)
+            if "VALVE" in point_name or "VLV" in point_name:
+                if "CHW" in point_name or "COOL" in point_name:
+                    return round(cooling_cmd, 1)
+                if "HW" in point_name or "HEAT" in point_name or "RHT" in point_name:
+                    return round(heating_cmd, 1)
             if point.kind not in {"sensor", "trend", "derived", "calculated"}:
                 return point.baseline_value
-            amplitude = max(abs(float(point.baseline_value)) * 0.05, 1.0)
+            amplitude = max(abs(baseline_numeric) * 0.05, 1.0)
             offset = math.sin((self.tick + (point.object_instance % 11)) / 3.0) * amplitude
-            return round(float(point.baseline_value) + offset, 2)
+            return round(baseline_numeric + offset, 2)
         return point.baseline_value
+
+    def _equipment_points(self, equipment_id: str) -> dict[str, EmulatedPoint]:
+        return {
+            _normalize_token(point.point_name): point
+            for device in self.controllers
+            for point in device.points
+            if point.equipment_id == equipment_id
+        }
+
+    def _point_value(
+        self,
+        equipment_points: dict[str, EmulatedPoint],
+        fragments: tuple[str, ...],
+        *,
+        default: bool | float | int,
+    ) -> bool | float | int:
+        normalized_fragments = tuple(_normalize_token(fragment) for fragment in fragments)
+        for name, point in equipment_points.items():
+            if any(fragment in name for fragment in normalized_fragments):
+                return point.present_value  # type: ignore[return-value]
+        return default
 
     def list_points(self) -> list[EmulatedPoint]:
         return [point for device in self.controllers for point in device.points]

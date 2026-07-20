@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any
 import re
 
+from .px_asset_library import get_px_widget_templates
+
 
 class PXWidgetType(str, Enum):
     """Standard Niagara PX widget types."""
@@ -361,178 +363,9 @@ class PXFile:
 class PXGraphicsGenerator:
     """Generates PX graphics from BAS equipment data."""
 
-    # Standard PX widget templates for common BAS equipment
-    WIDGET_TEMPLATES = {
-        "ahu": {
-            "widgets": [
-                # Main casing
-                {"type": PXWidgetType.CANVAS_PANE, "name": "casing", "x": 50, "y": 50, "width": 600, "height": 400,
-                 "properties": {"backgroundColor": "#f5f5f5", "borderColor": "#333", "borderWidth": "2"}},
-
-                # Supply fan
-                {"type": PXWidgetType.BOUND_LABEL, "name": "sf_label", "x": 80, "y": 220, "width": 80, "height": 40,
-                 "properties": {"text": "SF", "fontSize": "12", "horizontalAlignment": "center"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "sf_status", "x": 80, "y": 265, "width": 80, "height": 25,
-                 "properties": {"format": "on/off"}},
-
-                # Return fan
-                {"type": PXWidgetType.BOUND_LABEL, "name": "rf_label", "x": 540, "y": 220, "width": 80, "height": 40,
-                 "properties": {"text": "RF", "fontSize": "12", "horizontalAlignment": "center"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "rf_status", "x": 540, "y": 265, "width": 80, "height": 25,
-                 "properties": {"format": "on/off"}},
-
-                # Cooling coil
-                {"type": PXWidgetType.BOUND_LABEL, "name": "cc_label", "x": 250, "y": 80, "width": 100, "height": 30,
-                 "properties": {"text": "CC", "fontSize": "12", "horizontalAlignment": "center", "backgroundColor": "#cce5ff"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "cc_valve", "x": 250, "y": 115, "width": 100, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Heating coil
-                {"type": PXWidgetType.BOUND_LABEL, "name": "hc_label", "x": 250, "y": 350, "width": 100, "height": 30,
-                 "properties": {"text": "HC", "fontSize": "12", "horizontalAlignment": "center", "backgroundColor": "#ffccbc"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "hc_valve", "x": 250, "y": 385, "width": 100, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Temperatures
-                {"type": PXWidgetType.BOUND_VALUE, "name": "sat", "x": 580, "y": 120, "width": 80, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "SAT"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "mat", "x": 120, "y": 60, "width": 80, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "MAT"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "rat", "x": 580, "y": 340, "width": 80, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "RAT"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "oat", "x": 30, "y": 30, "width": 80, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "OAT"}},
-
-                # Dampers
-                {"type": PXWidgetType.BOUND_LABEL, "name": "oa_damper", "x": 30, "y": 50, "width": 60, "height": 20,
-                 "properties": {"text": "OA", "fontSize": "10"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "oa_pos", "x": 30, "y": 75, "width": 60, "height": 20,
-                 "properties": {"format": ".0f", "units": "%"}},
-                {"type": PXWidgetType.BOUND_LABEL, "name": "ra_damper", "x": 590, "y": 50, "width": 60, "height": 20,
-                 "properties": {"text": "RA", "fontSize": "10"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "ra_pos", "x": 590, "y": 75, "width": 60, "height": 20,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Filter
-                {"type": PXWidgetType.BOUND_LABEL, "name": "filter_label", "x": 150, "y": 180, "width": 50, "height": 100,
-                 "properties": {"text": "FILT", "fontSize": "10", "rotation": "90", "backgroundColor": "#e8eaf6"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "filter_dp", "x": 150, "y": 290, "width": 50, "height": 25,
-                 "properties": {"format": ".2f", "units": "inWC", "label": "DP"}},
-
-                # Duct connections
-                {"type": PXWidgetType.LABEL, "name": "sa_label", "x": 620, "y": 180, "width": 40, "height": 25,
-                 "properties": {"text": "SA →", "fontSize": "10", "foregroundColor": "#1976d2"}},
-                {"type": PXWidgetType.LABEL, "name": "ra_label", "x": 620, "y": 280, "width": 40, "height": 25,
-                 "properties": {"text": "RA →", "fontSize": "10", "foregroundColor": "#ef6c00"}},
-            ],
-            "bindings": {
-                "sf_status": "slot:points/SF_S",
-                "sf_label": "slot:points/SF_C",
-                "rf_status": "slot:points/RF_S",
-                "rf_label": "slot:points/RF_C",
-                "cc_valve": "slot:points/CC_V",
-                "hc_valve": "slot:points/HC_V",
-                "sat": "slot:points/SAT",
-                "mat": "slot:points/MAT",
-                "rat": "slot:points/RAT",
-                "oat": "slot:points/OAT",
-                "oa_pos": "slot:points/OAD_P",
-                "ra_pos": "slot:points/RAD_P",
-                "filter_dp": "slot:points/FILT_DP",
-            }
-        },
-        "vav": {
-            "widgets": [
-                {"type": PXWidgetType.CANVAS_PANE, "name": "casing", "x": 50, "y": 50, "width": 300, "height": 200,
-                 "properties": {"backgroundColor": "#fff", "borderColor": "#333", "borderWidth": "2"}},
-
-                # Damper
-                {"type": PXWidgetType.BOUND_LABEL, "name": "damper_label", "x": 80, "y": 90, "width": 50, "height": 60,
-                 "properties": {"text": "DMPR", "fontSize": "10", "backgroundColor": "#e0e0e0"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "damper_pos", "x": 80, "y": 155, "width": 50, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Reheat coil
-                {"type": PXWidgetType.BOUND_LABEL, "name": "rh_label", "x": 160, "y": 80, "width": 80, "height": 80,
-                 "properties": {"text": "RH", "fontSize": "12", "horizontalAlignment": "center", "backgroundColor": "#ffccbc"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "rh_valve", "x": 160, "y": 165, "width": 80, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Discharge temp
-                {"type": PXWidgetType.BOUND_VALUE, "name": "dat", "x": 270, "y": 90, "width": 60, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "DAT"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "airflow", "x": 220, "y": 30, "width": 80, "height": 25,
-                 "properties": {"format": ".0f", "units": "CFM", "label": "Flow"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "zone_temp", "x": 270, "y": 140, "width": 60, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "Zone"}},
-
-                # Duct connections
-                {"type": PXWidgetType.LABEL, "name": "sa_label", "x": 320, "y": 95, "width": 30, "height": 25,
-                 "properties": {"text": "SA →", "fontSize": "10", "foregroundColor": "#1976d2"}},
-            ],
-            "bindings": {
-                "damper_pos": "slot:points/DMPR_P",
-                "rh_valve": "slot:points/RHV_P",
-                "dat": "slot:points/DAT",
-                "airflow": "slot:points/CFM",
-                "zone_temp": "slot:points/ZN_T",
-            }
-        },
-        "chiller": {
-            "widgets": [
-                {"type": PXWidgetType.CANVAS_PANE, "name": "casing", "x": 50, "y": 50, "width": 500, "height": 300,
-                 "properties": {"backgroundColor": "#e3f2fd", "borderColor": "#1976d2", "borderWidth": "2"}},
-
-                # Compressor
-                {"type": PXWidgetType.BOUND_LABEL, "name": "comp_label", "x": 100, "y": 140, "width": 100, "height": 60,
-                 "properties": {"text": "COMP", "fontSize": "12", "horizontalAlignment": "center"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "comp_status", "x": 100, "y": 205, "width": 100, "height": 25,
-                 "properties": {"format": "on/off"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "comp_speed", "x": 100, "y": 235, "width": 100, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Evaporator
-                {"type": PXWidgetType.BOUND_LABEL, "name": "evap_label", "x": 250, "y": 80, "width": 100, "height": 100,
-                 "properties": {"text": "EVAP", "fontSize": "12", "horizontalAlignment": "center", "backgroundColor": "#cce5ff"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "chw_supply", "x": 250, "y": 185, "width": 100, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "CHWS"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "chw_return", "x": 250, "y": 215, "width": 100, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "CHWR"}},
-
-                # Condenser
-                {"type": PXWidgetType.BOUND_LABEL, "name": "cond_label", "x": 400, "y": 80, "width": 100, "height": 100,
-                 "properties": {"text": "COND", "fontSize": "12", "horizontalAlignment": "center", "backgroundColor": "#ffccbc"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "cws_temp", "x": 400, "y": 40, "width": 100, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "CWS"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "cwr_temp", "x": 400, "y": 235, "width": 100, "height": 25,
-                 "properties": {"format": ".1f", "units": "°F", "label": "CWR"}},
-
-                # EXV
-                {"type": PXWidgetType.BOUND_LABEL, "name": "exv_label", "x": 250, "y": 40, "width": 50, "height": 30,
-                 "properties": {"text": "EXV", "fontSize": "10", "horizontalAlignment": "center"}},
-                {"type": PXWidgetType.BOUND_VALUE, "name": "exv_pos", "x": 250, "y": 10, "width": 50, "height": 25,
-                 "properties": {"format": ".0f", "units": "%"}},
-
-                # Piping labels
-                {"type": PXWidgetType.LABEL, "name": "chws_label", "x": 350, "y": 160, "width": 40, "height": 25,
-                 "properties": {"text": "CHWS →", "fontSize": "10", "foregroundColor": "#1976d2"}},
-                {"type": PXWidgetType.LABEL, "name": "chwr_label", "x": 350, "y": 200, "width": 40, "height": 25,
-                 "properties": {"text": "CHWR →", "fontSize": "10", "foregroundColor": "#1976d2"}},
-            ],
-            "bindings": {
-                "comp_status": "slot:points/COMP_S",
-                "comp_speed": "slot:points/COMP_SPD",
-                "chw_supply": "slot:points/CHWS_T",
-                "chw_return": "slot:points/CHWR_T",
-                "cws_temp": "slot:points/CWS_T",
-                "cwr_temp": "slot:points/CWR_T",
-                "exv_pos": "slot:points/EXV_P",
-            }
-        },
-    }
-
     def __init__(self, project_root: Path | None = None):
         self.project_root = project_root or Path.cwd()
+        self.widget_templates = get_px_widget_templates()
 
     def generate_equipment_px(
         self,
@@ -545,10 +378,10 @@ class PXGraphicsGenerator:
     ) -> PXFile:
         """Generate a PX file for a specific equipment type."""
 
-        if equipment_type not in self.WIDGET_TEMPLATES:
+        if equipment_type not in self.widget_templates:
             raise ValueError(f"Unknown equipment type: {equipment_type}")
 
-        template = self.WIDGET_TEMPLATES[equipment_type]
+        template = self.widget_templates[equipment_type]
 
         # Create root canvas pane
         root = PXWidget(

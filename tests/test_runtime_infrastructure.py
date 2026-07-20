@@ -90,9 +90,15 @@ def test_seed_codex_demo_project_creates_project_and_outputs(tmp_path: Path) -> 
     project = repo.get("codex-test-project")
     assert project is not None
     assert project.metadata.name == "Codex Test Project"
-    assert len(project.equipment) > 0
-    assert len(project.points) > 0
-    assert len(project.controllers) > 0
+    assert len(project.equipment) >= 5
+    assert len(project.points) >= 40
+    assert len(project.controllers) >= 5
+    assert project.get_equipment("AHU-1") is not None
+    assert project.get_equipment("VAV-101") is not None
+    assert project.get_point("AHU-1 SF CMD") is not None
+    assert project.get_point("VAV-104 REHEAT CMD") is not None
+    assert project.get_controller("MPC-1") is not None
+    assert project.get_controller("VAV-101") is not None
     source_types = {document.type for document in project.source_documents}
     assert {"equipment_schedule", "point_list", "controller_schedule"} <= source_types
     assert {"submittal", "sequence", "manual", "point_schedule"} <= source_types

@@ -7,8 +7,8 @@
     "location": "Demo Building",
     "timezone": null,
     "unit_system": "IP",
-    "created_at": "2026-07-16T17:26:50.165588",
-    "updated_at": "2026-07-16T17:26:50.165592",
+    "created_at": "2026-07-20T17:28:04.814785",
+    "updated_at": "2026-07-20T17:28:04.814790",
     "design_phase": "Design Development",
     "naming_standard": "ASHRAE 135",
     "bacnet_network_number": null,
@@ -24,39 +24,233 @@
       "building": "Main",
       "floor": "1",
       "room": "Mechanical",
-      "served_area": "Floor 1",
+      "served_area": "Floor 1 Office Wing",
       "parent_equipment_id": "nan",
       "child_equipment_ids": [
         "VAV-101",
-        "VAV-102"
+        "VAV-102",
+        "VAV-103",
+        "VAV-104"
       ],
       "relationships": [],
       "controller_id": "MPC-1",
       "point_names": [
         "AHU-1 SAT",
+        "AHU-1 DAT SP",
         "AHU-1 MAT",
         "AHU-1 RAT",
-        "AHU-1 SF CMD"
+        "AHU-1 OAT",
+        "AHU-1 OA HUM",
+        "AHU-1 SF CMD",
+        "AHU-1 SF STATUS",
+        "AHU-1 SF VFD SPD",
+        "AHU-1 OA DAMPER",
+        "AHU-1 RA DAMPER",
+        "AHU-1 EA DAMPER",
+        "AHU-1 CLG VALVE",
+        "AHU-1 HTG VALVE",
+        "AHU-1 DUCT SP",
+        "AHU-1 FILTER DP",
+        "AHU-1 FREEZE STAT",
+        "AHU-1 DUCT SMOKE",
+        "AHU-1 SAF ALM"
       ],
       "template": {
         "template_name": "graphic_layout",
         "parameters": {
-          "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge"
+          "graphic_sections": "outside_air,mixed_air,filter,cooling_coil,heating_coil,supply_fan,return_fan,discharge"
         }
       },
       "sequence_ref": null,
-      "design_cfm": 10000.0,
-      "design_tonnage": 25.0,
-      "design_gpm": 50.0,
-      "design_kw": 15.0,
+      "design_cfm": 25000.0,
+      "design_tonnage": 60.0,
+      "design_gpm": 120.0,
+      "design_kw": 40.0,
       "voltage": "460",
       "phase": 3,
       "status": "design",
       "tags": [
         "ahu",
-        "main"
+        "airside",
+        "station-demo"
       ],
-      "notes": "Main AHU for floor 1",
+      "notes": "Primary office air handler used for live graphics preview and emulator testing.",
+      "provenance": {
+        "importer": "csv_equipment_schedule",
+        "source_doc_id": "codex-test-project_equipment",
+        "source_name": "equipment_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-101",
+      "type": "VAV",
+      "subtype": "Single Duct Reheat",
+      "building": "Main",
+      "floor": "1",
+      "room": "Zone 101",
+      "served_area": "Office 101",
+      "parent_equipment_id": "AHU-1",
+      "child_equipment_ids": [
+        "nan"
+      ],
+      "relationships": [],
+      "controller_id": "VAV-101",
+      "point_names": [
+        "VAV-101 FLOW",
+        "VAV-101 FLOW SP",
+        "VAV-101 DAMPER",
+        "VAV-101 ZT",
+        "VAV-101 ZT SP",
+        "VAV-101 REHEAT CMD",
+        "VAV-101 OCC"
+      ],
+      "template": null,
+      "sequence_ref": null,
+      "design_cfm": 1200.0,
+      "design_tonnage": null,
+      "design_gpm": 4.0,
+      "design_kw": 1.5,
+      "voltage": "120",
+      "phase": 1,
+      "status": "design",
+      "tags": [
+        "vav",
+        "zone",
+        "station-demo"
+      ],
+      "notes": "Perimeter office VAV with reheat.",
+      "provenance": {
+        "importer": "csv_equipment_schedule",
+        "source_doc_id": "codex-test-project_equipment",
+        "source_name": "equipment_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-102",
+      "type": "VAV",
+      "subtype": "Single Duct Reheat",
+      "building": "Main",
+      "floor": "1",
+      "room": "Zone 102",
+      "served_area": "Office 102",
+      "parent_equipment_id": "AHU-1",
+      "child_equipment_ids": [
+        "nan"
+      ],
+      "relationships": [],
+      "controller_id": "VAV-102",
+      "point_names": [
+        "VAV-102 FLOW",
+        "VAV-102 FLOW SP",
+        "VAV-102 DAMPER",
+        "VAV-102 ZT",
+        "VAV-102 ZT SP",
+        "VAV-102 REHEAT CMD",
+        "VAV-102 OCC"
+      ],
+      "template": null,
+      "sequence_ref": null,
+      "design_cfm": 1000.0,
+      "design_tonnage": null,
+      "design_gpm": 3.0,
+      "design_kw": 1.2,
+      "voltage": "120",
+      "phase": 1,
+      "status": "design",
+      "tags": [
+        "vav",
+        "zone",
+        "station-demo"
+      ],
+      "notes": "Interior office VAV with reheat.",
+      "provenance": {
+        "importer": "csv_equipment_schedule",
+        "source_doc_id": "codex-test-project_equipment",
+        "source_name": "equipment_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-103",
+      "type": "VAV",
+      "subtype": "Single Duct Reheat",
+      "building": "Main",
+      "floor": "1",
+      "room": "Zone 103",
+      "served_area": "Conference 103",
+      "parent_equipment_id": "AHU-1",
+      "child_equipment_ids": [
+        "nan"
+      ],
+      "relationships": [],
+      "controller_id": "VAV-103",
+      "point_names": [
+        "VAV-103 FLOW",
+        "VAV-103 FLOW SP",
+        "VAV-103 DAMPER",
+        "VAV-103 ZT",
+        "VAV-103 ZT SP",
+        "VAV-103 REHEAT CMD",
+        "VAV-103 OCC"
+      ],
+      "template": null,
+      "sequence_ref": null,
+      "design_cfm": 1500.0,
+      "design_tonnage": null,
+      "design_gpm": 5.0,
+      "design_kw": 1.8,
+      "voltage": "120",
+      "phase": 1,
+      "status": "design",
+      "tags": [
+        "vav",
+        "conference",
+        "station-demo"
+      ],
+      "notes": "Conference VAV with reheat.",
+      "provenance": {
+        "importer": "csv_equipment_schedule",
+        "source_doc_id": "codex-test-project_equipment",
+        "source_name": "equipment_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-104",
+      "type": "VAV",
+      "subtype": "Fan Powered",
+      "building": "Main",
+      "floor": "1",
+      "room": "Zone 104",
+      "served_area": "Perimeter 104",
+      "parent_equipment_id": "AHU-1",
+      "child_equipment_ids": [
+        "nan"
+      ],
+      "relationships": [],
+      "controller_id": "VAV-104",
+      "point_names": [
+        "VAV-104 FLOW",
+        "VAV-104 FLOW SP",
+        "VAV-104 DAMPER",
+        "VAV-104 ZT",
+        "VAV-104 ZT SP",
+        "VAV-104 REHEAT CMD",
+        "VAV-104 OCC"
+      ],
+      "template": null,
+      "sequence_ref": null,
+      "design_cfm": 800.0,
+      "design_tonnage": null,
+      "design_gpm": 3.0,
+      "design_kw": 1.0,
+      "voltage": "120",
+      "phase": 1,
+      "status": "design",
+      "tags": [
+        "vav",
+        "perimeter",
+        "station-demo"
+      ],
+      "notes": "Fan-powered perimeter VAV for override testing.",
       "provenance": {
         "importer": "csv_equipment_schedule",
         "source_doc_id": "codex-test-project_equipment",
@@ -73,21 +267,1354 @@
       "direction": "input",
       "units": "degF",
       "unit_system": "IP",
-      "range_min": 40.0,
-      "range_max": 120.0,
+      "range_min": 45.0,
+      "range_max": 95.0,
       "bacnet_object_type": "AI",
       "bacnet_instance": 1,
       "modbus_register": null,
       "modbus_type": null,
       "source": "point_list",
-      "source_reference": "Row 1",
+      "source_reference": "AHU-1 SAT",
       "validation_status": "pending",
       "validation_issues": [],
-      "description": "Supply Air Temperature",
+      "description": "Supply air temperature",
       "tags": [
-        "temperature",
-        "supply",
-        "ahu"
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 DAT SP",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 50.0,
+      "range_max": 65.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 2,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 DAT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Discharge air temperature setpoint",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 MAT",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 45.0,
+      "range_max": 95.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 3,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 MAT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Mixed air temperature",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 RAT",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 65.0,
+      "range_max": 85.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 4,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 RAT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Return air temperature",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 OAT",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": -10.0,
+      "range_max": 110.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 5,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 OAT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Outdoor air temperature",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 OA HUM",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "%RH",
+      "unit_system": "IP",
+      "range_min": 10.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 6,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 OA HUM",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Outdoor air humidity",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 SF CMD",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 7,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 SF CMD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply fan speed command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 SF STATUS",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "status",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 8,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 SF STATUS",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply fan proof",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 SF VFD SPD",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 9,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 SF VFD SPD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply fan VFD speed",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 OA DAMPER",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 10,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 OA DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Outside air damper command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 RA DAMPER",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 11,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 RA DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Return air damper command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 EA DAMPER",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 12,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 EA DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Exhaust air damper command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 CLG VALVE",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 13,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 CLG VALVE",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Cooling valve command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 HTG VALVE",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 14,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 HTG VALVE",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Heating valve command",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 DUCT SP",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "inWC",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 5.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 15,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 DUCT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply duct static pressure",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 FILTER DP",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "inWC",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 3.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 16,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 FILTER DP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Filter differential pressure",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 FREEZE STAT",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "alarm",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 17,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 FREEZE STAT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Freeze protection status",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 DUCT SMOKE",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "alarm",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 18,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 DUCT SMOKE",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Duct smoke status",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "AHU-1 SAF ALM",
+      "equipment_id": "AHU-1",
+      "controller_id": "MPC-1",
+      "kind": "alarm",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 19,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "AHU-1 SAF ALM",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Supply airflow alarm",
+      "tags": [
+        "ahu",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 FLOW",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 2000.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 20,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 FLOW",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Measured airflow",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 FLOW SP",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 200.0,
+      "range_max": 1800.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 21,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 FLOW SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Airflow setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 DAMPER",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 22,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Damper command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 ZT",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 60.0,
+      "range_max": 85.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 23,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 ZT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 ZT SP",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 68.0,
+      "range_max": 75.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 24,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 ZT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 REHEAT CMD",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 25,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 REHEAT CMD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Reheat command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-101 OCC",
+      "equipment_id": "VAV-101",
+      "controller_id": "VAV-101",
+      "kind": "status",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 26,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-101 OCC",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Occupancy status",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 FLOW",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 2000.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 27,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 FLOW",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Measured airflow",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 FLOW SP",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 200.0,
+      "range_max": 1800.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 28,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 FLOW SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Airflow setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 DAMPER",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 29,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Damper command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 ZT",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 60.0,
+      "range_max": 85.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 30,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 ZT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 ZT SP",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 68.0,
+      "range_max": 75.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 31,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 ZT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 REHEAT CMD",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 32,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 REHEAT CMD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Reheat command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-102 OCC",
+      "equipment_id": "VAV-102",
+      "controller_id": "VAV-102",
+      "kind": "status",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 33,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-102 OCC",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Occupancy status",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 FLOW",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 2000.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 34,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 FLOW",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Measured airflow",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 FLOW SP",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 200.0,
+      "range_max": 1800.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 35,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 FLOW SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Airflow setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 DAMPER",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 36,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Damper command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 ZT",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 60.0,
+      "range_max": 85.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 37,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 ZT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 ZT SP",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 68.0,
+      "range_max": 75.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 38,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 ZT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 REHEAT CMD",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 39,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 REHEAT CMD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Reheat command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-103 OCC",
+      "equipment_id": "VAV-103",
+      "controller_id": "VAV-103",
+      "kind": "status",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 40,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-103 OCC",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Occupancy status",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 FLOW",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 2000.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 41,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 FLOW",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Measured airflow",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 FLOW SP",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "CFM",
+      "unit_system": "IP",
+      "range_min": 200.0,
+      "range_max": 1800.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 42,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 FLOW SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Airflow setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 DAMPER",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 43,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 DAMPER",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Damper command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 ZT",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "sensor",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 60.0,
+      "range_max": 85.0,
+      "bacnet_object_type": "AI",
+      "bacnet_instance": 44,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 ZT",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 ZT SP",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "setpoint",
+      "direction": "input",
+      "units": "degF",
+      "unit_system": "IP",
+      "range_min": 68.0,
+      "range_max": 75.0,
+      "bacnet_object_type": "AV",
+      "bacnet_instance": 45,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 ZT SP",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Zone temperature setpoint",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 REHEAT CMD",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "actuator",
+      "direction": "output",
+      "units": "%",
+      "unit_system": "IP",
+      "range_min": 0.0,
+      "range_max": 100.0,
+      "bacnet_object_type": "AO",
+      "bacnet_instance": 46,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 REHEAT CMD",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Reheat command",
+      "tags": [
+        "vav",
+        "station-demo"
+      ],
+      "provenance": {
+        "importer": "csv_point_list",
+        "source_doc_id": "codex-test-project_points",
+        "source_name": "point_list.csv"
+      }
+    },
+    {
+      "name": "VAV-104 OCC",
+      "equipment_id": "VAV-104",
+      "controller_id": "VAV-104",
+      "kind": "status",
+      "direction": "input",
+      "units": null,
+      "unit_system": "IP",
+      "range_min": null,
+      "range_max": null,
+      "bacnet_object_type": "BI",
+      "bacnet_instance": 47,
+      "modbus_register": null,
+      "modbus_type": null,
+      "source": "point_list",
+      "source_reference": "VAV-104 OCC",
+      "validation_status": "pending",
+      "validation_issues": [],
+      "description": "Occupancy status",
+      "tags": [
+        "vav",
+        "station-demo"
       ],
       "provenance": {
         "importer": "csv_point_list",
@@ -99,53 +1626,288 @@
   "controllers": [
     {
       "id": "MPC-1",
-      "name": "Main Plant Controller 1",
+      "name": "Main Airside Controller 1",
       "vendor": "Johnson Controls",
       "model": "MPC-8000",
       "firmware_version": "12.3",
       "type": "MPC",
       "protocols": [
-        "BACnet/IP",
-        "BACnet/MSTP"
+        "BACnet/IP"
       ],
       "network_addresses": [
         {
           "protocol": "BACnet/IP",
-          "address": "192.168.1.10",
+          "address": "192.168.10.11",
           "network_number": null,
-          "subnet_mask": null,
-          "gateway": null
-        },
-        {
-          "protocol": "BACnet/MSTP",
-          "address": "11",
-          "network_number": 2001,
           "subnet_mask": null,
           "gateway": null
         }
       ],
       "io_capacity": {
-        "universal_inputs": 16,
-        "digital_inputs": 8,
-        "analog_outputs": 4,
-        "digital_outputs": 8,
-        "total_points": 36
+        "universal_inputs": 48,
+        "digital_inputs": 24,
+        "analog_outputs": 12,
+        "digital_outputs": 12,
+        "total_points": 96
       },
       "serves_equipment_ids": [
         "AHU-1"
       ],
       "owned_point_names": [
         "AHU-1 SAT",
+        "AHU-1 DAT SP",
         "AHU-1 MAT",
         "AHU-1 RAT",
-        "AHU-1 SF CMD"
+        "AHU-1 OAT",
+        "AHU-1 OA HUM",
+        "AHU-1 SF CMD",
+        "AHU-1 SF STATUS",
+        "AHU-1 SF VFD SPD",
+        "AHU-1 OA DAMPER",
+        "AHU-1 RA DAMPER",
+        "AHU-1 EA DAMPER",
+        "AHU-1 CLG VALVE",
+        "AHU-1 HTG VALVE",
+        "AHU-1 DUCT SP",
+        "AHU-1 FILTER DP",
+        "AHU-1 FREEZE STAT",
+        "AHU-1 DUCT SMOKE",
+        "AHU-1 SAF ALM"
       ],
-      "panel_location": "Mechanical Room",
+      "panel_location": "Mechanical Room Panel MP-1",
       "electrical_panel": "MP-1",
+      "circuit": "14",
+      "status": "design",
+      "tags": [],
+      "notes": "Primary airside controller for the live station demo.",
+      "provenance": {
+        "importer": "csv_controller_schedule",
+        "source_doc_id": "codex-test-project_controllers",
+        "source_name": "controller_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-101",
+      "name": "VAV-101 Terminal Controller",
+      "vendor": "Johnson Controls",
+      "model": "VAV-3000",
+      "firmware_version": "5.2",
+      "type": "VAV",
+      "protocols": [
+        "BACnet/MSTP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "nan",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        },
+        {
+          "protocol": "BACnet/MSTP",
+          "address": "11.0",
+          "network_number": 2001,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 4,
+        "digital_inputs": 2,
+        "analog_outputs": 2,
+        "digital_outputs": 2,
+        "total_points": 10
+      },
+      "serves_equipment_ids": [
+        "VAV-101"
+      ],
+      "owned_point_names": [
+        "VAV-101 FLOW",
+        "VAV-101 FLOW SP",
+        "VAV-101 DAMPER",
+        "VAV-101 ZT",
+        "VAV-101 ZT SP",
+        "VAV-101 REHEAT CMD",
+        "VAV-101 OCC"
+      ],
+      "panel_location": "Zone 101 Ceiling",
+      "electrical_panel": "LP-1",
+      "circuit": "8",
+      "status": "design",
+      "tags": [],
+      "notes": "Terminal controller on the AHU-1 branch trunk.",
+      "provenance": {
+        "importer": "csv_controller_schedule",
+        "source_doc_id": "codex-test-project_controllers",
+        "source_name": "controller_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-102",
+      "name": "VAV-102 Terminal Controller",
+      "vendor": "Johnson Controls",
+      "model": "VAV-3000",
+      "firmware_version": "5.2",
+      "type": "VAV",
+      "protocols": [
+        "BACnet/MSTP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "nan",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        },
+        {
+          "protocol": "BACnet/MSTP",
+          "address": "12.0",
+          "network_number": 2001,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 4,
+        "digital_inputs": 2,
+        "analog_outputs": 2,
+        "digital_outputs": 2,
+        "total_points": 10
+      },
+      "serves_equipment_ids": [
+        "VAV-102"
+      ],
+      "owned_point_names": [
+        "VAV-102 FLOW",
+        "VAV-102 FLOW SP",
+        "VAV-102 DAMPER",
+        "VAV-102 ZT",
+        "VAV-102 ZT SP",
+        "VAV-102 REHEAT CMD",
+        "VAV-102 OCC"
+      ],
+      "panel_location": "Zone 102 Ceiling",
+      "electrical_panel": "LP-1",
+      "circuit": "10",
+      "status": "design",
+      "tags": [],
+      "notes": "Terminal controller on the AHU-1 branch trunk.",
+      "provenance": {
+        "importer": "csv_controller_schedule",
+        "source_doc_id": "codex-test-project_controllers",
+        "source_name": "controller_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-103",
+      "name": "VAV-103 Terminal Controller",
+      "vendor": "Johnson Controls",
+      "model": "VAV-3000",
+      "firmware_version": "5.2",
+      "type": "VAV",
+      "protocols": [
+        "BACnet/MSTP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "nan",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        },
+        {
+          "protocol": "BACnet/MSTP",
+          "address": "13.0",
+          "network_number": 2001,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 4,
+        "digital_inputs": 2,
+        "analog_outputs": 2,
+        "digital_outputs": 2,
+        "total_points": 10
+      },
+      "serves_equipment_ids": [
+        "VAV-103"
+      ],
+      "owned_point_names": [
+        "VAV-103 FLOW",
+        "VAV-103 FLOW SP",
+        "VAV-103 DAMPER",
+        "VAV-103 ZT",
+        "VAV-103 ZT SP",
+        "VAV-103 REHEAT CMD",
+        "VAV-103 OCC"
+      ],
+      "panel_location": "Zone 103 Ceiling",
+      "electrical_panel": "LP-1",
       "circuit": "12",
       "status": "design",
       "tags": [],
-      "notes": "Main plant controller",
+      "notes": "Terminal controller on the AHU-1 branch trunk.",
+      "provenance": {
+        "importer": "csv_controller_schedule",
+        "source_doc_id": "codex-test-project_controllers",
+        "source_name": "controller_schedule.csv"
+      }
+    },
+    {
+      "id": "VAV-104",
+      "name": "VAV-104 Terminal Controller",
+      "vendor": "Johnson Controls",
+      "model": "VAV-3000",
+      "firmware_version": "5.2",
+      "type": "VAV",
+      "protocols": [
+        "BACnet/MSTP"
+      ],
+      "network_addresses": [
+        {
+          "protocol": "BACnet/IP",
+          "address": "nan",
+          "network_number": null,
+          "subnet_mask": null,
+          "gateway": null
+        },
+        {
+          "protocol": "BACnet/MSTP",
+          "address": "14.0",
+          "network_number": 2001,
+          "subnet_mask": null,
+          "gateway": null
+        }
+      ],
+      "io_capacity": {
+        "universal_inputs": 4,
+        "digital_inputs": 2,
+        "analog_outputs": 2,
+        "digital_outputs": 2,
+        "total_points": 10
+      },
+      "serves_equipment_ids": [
+        "VAV-104"
+      ],
+      "owned_point_names": [
+        "VAV-104 FLOW",
+        "VAV-104 FLOW SP",
+        "VAV-104 DAMPER",
+        "VAV-104 ZT",
+        "VAV-104 ZT SP",
+        "VAV-104 REHEAT CMD",
+        "VAV-104 OCC"
+      ],
+      "panel_location": "Zone 104 Ceiling",
+      "electrical_panel": "LP-1",
+      "circuit": "14",
+      "status": "design",
+      "tags": [],
+      "notes": "Terminal controller on the AHU-1 branch trunk.",
       "provenance": {
         "importer": "csv_controller_schedule",
         "source_doc_id": "codex-test-project_controllers",
@@ -158,99 +1920,99 @@
       "id": "codex-test-project_controllers",
       "name": "controller_schedule.csv",
       "type": "controller_schedule",
-      "path": "examples/controller_schedule.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/controller_schedule.csv",
       "version": null,
-      "imported_at": "2026-07-16T17:26:50.174237",
+      "imported_at": "2026-07-20T17:28:04.896347",
       "hash": null
     },
     {
       "id": "codex-test-project_equipment",
       "name": "equipment_schedule.csv",
       "type": "equipment_schedule",
-      "path": "examples/equipment_schedule.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/equipment_schedule.csv",
       "version": null,
-      "imported_at": "2026-07-16T17:26:50.174175",
+      "imported_at": "2026-07-20T17:28:04.896240",
       "hash": null
     },
     {
       "id": "codex-test-project_points",
       "name": "point_list.csv",
       "type": "point_list",
-      "path": "examples/point_list.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/point_list.csv",
       "version": null,
-      "imported_at": "2026-07-16T17:26:50.174210",
+      "imported_at": "2026-07-20T17:28:04.896302",
       "hash": null
     },
     {
       "id": "codex-test-project_submittal",
       "name": "codex-test-project_mechanical_submittal.md",
       "type": "submittal",
-      "path": "examples/demo_documents/codex-test-project_mechanical_submittal.md",
+      "path": "ui/data/projects/codex-test-project/source_documents/codex-test-project_mechanical_submittal.md",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174475",
+      "imported_at": "2026-07-20T17:28:04.896771",
       "hash": null
     },
     {
       "id": "codex-test-project_sequence",
       "name": "codex-test-project_sequence_of_operations.md",
       "type": "sequence",
-      "path": "examples/demo_documents/codex-test-project_sequence_of_operations.md",
+      "path": "ui/data/projects/codex-test-project/source_documents/codex-test-project_sequence_of_operations.md",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174617",
+      "imported_at": "2026-07-20T17:28:04.896927",
       "hash": null
     },
     {
       "id": "codex-test-project_manual",
       "name": "codex-test-project_om_manual.md",
       "type": "manual",
-      "path": "examples/demo_documents/codex-test-project_om_manual.md",
+      "path": "ui/data/projects/codex-test-project/source_documents/codex-test-project_om_manual.md",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174743",
+      "imported_at": "2026-07-20T17:28:04.897079",
       "hash": null
     },
     {
       "id": "codex-test-project_point_schedule",
       "name": "codex-test-project_simulated_point_schedule.csv",
       "type": "point_schedule",
-      "path": "examples/demo_documents/codex-test-project_simulated_point_schedule.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/codex-test-project_simulated_point_schedule.csv",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174875",
+      "imported_at": "2026-07-20T17:28:04.897225",
       "hash": null
     },
     {
       "id": "codex-test-project_controller_runtime",
       "name": "controller_runtime.csv",
       "type": "station_runtime",
-      "path": "examples/fake_station/controller_runtime.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/fake_station/controller_runtime.csv",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174929",
+      "imported_at": "2026-07-20T17:28:04.897291",
       "hash": null
     },
     {
       "id": "codex-test-project_point_snapshot",
       "name": "station_point_snapshot.csv",
       "type": "station_snapshot",
-      "path": "examples/fake_station/station_point_snapshot.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/fake_station/station_point_snapshot.csv",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174959",
+      "imported_at": "2026-07-20T17:28:04.897339",
       "hash": null
     },
     {
       "id": "codex-test-project_trends",
       "name": "station_trends.csv",
       "type": "trend_log",
-      "path": "examples/fake_station/station_trends.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/fake_station/station_trends.csv",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.174985",
+      "imported_at": "2026-07-20T17:28:04.897383",
       "hash": null
     },
     {
       "id": "codex-test-project_alarms",
       "name": "station_alarms.csv",
       "type": "alarm_log",
-      "path": "examples/fake_station/station_alarms.csv",
+      "path": "ui/data/projects/codex-test-project/source_documents/fake_station/station_alarms.csv",
       "version": "simulated-1",
-      "imported_at": "2026-07-16T17:26:50.175010",
+      "imported_at": "2026-07-20T17:28:04.897425",
       "hash": null
     }
   ],

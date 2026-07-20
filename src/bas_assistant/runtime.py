@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import logging
 import logging.config
 import shutil
@@ -156,6 +157,330 @@ def _write_demo_document(path: Path, content: str) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     return path
+
+
+def _write_demo_csv(path: Path, fieldnames: list[str], rows: list[dict[str, Any]]) -> Path:
+    """Write a deterministic CSV document for demo project seeding."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
+def _codex_station_seed_rows() -> tuple[list[dict[str, str]], list[dict[str, Any]], list[dict[str, str]]]:
+    """Build the focused AHU/VAV station dataset for the Codex demo project."""
+    equipment_rows = [
+        {
+            "Equipment ID": "AHU-1",
+            "Equipment Type": "AHU",
+            "Subtype": "VAV",
+            "Building": "Main",
+            "Floor": "1",
+            "Room": "Mechanical",
+            "Served Area": "Floor 1 Office Wing",
+            "Controller ID": "MPC-1",
+            "Parent Equipment": "",
+            "Child Equipment": "VAV-101,VAV-102,VAV-103,VAV-104",
+            "Design CFM": "25000",
+            "Design Tonnage": "60",
+            "Design GPM": "120",
+            "Design kW": "40",
+            "Voltage": "460",
+            "Phase": "3",
+            "Status": "design",
+            "Graphic Sections": "outside_air,mixed_air,filter,cooling_coil,heating_coil,supply_fan,return_fan,discharge",
+            "Notes": "Primary office air handler used for live graphics preview and emulator testing.",
+            "Tags": "ahu,airside,station-demo",
+        },
+        {
+            "Equipment ID": "VAV-101",
+            "Equipment Type": "VAV",
+            "Subtype": "Single Duct Reheat",
+            "Building": "Main",
+            "Floor": "1",
+            "Room": "Zone 101",
+            "Served Area": "Office 101",
+            "Controller ID": "VAV-101",
+            "Parent Equipment": "AHU-1",
+            "Child Equipment": "",
+            "Design CFM": "1200",
+            "Design Tonnage": "",
+            "Design GPM": "4",
+            "Design kW": "1.5",
+            "Voltage": "120",
+            "Phase": "1",
+            "Status": "design",
+            "Graphic Sections": "",
+            "Notes": "Perimeter office VAV with reheat.",
+            "Tags": "vav,zone,station-demo",
+        },
+        {
+            "Equipment ID": "VAV-102",
+            "Equipment Type": "VAV",
+            "Subtype": "Single Duct Reheat",
+            "Building": "Main",
+            "Floor": "1",
+            "Room": "Zone 102",
+            "Served Area": "Office 102",
+            "Controller ID": "VAV-102",
+            "Parent Equipment": "AHU-1",
+            "Child Equipment": "",
+            "Design CFM": "1000",
+            "Design Tonnage": "",
+            "Design GPM": "3",
+            "Design kW": "1.2",
+            "Voltage": "120",
+            "Phase": "1",
+            "Status": "design",
+            "Graphic Sections": "",
+            "Notes": "Interior office VAV with reheat.",
+            "Tags": "vav,zone,station-demo",
+        },
+        {
+            "Equipment ID": "VAV-103",
+            "Equipment Type": "VAV",
+            "Subtype": "Single Duct Reheat",
+            "Building": "Main",
+            "Floor": "1",
+            "Room": "Zone 103",
+            "Served Area": "Conference 103",
+            "Controller ID": "VAV-103",
+            "Parent Equipment": "AHU-1",
+            "Child Equipment": "",
+            "Design CFM": "1500",
+            "Design Tonnage": "",
+            "Design GPM": "5",
+            "Design kW": "1.8",
+            "Voltage": "120",
+            "Phase": "1",
+            "Status": "design",
+            "Graphic Sections": "",
+            "Notes": "Conference VAV with reheat.",
+            "Tags": "vav,conference,station-demo",
+        },
+        {
+            "Equipment ID": "VAV-104",
+            "Equipment Type": "VAV",
+            "Subtype": "Fan Powered",
+            "Building": "Main",
+            "Floor": "1",
+            "Room": "Zone 104",
+            "Served Area": "Perimeter 104",
+            "Controller ID": "VAV-104",
+            "Parent Equipment": "AHU-1",
+            "Child Equipment": "",
+            "Design CFM": "800",
+            "Design Tonnage": "",
+            "Design GPM": "3",
+            "Design kW": "1.0",
+            "Voltage": "120",
+            "Phase": "1",
+            "Status": "design",
+            "Graphic Sections": "",
+            "Notes": "Fan-powered perimeter VAV for override testing.",
+            "Tags": "vav,perimeter,station-demo",
+        },
+    ]
+
+    point_templates: dict[str, list[tuple[str, str, str, str, str, float | None, float | None, str]]] = {
+        "AHU-1": [
+            ("SAT", "sensor", "input", "degF", "AI", 45.0, 95.0, "Supply air temperature"),
+            ("DAT SP", "setpoint", "input", "degF", "AV", 50.0, 65.0, "Discharge air temperature setpoint"),
+            ("MAT", "sensor", "input", "degF", "AI", 45.0, 95.0, "Mixed air temperature"),
+            ("RAT", "sensor", "input", "degF", "AI", 65.0, 85.0, "Return air temperature"),
+            ("OAT", "sensor", "input", "degF", "AI", -10.0, 110.0, "Outdoor air temperature"),
+            ("OA HUM", "sensor", "input", "%RH", "AI", 10.0, 100.0, "Outdoor air humidity"),
+            ("SF CMD", "actuator", "output", "%", "AO", 0.0, 100.0, "Supply fan speed command"),
+            ("SF STATUS", "status", "input", "", "BI", None, None, "Supply fan proof"),
+            ("SF VFD SPD", "sensor", "input", "%", "AI", 0.0, 100.0, "Supply fan VFD speed"),
+            ("OA DAMPER", "actuator", "output", "%", "AO", 0.0, 100.0, "Outside air damper command"),
+            ("RA DAMPER", "actuator", "output", "%", "AO", 0.0, 100.0, "Return air damper command"),
+            ("EA DAMPER", "actuator", "output", "%", "AO", 0.0, 100.0, "Exhaust air damper command"),
+            ("CLG VALVE", "actuator", "output", "%", "AO", 0.0, 100.0, "Cooling valve command"),
+            ("HTG VALVE", "actuator", "output", "%", "AO", 0.0, 100.0, "Heating valve command"),
+            ("DUCT SP", "sensor", "input", "inWC", "AI", 0.0, 5.0, "Supply duct static pressure"),
+            ("FILTER DP", "sensor", "input", "inWC", "AI", 0.0, 3.0, "Filter differential pressure"),
+            ("FREEZE STAT", "alarm", "input", "", "BI", None, None, "Freeze protection status"),
+            ("DUCT SMOKE", "alarm", "input", "", "BI", None, None, "Duct smoke status"),
+            ("SAF ALM", "alarm", "input", "", "BI", None, None, "Supply airflow alarm"),
+        ],
+        "VAV": [
+            ("FLOW", "sensor", "input", "CFM", "AI", 0.0, 2000.0, "Measured airflow"),
+            ("FLOW SP", "setpoint", "input", "CFM", "AV", 200.0, 1800.0, "Airflow setpoint"),
+            ("DAMPER", "actuator", "output", "%", "AO", 0.0, 100.0, "Damper command"),
+            ("ZT", "sensor", "input", "degF", "AI", 60.0, 85.0, "Zone temperature"),
+            ("ZT SP", "setpoint", "input", "degF", "AV", 68.0, 75.0, "Zone temperature setpoint"),
+            ("REHEAT CMD", "actuator", "output", "%", "AO", 0.0, 100.0, "Reheat command"),
+            ("OCC", "status", "input", "", "BI", None, None, "Occupancy status"),
+        ],
+    }
+
+    point_rows: list[dict[str, Any]] = []
+    point_instance = 1
+    for equipment_row in equipment_rows:
+        equipment_id = equipment_row["Equipment ID"]
+        equipment_type = equipment_row["Equipment Type"]
+        point_specs = point_templates["AHU-1"] if equipment_id == "AHU-1" else point_templates[equipment_type]
+        point_names: list[str] = []
+        for suffix, kind, direction, units, object_type, range_min, range_max, description in point_specs:
+            point_name = f"{equipment_id} {suffix}"
+            point_names.append(point_name)
+            point_rows.append(
+                {
+                    "Point Name": point_name,
+                    "Equipment ID": equipment_id,
+                    "Point Kind": kind,
+                    "Direction": direction,
+                    "Units": units,
+                    "Unit System": "IP",
+                    "Range Min": range_min if range_min is not None else "",
+                    "Range Max": range_max if range_max is not None else "",
+                    "Controller ID": equipment_row["Controller ID"],
+                    "BACnet Object Type": object_type,
+                    "BACnet Instance": point_instance,
+                    "Modbus Register": "",
+                    "Modbus Type": "",
+                    "Source": "point_list",
+                    "Source Reference": point_name,
+                    "Description": description,
+                    "Tags": f"{equipment_type.lower()},station-demo",
+                }
+            )
+            point_instance += 1
+        equipment_row["Points"] = ",".join(point_names)
+
+    controller_rows = [
+        {
+            "Controller ID": "MPC-1",
+            "Name": "Main Airside Controller 1",
+            "Vendor": "Johnson Controls",
+            "Model": "MPC-8000",
+            "Firmware": "12.3",
+            "Type": "MPC",
+            "Protocols": "BACnet/IP",
+            "IP Address": "192.168.10.11",
+            "MS/TP MAC": "",
+            "Network Number": "2001",
+            "Panel Location": "Mechanical Room Panel MP-1",
+            "Electrical Panel": "MP-1",
+            "Circuit": "14",
+            "Serves Equipment": "AHU-1",
+            "Owned Points": ",".join(row["Point Name"] for row in point_rows if row["Controller ID"] == "MPC-1"),
+            "Universal Inputs": "48",
+            "Digital Inputs": "24",
+            "Analog Outputs": "12",
+            "Digital Outputs": "12",
+            "Total Points": "96",
+            "Status": "design",
+            "Notes": "Primary airside controller for the live station demo.",
+        },
+    ]
+    for index in range(101, 105):
+        controller_id = f"VAV-{index}"
+        controller_rows.append(
+            {
+                "Controller ID": controller_id,
+                "Name": f"{controller_id} Terminal Controller",
+                "Vendor": "Johnson Controls",
+                "Model": "VAV-3000",
+                "Firmware": "5.2",
+                "Type": "VAV",
+                "Protocols": "BACnet/MSTP",
+                "IP Address": "",
+                "MS/TP MAC": str(index - 90),
+                "Network Number": "2001",
+                "Panel Location": f"Zone {index} Ceiling",
+                "Electrical Panel": "LP-1",
+                "Circuit": str((index - 100) * 2 + 6),
+                "Serves Equipment": controller_id,
+                "Owned Points": ",".join(row["Point Name"] for row in point_rows if row["Controller ID"] == controller_id),
+                "Universal Inputs": "4",
+                "Digital Inputs": "2",
+                "Analog Outputs": "2",
+                "Digital Outputs": "2",
+                "Total Points": "10",
+                "Status": "design",
+                "Notes": "Terminal controller on the AHU-1 branch trunk.",
+            }
+        )
+    return equipment_rows, point_rows, controller_rows
+
+
+def _write_codex_station_seed_files(seed_dir: Path) -> tuple[Path, Path, Path]:
+    """Write the focused station CSV schedules used to seed the Codex demo."""
+    equipment_rows, point_rows, controller_rows = _codex_station_seed_rows()
+    equipment_fields = [
+        "Equipment ID",
+        "Equipment Type",
+        "Subtype",
+        "Building",
+        "Floor",
+        "Room",
+        "Served Area",
+        "Controller ID",
+        "Parent Equipment",
+        "Child Equipment",
+        "Points",
+        "Design CFM",
+        "Design Tonnage",
+        "Design GPM",
+        "Design kW",
+        "Voltage",
+        "Phase",
+        "Status",
+        "Graphic Sections",
+        "Notes",
+        "Tags",
+    ]
+    point_fields = [
+        "Point Name",
+        "Equipment ID",
+        "Point Kind",
+        "Direction",
+        "Units",
+        "Unit System",
+        "Range Min",
+        "Range Max",
+        "Controller ID",
+        "BACnet Object Type",
+        "BACnet Instance",
+        "Modbus Register",
+        "Modbus Type",
+        "Source",
+        "Source Reference",
+        "Description",
+        "Tags",
+    ]
+    controller_fields = [
+        "Controller ID",
+        "Name",
+        "Vendor",
+        "Model",
+        "Firmware",
+        "Type",
+        "Protocols",
+        "IP Address",
+        "MS/TP MAC",
+        "Network Number",
+        "Panel Location",
+        "Electrical Panel",
+        "Circuit",
+        "Serves Equipment",
+        "Owned Points",
+        "Universal Inputs",
+        "Digital Inputs",
+        "Analog Outputs",
+        "Digital Outputs",
+        "Total Points",
+        "Status",
+        "Notes",
+    ]
+    equipment_path = _write_demo_csv(seed_dir / "equipment_schedule.csv", equipment_fields, equipment_rows)
+    points_path = _write_demo_csv(seed_dir / "point_list.csv", point_fields, point_rows)
+    controllers_path = _write_demo_csv(seed_dir / "controller_schedule.csv", controller_fields, controller_rows)
+    return equipment_path, points_path, controllers_path
 
 
 def _render_demo_submittal(project: Project) -> str:
@@ -392,6 +717,157 @@ def _attach_demo_source_documents(
         )
 
 
+def _write_codex_station_runtime_files(project: Project, seed_dir: Path) -> None:
+    """Write station-facing runtime documents that match the focused emulator scenario."""
+    from bas_assistant.emulation import BasEmulationLab
+
+    lab = BasEmulationLab(project)
+    snapshot = lab.snapshot()
+    manifest = lab.manifest()
+    fake_station_dir = seed_dir / "fake_station"
+
+    controller_runtime_rows: list[dict[str, Any]] = []
+    for controller in manifest.controllers:
+        controller_runtime_rows.append(
+            {
+                "controller_id": controller.device_id,
+                "display_name": controller.display_name,
+                "protocol": controller.protocol,
+                "address": controller.address or "",
+                "network_number": controller.network_number or "",
+                "point_count": controller.point_count,
+                "vendor": controller.vendor or "",
+                "model": controller.model or "",
+                "status": "online",
+                "served_equipment": ",".join(self_project_equipment for self_project_equipment in (project.get_controller(controller.device_id).serves_equipment_ids if project.get_controller(controller.device_id) else [])),
+            }
+        )
+    _write_demo_csv(
+        fake_station_dir / "controller_runtime.csv",
+        [
+            "controller_id",
+            "display_name",
+            "protocol",
+            "address",
+            "network_number",
+            "point_count",
+            "vendor",
+            "model",
+            "status",
+            "served_equipment",
+        ],
+        controller_runtime_rows,
+    )
+
+    snapshot_rows: list[dict[str, Any]] = []
+    for device in snapshot.devices:
+        if device.role != "controller":
+            continue
+        for point in device.points:
+            snapshot_rows.append(
+                {
+                    "timestamp": snapshot.generated_at.isoformat(),
+                    "controller_id": device.device_id,
+                    "point_name": point.point_name,
+                    "present_value": point.present_value,
+                    "units": point.units or "",
+                    "writable": "yes" if point.writable else "no",
+                }
+            )
+    _write_demo_csv(
+        fake_station_dir / "station_point_snapshot.csv",
+        ["timestamp", "controller_id", "point_name", "present_value", "units", "writable"],
+        snapshot_rows,
+    )
+
+    trend_targets = [
+        "AHU-1 SAT",
+        "AHU-1 MAT",
+        "AHU-1 OAT",
+        "AHU-1 SF CMD",
+        "VAV-101 ZT",
+        "VAV-101 FLOW",
+        "VAV-102 ZT",
+        "VAV-103 ZT",
+        "VAV-104 REHEAT CMD",
+    ]
+    trend_rows: list[dict[str, Any]] = []
+    for _ in range(6):
+        stepped = lab.step()
+        current_points = {
+            point.point_name: point
+            for device in stepped.devices
+            if device.role == "controller"
+            for point in device.points
+        }
+        for point_name in trend_targets:
+            point = current_points.get(point_name)
+            if point is None:
+                continue
+            trend_rows.append(
+                {
+                    "timestamp": stepped.generated_at.isoformat(),
+                    "point_name": point_name,
+                    "value": point.present_value,
+                    "units": point.units or "",
+                    "tick": stepped.tick,
+                }
+            )
+    _write_demo_csv(
+        fake_station_dir / "station_trends.csv",
+        ["timestamp", "point_name", "value", "units", "tick"],
+        trend_rows,
+    )
+
+    alarm_rows = [
+        {
+            "timestamp": snapshot.generated_at.isoformat(),
+            "priority": "normal",
+            "equipment_id": "AHU-1",
+            "point_name": "AHU-1 SAF ALM",
+            "message": "Alarm clear at seed load. Hot and humid weather profile active for testing.",
+            "state": "normal",
+        },
+        {
+            "timestamp": snapshot.generated_at.isoformat(),
+            "priority": "info",
+            "equipment_id": "VAV-104",
+            "point_name": "VAV-104 REHEAT CMD",
+            "message": "Fan-powered VAV included for controller override simulation.",
+            "state": "normal",
+        },
+    ]
+    _write_demo_csv(
+        fake_station_dir / "station_alarms.csv",
+        ["timestamp", "priority", "equipment_id", "point_name", "message", "state"],
+        alarm_rows,
+    )
+
+
+def create_codex_demo_project(
+    project_id: str,
+    project_name: str,
+    seed_dir: Path,
+) -> Project:
+    """Create the focused Codex station project used by the live graphics demo."""
+    from bas_assistant.importers import CSVImporter
+
+    equipment_path, points_path, controllers_path = _write_codex_station_seed_files(seed_dir)
+    project = Project(metadata=_demo_project_metadata(project_id, project_name))
+    importer = CSVImporter(project)
+    importer.import_equipment_schedule(equipment_path, f"{project_id}_equipment")
+    importer.import_point_list(points_path, f"{project_id}_points")
+    importer.import_controller_schedule(controllers_path, f"{project_id}_controllers")
+    _write_codex_station_runtime_files(project, seed_dir)
+    _attach_demo_source_documents(
+        project,
+        project_id,
+        seed_dir,
+        generated_documents_dir=seed_dir,
+    )
+    return project
+
+
 def create_demo_project(
     project_id: str,
     project_name: str,
@@ -506,12 +982,16 @@ def provision_demo_project(
 ) -> Project:
     """Create, save, and generate artifacts for a demo project."""
     logger.info("Provisioning demo project '%s'", project_id)
-    project = create_demo_project(
-        project_id,
-        project_name,
-        examples_dir,
-        generated_documents_dir=demo_generated_documents_dir(projects_repo, project_id, examples_dir),
-    )
+    generated_documents_dir = demo_generated_documents_dir(projects_repo, project_id, examples_dir)
+    if project_id == "codex-test-project":
+        project = create_codex_demo_project(project_id, project_name, generated_documents_dir)
+    else:
+        project = create_demo_project(
+            project_id,
+            project_name,
+            examples_dir,
+            generated_documents_dir=generated_documents_dir,
+        )
     projects_repo.save(project)
     generate_demo_outputs(project, output_dir)
     logger.info(

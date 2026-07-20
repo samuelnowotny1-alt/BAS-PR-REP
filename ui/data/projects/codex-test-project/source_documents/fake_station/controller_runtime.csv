@@ -1,0 +1,6 @@
+controller_id,display_name,protocol,address,network_number,point_count,vendor,model,status,served_equipment
+MPC-1,Main Airside Controller 1,BACnet/IP,192.168.10.11,,19,Johnson Controls,MPC-8000,online,AHU-1
+VAV-101,VAV-101 Terminal Controller,BACnet/MSTP,nan,,7,Johnson Controls,VAV-3000,online,VAV-101
+VAV-102,VAV-102 Terminal Controller,BACnet/MSTP,nan,,7,Johnson Controls,VAV-3000,online,VAV-102
+VAV-103,VAV-103 Terminal Controller,BACnet/MSTP,nan,,7,Johnson Controls,VAV-3000,online,VAV-103
+VAV-104,VAV-104 Terminal Controller,BACnet/MSTP,nan,,7,Johnson Controls,VAV-3000,online,VAV-104
