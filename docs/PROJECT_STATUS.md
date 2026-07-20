@@ -42,6 +42,9 @@ Last updated: 2026-07-20
 - Finalized production operating model: single documented service path, restart path, and recovery path
 - Deliberate milestone boundaries between demo-ready, graphics/library, and field-tooling work
 
+Note:
+`docs/DEMO_READY_CHECKLIST.md` now covers the current demo-ready acceptance path. The remaining gap is broader release narration and operational standardization.
+
 ## Next Release Slice
 
 Current next slice: `Demo Ready Consolidation`
@@ -68,5 +71,5 @@ Deferred until after this slice:
 
 1. Commit the current runtime/demo-storage and audit pass.
 2. Treat `docs/PROJECT_STATUS.md` and `docs/PROJECT_AUDIT.md` as the current planning baseline.
-3. Finish demo-ready documentation cleanup.
+3. Use `docs/DEMO_READY_CHECKLIST.md` as the acceptance gate for the current slice.
 4. Review the remaining graphics/library/lab-bench scope as the following release slice.

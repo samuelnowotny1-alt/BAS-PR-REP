@@ -30,6 +30,7 @@ This audit reflects the current BAS Assistant repo and live VPS state, not the o
 - Demo loader and output-link behavior now have tighter regression coverage.
 - Focused graphics/runtime/UI regression suite is green.
 - Live VPS app was synced and restarted against the current tree on 2026-07-20.
+- A release-grade demo acceptance checklist now exists in `docs/DEMO_READY_CHECKLIST.md`.
 
 ## Highest-Value Risks
 
