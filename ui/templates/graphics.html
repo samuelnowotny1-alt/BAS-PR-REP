@@ -481,20 +481,6 @@
         return items;
     }
 
-    function isCabinetComponent(component) {
-        const slotType = component.slotType || "";
-        const position = component.position || {};
-        const width = Number(position.width || 0);
-        const height = Number(position.height || 0);
-        return slotType.includes("Rect") && width >= 42 && height >= 42;
-    }
-
-    function cabinetDepth(position) {
-        const width = Number(position.width || 0);
-        const height = Number(position.height || 0);
-        return Math.max(10, Math.min(26, Math.round(Math.min(width, height) * 0.16)));
-    }
-
     function faceShade(baseColor, variant) {
         const shades = {
             top: "#dfe5eb",
@@ -789,7 +775,6 @@
     function renderSceneSection(placement, telemetryBindings, width, height) {
         const role = String(placement.role || "");
         const rect = sceneRect(placement, width, height);
-        const depth = Math.max(14, Math.min(28, Math.round(rect.height * 0.14)));
         const theme = sectionTheme(role);
         const title = escapeHtml(roleTitle(role));
         const callouts = (placement.relatedPoints || [])
@@ -847,8 +832,6 @@
         }).join("");
         return `
             <g>
-                <polygon points="${rect.x},${rect.y} ${rect.x + depth},${rect.y - depth} ${rect.x + rect.width + depth},${rect.y - depth} ${rect.x + rect.width},${rect.y}" fill="${theme.top}" stroke="#6b7280" stroke-width="1.2" />
-                <polygon points="${rect.x + rect.width},${rect.y} ${rect.x + rect.width + depth},${rect.y - depth} ${rect.x + rect.width + depth},${rect.y + rect.height - depth} ${rect.x + rect.width},${rect.y + rect.height}" fill="${theme.side}" stroke="#6b7280" stroke-width="1.2" />
                 <rect x="${rect.x}" y="${rect.y}" width="${rect.width}" height="${rect.height}" rx="10" fill="${theme.front}" stroke="#475569" stroke-width="1.8" />
                 <rect x="${rect.x + 8}" y="${rect.y + 8}" width="${rect.width - 16}" height="${rect.height - 16}" rx="7" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.24)" />
                 ${internals}
@@ -862,20 +845,16 @@
         const primary = scene.primaryPlacement || { x: 0.08, y: 0.22, width: 0.84, height: 0.54 };
         const frame = sceneRect(primary, width, height);
         const sections = Array.isArray(scene.sectionPlacements) ? scene.sectionPlacements : [];
-        const depth = 24;
         const sectionMarkup = sections.map((placement) => renderSceneSection(placement, telemetryBindings, width, height)).join("");
         const duct = sections.find((placement) => String(placement.role || "") === "section:discharge");
         const dischargeRect = duct ? sceneRect(duct, width, height) : null;
         const dischargeMarkup = dischargeRect ? `
             <g>
-                <polygon points="${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.22} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.16} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.84} ${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.78}" fill="#cfd6df" stroke="#64748b" stroke-width="1.4" />
-                <polygon points="${dischargeRect.x + dischargeRect.width},${dischargeRect.y + dischargeRect.height * 0.22} ${dischargeRect.x + dischargeRect.width + 16},${dischargeRect.y + dischargeRect.height * 0.02} ${dischargeRect.x + dischargeRect.width + 68},${dischargeRect.y - 10} ${dischargeRect.x + dischargeRect.width + 52},${dischargeRect.y + dischargeRect.height * 0.16}" fill="#e8edf2" stroke="#94a3b8" stroke-width="1.2" />
+                <rect x="${dischargeRect.x + dischargeRect.width - 2}" y="${dischargeRect.y + dischargeRect.height * 0.22}" width="54" height="${dischargeRect.height * 0.56}" rx="10" fill="#d8e0e8" stroke="#64748b" stroke-width="1.4" />
             </g>
         ` : "";
         return `
             <g>
-                <polygon points="${frame.x},${frame.y} ${frame.x + depth},${frame.y - depth} ${frame.x + frame.width + depth},${frame.y - depth} ${frame.x + frame.width},${frame.y}" fill="#e2e8f0" stroke="#64748b" stroke-width="1.6" />
-                <polygon points="${frame.x + frame.width},${frame.y} ${frame.x + frame.width + depth},${frame.y - depth} ${frame.x + frame.width + depth},${frame.y + frame.height - depth} ${frame.x + frame.width},${frame.y + frame.height}" fill="#98a4b2" stroke="#64748b" stroke-width="1.6" />
                 <rect x="${frame.x}" y="${frame.y}" width="${frame.width}" height="${frame.height}" rx="12" fill="#d7dee6" stroke="#475569" stroke-width="2" />
                 <rect x="${frame.x + 8}" y="${frame.y + 8}" width="${frame.width - 16}" height="${frame.height - 16}" rx="10" fill="rgba(255,255,255,0.24)" stroke="rgba(255,255,255,0.32)" />
                 <rect x="${frame.x + 14}" y="${frame.y + frame.height * 0.42}" width="${frame.width - 28}" height="${Math.max(frame.height * 0.16, 22)}" rx="10" fill="rgba(59,130,246,0.10)" stroke="rgba(59,130,246,0.30)" stroke-width="1.6" />
@@ -991,26 +970,6 @@
 
         if (isTextComponent(slotType)) {
             return `<text x="${x + (width / 2)}" y="${y + (height / 2)}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-family="${fontFamily}" fill="#0f172a" font-weight="${slotType.includes("Label") ? "700" : "600"}">${label}</text>`;
-        }
-
-        if (isCabinetComponent(component)) {
-            const depth = cabinetDepth(position);
-            const outerWidth = Math.max(width, 8);
-            const outerHeight = Math.max(height, 8);
-            const frontFill = faceShade(fill, "front");
-            const topFill = faceShade(fill, "top");
-            const sideFill = faceShade(fill, "side");
-            const innerFill = faceShade(fill, "inner");
-            const inset = Math.max(4, Math.min(12, depth - 2));
-            return `
-                <g>
-                    <polygon points="${x},${y} ${x + depth},${y - depth} ${x + outerWidth + depth},${y - depth} ${x + outerWidth},${y}" fill="${topFill}" stroke="${stroke}" stroke-width="${Math.max(strokeWidth * 0.7, 1)}" />
-                    <polygon points="${x + outerWidth},${y} ${x + outerWidth + depth},${y - depth} ${x + outerWidth + depth},${y + outerHeight - depth} ${x + outerWidth},${y + outerHeight}" fill="${sideFill}" stroke="${stroke}" stroke-width="${Math.max(strokeWidth * 0.7, 1)}" />
-                    <rect x="${x}" y="${y}" width="${outerWidth}" height="${outerHeight}" rx="6" fill="${frontFill}" stroke="${stroke}" stroke-width="${strokeWidth}" />
-                    <rect x="${x + inset}" y="${y + inset}" width="${Math.max(outerWidth - inset * 2, 10)}" height="${Math.max(outerHeight - inset * 2, 10)}" rx="4" fill="rgba(255,255,255,0.18)" stroke="rgba(15,23,42,0.16)" stroke-width="1" />
-                    <rect x="${x + inset + 4}" y="${y + inset + 4}" width="${Math.max(outerWidth - inset * 2 - 8, 6)}" height="${Math.max(outerHeight - inset * 2 - 8, 6)}" rx="3" fill="${innerFill}" opacity="0.16" />
-                </g>
-            `;
         }
 
         return `
