@@ -358,6 +358,9 @@ def test_vav_graphic_uses_isometric_asset_layout() -> None:
 
     assert any(placement["asset_id"] == "vav_reheat_terminal" for placement in placements)
     assert any(element.css_class == "vav-shell" for element in graphic.elements)
+    assert any(element.css_class == "flex-connector" for element in graphic.elements)
+    assert any(element.css_class == "damper-frame" for element in graphic.elements)
+    assert any(element.css_class == "discharge-sensor" for element in graphic.elements)
     assert any(element.css_class == "airflow-path airflow-supply" for element in graphic.elements)
 
     relations = graphic.metadata.get("asset_point_relations", [])

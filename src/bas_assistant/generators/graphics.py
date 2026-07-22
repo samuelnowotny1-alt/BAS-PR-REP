@@ -3715,6 +3715,23 @@ class GraphicsGenerator:
     ) -> None:
         body_y = y + 0.06
         body_h = height * 0.42
+        airflow_y = y + 0.215
+        self._append_flex_connector(
+            graphic,
+            x=x - 0.035,
+            y=airflow_y - 0.026,
+            width=0.035,
+            height=0.052,
+            stroke="#64748b",
+        )
+        self._append_flex_connector(
+            graphic,
+            x=x + width,
+            y=airflow_y - 0.026,
+            width=0.035,
+            height=0.052,
+            stroke="#64748b",
+        )
         graphic.elements.append(GraphicElement(
             element_type="rect",
             x=x,
@@ -3760,6 +3777,28 @@ class GraphicsGenerator:
             layer="symbol",
         ))
         graphic.elements.append(GraphicElement(
+            element_type="line",
+            x=x + (width * 0.16),
+            y=body_y + 0.01,
+            width=width * 0.68,
+            height=0,
+            stroke="#ffffff",
+            stroke_width=1,
+            layer="symbol",
+        ))
+        for hanger_x in (x + 0.12, x + width - 0.12):
+            graphic.elements.append(GraphicElement(
+                element_type="line",
+                x=hanger_x,
+                y=y + 0.015,
+                width=0,
+                height=body_y - (y + 0.015),
+                stroke="#6b7280",
+                stroke_width=1,
+                layer="symbol",
+                css_class="hanger-rod",
+            ))
+        graphic.elements.append(GraphicElement(
             element_type="rect",
             x=x + 0.055,
             y=y + 0.14,
@@ -3781,6 +3820,14 @@ class GraphicsGenerator:
             stroke_width=2.4,
             layer="symbol",
         ))
+        self._append_damper_symbol(
+            graphic,
+            x=x + 0.085,
+            y=y + 0.12,
+            width=0.09,
+            height=0.14,
+            stroke="#475569",
+        )
         graphic.elements.append(GraphicElement(
             element_type="circle",
             x=x + 0.145,
@@ -3838,9 +3885,9 @@ class GraphicsGenerator:
             ))
         graphic.elements.append(GraphicElement(
             element_type="line",
-            x=x + 0.02,
-            y=y + 0.215,
-            width=width - 0.04,
+            x=x - 0.035,
+            y=airflow_y,
+            width=width + 0.07,
             height=0,
             stroke="#1976d2",
             stroke_width=3.5,
@@ -3858,6 +3905,40 @@ class GraphicsGenerator:
             stroke_width=0.8,
             layer="symbol",
             css_class="control-enclosure",
+        ))
+        graphic.elements.append(GraphicElement(
+            element_type="line",
+            x=x + 0.65,
+            y=y + 0.19,
+            width=0.028,
+            height=-0.028,
+            stroke="#4b5563",
+            stroke_width=1.2,
+            layer="symbol",
+            css_class="actuator-linkage",
+        ))
+        graphic.elements.append(GraphicElement(
+            element_type="line",
+            x=x + 0.69,
+            y=airflow_y,
+            width=0.065,
+            height=0,
+            stroke="#64748b",
+            stroke_width=1.2,
+            layer="symbol",
+            css_class="sensor-probe",
+        ))
+        graphic.elements.append(GraphicElement(
+            element_type="circle",
+            x=x + 0.765,
+            y=airflow_y,
+            width=0.016,
+            height=0.016,
+            fill="#f8fafc",
+            stroke="#2563eb",
+            stroke_width=1.1,
+            layer="symbol",
+            css_class="discharge-sensor",
         ))
 
     def _apply_generic_template(
