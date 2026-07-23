@@ -154,6 +154,15 @@ sudo systemctl enable --now bas-assistant.service
 sudo systemctl status bas-assistant.service --no-pager
 ```
 
+When the deployment account cannot use sudo, install persistent user units
+instead. This enables lingering, starts backup and health timers immediately,
+and enables the app user service for the next reboot without disturbing an
+already-running system service:
+
+```bash
+./scripts/install_vps_operations.sh --user
+```
+
 ## 9. Updating the deployment
 
 ```bash
