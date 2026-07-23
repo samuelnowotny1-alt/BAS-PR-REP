@@ -18,11 +18,16 @@ if [ "${MODE}" = "--user" ]; then
 
     for unit in "${UNITS[@]}"; do
         source="${PROJECT_ROOT}/deploy/${unit}.example"
-        sed -e '/^User=/d' -e '/^Group=/d' "${source}" > "${unit_dir}/${unit}"
+        sed \
+            -e '/^User=/d' \
+            -e '/^Group=/d' \
+            -e 's/^WantedBy=multi-user.target$/WantedBy=default.target/' \
+            "${source}" > "${unit_dir}/${unit}"
         chmod 0644 "${unit_dir}/${unit}"
     done
 
     systemctl --user daemon-reload
+    systemctl --user disable bas-assistant.service >/dev/null 2>&1 || true
     systemctl --user enable bas-assistant.service
     if ! systemctl is-active --quiet bas-assistant.service; then
         systemctl --user start bas-assistant.service
