@@ -83,6 +83,190 @@
         </div>
     </div>
 
+    {% if project_view.live_conditions %}
+    <div class="mb-8 rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#edf5ff_0%,#ffffff_28%,#f8fbff_100%)] p-6 dark:border-slate-700 dark:bg-[linear-gradient(135deg,#0f1720_0%,#131c28_42%,#172330_100%)]" id="project-live-conditions" data-project-id="{{ project_view.project_id }}">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Project Live Conditions</p>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">BAS-style present-value readouts for this project’s current emulation snapshot.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+                <label class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Scenario
+                    <select id="live-scenario-select" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                        {% for scenario in project_view.live_conditions.station.available_scenarios %}
+                        <option value="{{ scenario.id }}" {% if scenario.id == project_view.live_conditions.station.scenario_id %}selected{% endif %}>{{ scenario.label }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                    Refresh
+                    <select id="live-refresh-interval" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                        <option value="2000">2s</option>
+                        <option value="5000" selected>5s</option>
+                        <option value="10000">10s</option>
+                        <option value="0">Pause</option>
+                    </select>
+                </label>
+                <button type="button" id="live-refresh-now" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300">
+                    Refresh Now
+                </button>
+                <div class="flex items-center gap-2">
+                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" data-live-status-dot></span>
+                    <div class="text-sm font-semibold text-gray-900 dark:text-white" data-live-condition="conditions">{{ project_view.live_conditions.conditions }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
+            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="polling">Polling every 5s</span>
+            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="updated">Last update: {{ project_view.live_conditions.generated_at or 'initial load' }}</span>
+            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="mode">Mode: {{ project_view.live_conditions.station.schedule_mode|replace('_', ' ')|title }}</span>
+        </div>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outdoor_air_temp" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_temp }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Air</p>
+                    <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAT</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_temp">{{ project_view.live_conditions.outdoor_air_temp }}</p>
+                <div class="mt-3 h-10" data-live-trend="outdoor_air_temp"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Present Value</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outdoor_air_humidity" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_humidity }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Humidity</p>
+                    <span class="rounded-full border border-sky-900/80 bg-sky-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">OAH</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_humidity">{{ project_view.live_conditions.outdoor_air_humidity }}</p>
+                <div class="mt-3 h-10" data-live-trend="outdoor_air_humidity"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Relative Humidity</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="wind_mph" data-live-status="{{ project_view.live_conditions.statuses.wind_mph }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Wind</p>
+                    <span class="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">WIND</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="wind_mph">{{ project_view.live_conditions.wind_mph }}</p>
+                <div class="mt-3 h-10" data-live-trend="wind_mph"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Weather Feed</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="supply_air_temp" data-live-status="{{ project_view.live_conditions.statuses.supply_air_temp }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Air</p>
+                    <span class="rounded-full border border-emerald-900/80 bg-emerald-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">SAT</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-emerald-300" data-live-condition="supply_air_temp">{{ project_view.live_conditions.supply_air_temp }}</p>
+                <div class="mt-3 h-10" data-live-trend="supply_air_temp"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Discharge Temperature</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="return_air_temp" data-live-status="{{ project_view.live_conditions.statuses.return_air_temp }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Return Air</p>
+                    <span class="rounded-full border border-orange-900/80 bg-orange-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-300">RAT</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-orange-300" data-live-condition="return_air_temp">{{ project_view.live_conditions.return_air_temp }}</p>
+                <div class="mt-3 h-10" data-live-trend="return_air_temp"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Return Path Sensor</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="mixed_air_temp" data-live-status="{{ project_view.live_conditions.statuses.mixed_air_temp }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Mixed Air</p>
+                    <span class="rounded-full border border-violet-900/80 bg-violet-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300">MAT</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-violet-300" data-live-condition="mixed_air_temp">{{ project_view.live_conditions.mixed_air_temp }}</p>
+                <div class="mt-3 h-10" data-live-trend="mixed_air_temp"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Mixing Section</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="avg_zone_temp" data-live-status="{{ project_view.live_conditions.statuses.avg_zone_temp }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Avg Zone Temp</p>
+                    <span class="rounded-full border border-fuchsia-900/80 bg-fuchsia-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fuchsia-300">ZNT</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-fuchsia-300" data-live-condition="avg_zone_temp">{{ project_view.live_conditions.avg_zone_temp }}</p>
+                <div class="mt-3 h-10" data-live-trend="avg_zone_temp"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Average Zone Sensor</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="supply_static" data-live-status="{{ project_view.live_conditions.statuses.supply_static }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Static</p>
+                    <span class="rounded-full border border-amber-900/80 bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">D-SP</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-amber-300" data-live-condition="supply_static">{{ project_view.live_conditions.supply_static }}</p>
+                <div class="mt-3 h-10" data-live-trend="supply_static"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Static Pressure</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outside_air_damper" data-live-status="{{ project_view.live_conditions.statuses.outside_air_damper }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">OA Damper</p>
+                    <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAD</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outside_air_damper">{{ project_view.live_conditions.outside_air_damper }}</p>
+                <div class="mt-3 h-10" data-live-trend="outside_air_damper"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Command Output</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="cooling_valve" data-live-status="{{ project_view.live_conditions.statuses.cooling_valve }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Cooling Valve</p>
+                    <span class="rounded-full border border-blue-900/80 bg-blue-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">CLG</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-blue-300" data-live-condition="cooling_valve">{{ project_view.live_conditions.cooling_valve }}</p>
+                <div class="mt-3 h-10" data-live-trend="cooling_valve"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position</p>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="heating_valve" data-live-status="{{ project_view.live_conditions.statuses.heating_valve }}">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Heating Valve</p>
+                    <span class="rounded-full border border-rose-900/80 bg-rose-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">HTG</span>
+                </div>
+                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-rose-300" data-live-condition="heating_valve">{{ project_view.live_conditions.heating_valve }}</p>
+                <div class="mt-3 h-10" data-live-trend="heating_valve"></div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position</p>
+            </div>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
+            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="scenario_label">{{ project_view.live_conditions.station.scenario_label }}</span>
+            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="point_count">{{ project_view.live_conditions.station.point_count }} points simulated</span>
+            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="alarm_count">{{ project_view.live_conditions.station.alarm_count }} active alarms</span>
+            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="tick">Tick {{ project_view.live_conditions.tick }}</span>
+        </div>
+        <div class="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+            <div class="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Active Alarms</p>
+                    <span class="text-xs font-semibold text-slate-500" data-live-station="alarm_badge">{{ project_view.live_conditions.station.alarm_count }} active</span>
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2" id="live-alarm-list">
+                    {% for alarm in project_view.live_conditions.station.active_alarms[:8] %}
+                    <span class="rounded-full border border-rose-800 bg-rose-950/60 px-3 py-1 text-xs font-semibold text-rose-200">{{ alarm }}</span>
+                    {% else %}
+                    <span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">No active alarms</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Controller States</p>
+                    <span class="text-xs font-semibold text-slate-500">Live summary</span>
+                </div>
+                <div class="mt-3 grid gap-2 md:grid-cols-2" id="live-controller-list">
+                    {% for controller in project_view.live_conditions.station.controllers[:4] %}
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-semibold text-slate-100">{{ controller.display_name or controller.controller_id }}</p>
+                                <p class="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">{{ controller.protocol or '' }}{% if controller.address %} · {{ controller.address }}{% endif %}</p>
+                            </div>
+                            <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] {% if controller.state == 'online' %}bg-emerald-950/60 text-emerald-200 border border-emerald-800{% elif controller.state == 'degraded' %}bg-amber-950/60 text-amber-200 border border-amber-800{% else %}bg-rose-950/60 text-rose-200 border border-rose-800{% endif %}">{{ controller.state }}</span>
+                        </div>
+                        <p class="mt-3 text-xs text-slate-400">{{ controller.health_pct }}% health · {{ controller.point_count }} points</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% if project_view.object_health %}
     <div class="mb-8 grid gap-4 xl:grid-cols-3">
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
@@ -668,5 +852,263 @@
                 </a>
             </div>
         </div>
-    </div>
+</div>
+
+{% if project_view.live_conditions %}
+<script>
+    (() => {
+        const panel = document.getElementById("project-live-conditions");
+        if (!panel) return;
+
+        const projectId = panel.dataset.projectId;
+        const refreshUrl = `/api/project/${projectId}/live-conditions`;
+        const refreshSelect = document.getElementById("live-refresh-interval");
+        const scenarioSelect = document.getElementById("live-scenario-select");
+        const refreshNowButton = document.getElementById("live-refresh-now");
+        const statusDot = panel.querySelector("[data-live-status-dot]");
+        let timerId = null;
+        let inFlight = false;
+        const trendHistory = new Map();
+        const maxTrendPoints = 20;
+
+        const STATUS_CLASSES = {
+            normal: ["border-emerald-700", "bg-[#07161a]"],
+            caution: ["border-amber-600", "bg-[#1a1407]"],
+            alarm: ["border-rose-700", "bg-[#1a0a0d]"],
+            unknown: ["border-slate-700", "bg-[#07111a]"],
+        };
+
+        function setRefreshTimer(intervalMs) {
+            if (timerId !== null) {
+                window.clearInterval(timerId);
+                timerId = null;
+            }
+            if (intervalMs > 0) {
+                timerId = window.setInterval(refreshLiveConditions, intervalMs);
+            }
+        }
+
+        function updateText(selector, value) {
+            const node = panel.querySelector(selector);
+            if (!node || value === undefined || value === null) return;
+            node.textContent = String(value);
+        }
+
+        function parseNumericValue(value) {
+            const match = String(value ?? "").match(/-?\d+(\.\d+)?/);
+            return match ? Number(match[0]) : null;
+        }
+
+        function applyCardStatus(key, status) {
+            const node = panel.querySelector(`[data-live-card="${key}"]`);
+            if (!node) return;
+            node.dataset.liveStatus = status;
+            Object.values(STATUS_CLASSES).flat().forEach((className) => node.classList.remove(className));
+            (STATUS_CLASSES[status] || STATUS_CLASSES.unknown).forEach((className) => node.classList.add(className));
+        }
+
+        function updateStatusIndicator(station = {}) {
+            if (!statusDot) return;
+            statusDot.classList.remove("bg-emerald-500", "bg-amber-500", "bg-rose-500");
+            statusDot.classList.remove("shadow-[0_0_12px_rgba(16,185,129,0.8)]", "shadow-[0_0_12px_rgba(245,158,11,0.8)]", "shadow-[0_0_12px_rgba(244,63,94,0.85)]");
+            const alarmCount = Number(station.alarm_count || 0);
+            if (alarmCount > 0) {
+                statusDot.classList.add("bg-rose-500", "shadow-[0_0_12px_rgba(244,63,94,0.85)]");
+                return;
+            }
+            const mode = String(station.schedule_mode || "").toLowerCase();
+            if (mode === "fault" || mode === "alarm") {
+                statusDot.classList.add("bg-amber-500", "shadow-[0_0_12px_rgba(245,158,11,0.8)]");
+                return;
+            }
+            statusDot.classList.add("bg-emerald-500", "shadow-[0_0_12px_rgba(16,185,129,0.8)]");
+        }
+
+        function renderSparkline(key) {
+            const host = panel.querySelector(`[data-live-trend="${key}"]`);
+            const values = trendHistory.get(key) || [];
+            if (!host) return;
+            if (values.length < 2) {
+                host.innerHTML = '<div class="flex h-full items-center text-[10px] uppercase tracking-[0.14em] text-slate-600">Collecting trend...</div>';
+                return;
+            }
+            const width = 220;
+            const height = 34;
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = Math.max(max - min, 0.001);
+            const points = values.map((value, index) => {
+                const x = (index / Math.max(values.length - 1, 1)) * width;
+                const y = height - (((value - min) / range) * (height - 6)) - 3;
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(" ");
+            host.innerHTML = `
+                <svg viewBox="0 0 ${width} ${height}" class="block h-10 w-full">
+                    <rect x="0" y="0" width="${width}" height="${height}" rx="8" fill="rgba(15,23,42,0.18)" />
+                    <polyline fill="none" stroke="rgba(125,211,252,0.95)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="${points}" />
+                </svg>
+            `;
+        }
+
+        function recordTrendValue(key, rawValue) {
+            const numeric = parseNumericValue(rawValue);
+            if (numeric === null) return;
+            const history = trendHistory.get(key) || [];
+            history.push(numeric);
+            while (history.length > maxTrendPoints) history.shift();
+            trendHistory.set(key, history);
+            renderSparkline(key);
+        }
+
+        function renderAlarmList(station = {}) {
+            const container = document.getElementById("live-alarm-list");
+            if (!container) return;
+            const alarms = station.active_alarms || [];
+            const badge = panel.querySelector('[data-live-station="alarm_badge"]');
+            if (badge) {
+                badge.textContent = `${station.alarm_count ?? alarms.length ?? 0} active`;
+            }
+            if (!alarms.length) {
+                container.innerHTML = '<span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">No active alarms</span>';
+                return;
+            }
+            container.innerHTML = alarms.slice(0, 8).map((alarm) => `
+                <span class="rounded-full border border-rose-800 bg-rose-950/60 px-3 py-1 text-xs font-semibold text-rose-200">${alarm}</span>
+            `).join("");
+        }
+
+        function renderControllerList(station = {}) {
+            const container = document.getElementById("live-controller-list");
+            if (!container) return;
+            const controllers = station.controllers || [];
+            container.innerHTML = controllers.slice(0, 4).map((controller) => {
+                const state = String(controller.state || "online");
+                const stateClasses = state === "online"
+                    ? "bg-emerald-950/60 text-emerald-200 border border-emerald-800"
+                    : state === "degraded"
+                        ? "bg-amber-950/60 text-amber-200 border border-amber-800"
+                        : "bg-rose-950/60 text-rose-200 border border-rose-800";
+                return `
+                    <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <p class="truncate text-sm font-semibold text-slate-100">${controller.display_name || controller.controller_id || ""}</p>
+                                <p class="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">${controller.protocol || ""}${controller.address ? ` · ${controller.address}` : ""}</p>
+                            </div>
+                            <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${stateClasses}">${state}</span>
+                        </div>
+                        <p class="mt-3 text-xs text-slate-400">${controller.health_pct ?? 0}% health · ${controller.point_count ?? 0} points</p>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function applyLiveConditions(data) {
+            [
+                "conditions",
+                "outdoor_air_temp",
+                "outdoor_air_humidity",
+                "wind_mph",
+                "supply_air_temp",
+                "return_air_temp",
+                "mixed_air_temp",
+                "avg_zone_temp",
+                "supply_static",
+                "outside_air_damper",
+                "cooling_valve",
+                "heating_valve",
+            ].forEach((key) => {
+                updateText(`[data-live-condition="${key}"]`, data[key]);
+                if (key !== "conditions") {
+                    recordTrendValue(key, data[key]);
+                }
+            });
+            Object.entries(data.statuses || {}).forEach(([key, status]) => applyCardStatus(key, status));
+
+            if (data.station) {
+                updateText('[data-live-station="scenario_label"]', data.station.scenario_label || "");
+                updateText('[data-live-station="point_count"]', `${data.station.point_count ?? 0} points simulated`);
+                updateText('[data-live-station="alarm_count"]', `${data.station.alarm_count ?? 0} active alarms`);
+                updateStatusIndicator(data.station);
+                renderAlarmList(data.station);
+                renderControllerList(data.station);
+                if (scenarioSelect && data.station.scenario_id) {
+                    scenarioSelect.value = data.station.scenario_id;
+                }
+            }
+            updateText('[data-live-station="tick"]', `Tick ${data.tick ?? 0}`);
+            updateText('[data-live-meta="updated"]', `Last update: ${data.generated_at || "n/a"}`);
+            updateText('[data-live-meta="mode"]', `Mode: ${String(data.station?.schedule_mode || "").replaceAll("_", " ")}`);
+        }
+
+        async function refreshLiveConditions() {
+            if (inFlight) return;
+            inFlight = true;
+            try {
+                const response = await fetch(refreshUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                if (!response.ok) return;
+                applyLiveConditions(await response.json());
+            } catch (_error) {
+                return;
+            } finally {
+                inFlight = false;
+            }
+        }
+
+        async function applyScenario(scenario) {
+            if (!scenario) return;
+            if (inFlight) return;
+            inFlight = true;
+            try {
+                const response = await fetch(`/api/project/${projectId}/emulation/scenario`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ scenario }),
+                });
+                if (!response.ok) return;
+                const snapshot = await response.json();
+                const followUp = await fetch(refreshUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                });
+                if (!followUp.ok) return;
+                applyLiveConditions(await followUp.json());
+            } catch (_error) {
+                return;
+            } finally {
+                inFlight = false;
+            }
+        }
+
+        if (refreshSelect) {
+            refreshSelect.addEventListener("change", () => {
+                const interval = Number(refreshSelect.value || "0");
+                setRefreshTimer(interval);
+                updateText('[data-live-meta="polling"]', interval > 0 ? `Polling every ${interval / 1000}s` : "Polling paused");
+            });
+        }
+        if (refreshNowButton) {
+            refreshNowButton.addEventListener("click", () => {
+                refreshLiveConditions();
+            });
+        }
+        if (scenarioSelect) {
+            scenarioSelect.addEventListener("change", () => {
+                applyScenario(scenarioSelect.value);
+            });
+        }
+
+        setRefreshTimer(Number(refreshSelect?.value || "5000"));
+        updateText('[data-live-meta="polling"]', `Polling every ${Number(refreshSelect?.value || "5000") / 1000}s`);
+        window.addEventListener("beforeunload", () => {
+            if (timerId !== null) {
+                window.clearInterval(timerId);
+            }
+        }, { once: true });
+    })();
+</script>
+{% endif %}
 {% endblock %}

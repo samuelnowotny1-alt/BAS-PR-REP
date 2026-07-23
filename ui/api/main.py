@@ -2928,6 +2928,124 @@ def build_station_delivery_readiness(
     }
 
 
+def _normalize_live_point_token(value: str) -> str:
+    return "".join(ch for ch in value.upper() if ch.isalnum())
+
+
+def _format_live_value(value: object, units: str = "") -> str:
+    if not isinstance(value, (int, float)):
+        return "--"
+    if units == "%":
+        return f"{round(float(value), 1):g}%"
+    if units:
+        decimals = 2 if units in {"inWC", "psi"} else 1
+        numeric = f"{float(value):.{decimals}f}".rstrip("0").rstrip(".")
+        return f"{numeric} {units}"
+    return f"{float(value):.1f}"
+
+
+def _average_live_points(points: list[object], *tokens: str) -> float | None:
+    token_set = tuple(_normalize_live_point_token(token) for token in tokens)
+    values: list[float] = []
+    for point in points:
+        point_name = getattr(point, "point_name", "")
+        point_value = getattr(point, "present_value", None)
+        normalized_name = _normalize_live_point_token(str(point_name))
+        if any(token in normalized_name for token in token_set) and isinstance(point_value, (int, float)):
+            values.append(float(point_value))
+    if not values:
+        return None
+    return round(sum(values) / len(values), 1)
+
+
+def _live_point_status(key: str, value: float | None, *, station_alarm_count: int = 0) -> str:
+    if value is None:
+        return "unknown"
+    if key == "outdoor_air_temp":
+        return "alarm" if value < 25 or value > 100 else ("caution" if value < 35 or value > 95 else "normal")
+    if key == "outdoor_air_humidity":
+        return "alarm" if value > 75 else ("caution" if value > 65 else "normal")
+    if key == "supply_air_temp":
+        return "alarm" if value < 50 or value > 68 else ("caution" if value < 53 or value > 62 else "normal")
+    if key == "return_air_temp":
+        return "alarm" if value > 82 else ("caution" if value > 78 else "normal")
+    if key == "mixed_air_temp":
+        return "alarm" if value < 35 or value > 85 else ("caution" if value < 42 or value > 78 else "normal")
+    if key == "avg_zone_temp":
+        return "alarm" if value < 67 or value > 78 else ("caution" if value < 69 or value > 76 else "normal")
+    if key == "supply_static":
+        return "alarm" if value < 0.4 or value > 2.4 else ("caution" if value < 0.6 or value > 2.0 else "normal")
+    if key in {"outside_air_damper", "cooling_valve", "heating_valve"}:
+        return "alarm" if value > 95 and station_alarm_count else ("caution" if value > 85 else "normal")
+    if key == "wind_mph":
+        return "caution" if value > 20 else "normal"
+    return "normal"
+
+
+def build_project_live_conditions(project: Project, *, snapshot: object | None = None) -> dict[str, object]:
+    snapshot = snapshot or get_emulation_lab(project.metadata.project_id).snapshot()
+    weather = dict(snapshot.weather)
+    station = dict(snapshot.station)
+    points = [point for device in snapshot.devices for point in getattr(device, "points", [])]
+
+    def analog_value(*tokens: str) -> float | None:
+        token_set = tuple(_normalize_live_point_token(token) for token in tokens)
+        for point in points:
+            normalized_name = _normalize_live_point_token(str(getattr(point, "point_name", "")))
+            point_value = getattr(point, "present_value", None)
+            if any(token in normalized_name for token in token_set) and isinstance(point_value, (int, float)):
+                return float(point_value)
+        return None
+
+    def percent_value(*tokens: str) -> str:
+        return _format_live_value(analog_value(*tokens), "%")
+
+    supply_air_temp = analog_value("AHU-1 SAT", "AHU-1 DAT", "SUPPLY AIR TEMP")
+    return_air_temp = analog_value("AHU-1 RAT", "RETURN AIR TEMP")
+    mixed_air_temp = analog_value("AHU-1 MAT", "MIXED AIR TEMP")
+    zone_temp = _average_live_points(points, "ZNT", "ZONE TEMP", "SPACE TEMP")
+    supply_static = analog_value("DUCT SP", "STATIC PRESSURE", "FILTER DP")
+    outdoor_air_temp = weather.get("outdoor_air_temp") if isinstance(weather.get("outdoor_air_temp"), (int, float)) else None
+    outdoor_air_humidity = weather.get("outdoor_air_humidity") if isinstance(weather.get("outdoor_air_humidity"), (int, float)) else None
+    wind_mph = weather.get("wind_mph") if isinstance(weather.get("wind_mph"), (int, float)) else None
+    cooling_valve = analog_value("CLG VALVE", "COOLING VALVE")
+    heating_valve = analog_value("HTG VALVE", "HEATING VALVE")
+    outside_air_damper = analog_value("OA DAMPER", "OUTSIDE AIR DAMPER")
+    station_alarm_count = int(station.get("alarm_count", 0) or 0)
+
+    return {
+        "weather": weather,
+        "station": station,
+        "tick": int(getattr(snapshot, "tick", 0) or 0),
+        "generated_at": str(getattr(snapshot, "generated_at", "") or ""),
+        "outdoor_air_temp": _format_live_value(outdoor_air_temp, "degF"),
+        "outdoor_air_humidity": _format_live_value(outdoor_air_humidity, "%"),
+        "wind_mph": _format_live_value(wind_mph, "mph"),
+        "conditions": str(weather.get("conditions") or "unknown").replace("_", " ").title(),
+        "supply_air_temp": _format_live_value(supply_air_temp, "degF"),
+        "return_air_temp": _format_live_value(return_air_temp, "degF"),
+        "mixed_air_temp": _format_live_value(mixed_air_temp, "degF"),
+        "avg_zone_temp": _format_live_value(zone_temp, "degF"),
+        "supply_static": _format_live_value(supply_static, "inWC"),
+        "cooling_valve": _format_live_value(cooling_valve, "%"),
+        "heating_valve": _format_live_value(heating_valve, "%"),
+        "outside_air_damper": _format_live_value(outside_air_damper, "%"),
+        "statuses": {
+            "outdoor_air_temp": _live_point_status("outdoor_air_temp", outdoor_air_temp, station_alarm_count=station_alarm_count),
+            "outdoor_air_humidity": _live_point_status("outdoor_air_humidity", outdoor_air_humidity, station_alarm_count=station_alarm_count),
+            "wind_mph": _live_point_status("wind_mph", wind_mph, station_alarm_count=station_alarm_count),
+            "supply_air_temp": _live_point_status("supply_air_temp", supply_air_temp, station_alarm_count=station_alarm_count),
+            "return_air_temp": _live_point_status("return_air_temp", return_air_temp, station_alarm_count=station_alarm_count),
+            "mixed_air_temp": _live_point_status("mixed_air_temp", mixed_air_temp, station_alarm_count=station_alarm_count),
+            "avg_zone_temp": _live_point_status("avg_zone_temp", zone_temp, station_alarm_count=station_alarm_count),
+            "supply_static": _live_point_status("supply_static", supply_static, station_alarm_count=station_alarm_count),
+            "outside_air_damper": _live_point_status("outside_air_damper", outside_air_damper, station_alarm_count=station_alarm_count),
+            "cooling_valve": _live_point_status("cooling_valve", cooling_valve, station_alarm_count=station_alarm_count),
+            "heating_valve": _live_point_status("heating_valve", heating_valve, station_alarm_count=station_alarm_count),
+        },
+    }
+
+
 def build_graphic_detail_records(project: Project, graphics_result: dict[str, object]) -> list[dict[str, object]]:
     engine = ValidationEngine()
     report = engine.validate(project)
@@ -3869,6 +3987,7 @@ async def project_detail(request: Request, project_id: str):
     project_view["development_status"] = build_project_development_status(project)
     project_view["next_actions"] = build_project_next_actions(project, project_view)
     project_view["validation_triage"] = build_validation_triage(project)
+    project_view["live_conditions"] = build_project_live_conditions(project)
     return templates.TemplateResponse(request=request, name="project_detail.html", context={
         "project": project,
         "project_view": project_view,
@@ -5836,6 +5955,13 @@ async def api_emulation_write_point(project_id: str, point_name: str, payload: d
     except ReadOnlyPointError as exc:
         raise HTTPException(status_code=400, detail=f"Point {exc} is read-only in the emulator") from exc
     return point.model_dump(mode="json")
+
+
+@app.post("/api/project/{project_id}/live-conditions")
+async def api_project_live_conditions(project_id: str):
+    project = get_project(project_id)
+    snapshot = get_emulation_lab(project_id).step(1)
+    return build_project_live_conditions(project, snapshot=snapshot)
 
 
 @app.get("/api/project/{project_id}/knowledge/search")

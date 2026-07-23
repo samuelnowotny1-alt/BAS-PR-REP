@@ -18,6 +18,7 @@ from bas_assistant.database import (
     ProjectRecord,
     TaskRecord,
 )
+from bas_assistant.emulation import BasEmulationLab
 from bas_assistant.runtime import build_health_report
 
 from .projects import JsonProjectRepository
@@ -45,6 +46,7 @@ class DashboardSnapshot:
     controllers_per_project: float
     featured_project: dict[str, object] | None
     top_projects: list[dict[str, object]]
+    featured_project_live: dict[str, object] | None
 
 
 class DashboardService:
@@ -118,6 +120,7 @@ class DashboardService:
             ),
             reverse=True,
         )[:3]
+        featured_project_live = self._featured_project_live_snapshot(featured_project)
         return DashboardSnapshot(
             project_count=project_count,
             equipment_count=equipment_count,
@@ -135,6 +138,7 @@ class DashboardService:
             controllers_per_project=controllers_per_project,
             featured_project=featured_project,
             top_projects=top_projects,
+            featured_project_live=featured_project_live,
         )
 
     def _count_related(self, session, model, project_db_ids: list[int]) -> int:
@@ -143,3 +147,78 @@ class DashboardService:
         return session.scalar(
             select(func.count()).select_from(model).where(model.project_id.in_(project_db_ids))
         ) or 0
+
+    def _featured_project_live_snapshot(self, featured_project: dict[str, object] | None) -> dict[str, object] | None:
+        if not featured_project:
+            return None
+        project_id = str(featured_project.get("project_id") or "").strip()
+        if not project_id:
+            return None
+        project = self.project_repository.get(project_id)
+        if project is None:
+            return None
+
+        snapshot = BasEmulationLab(project=project).snapshot()
+        weather = dict(snapshot.weather)
+        station = dict(snapshot.station)
+        points = [point for device in snapshot.devices for point in device.points]
+
+        def analog_value(*tokens: str) -> float | None:
+            token_set = tuple(self._normalize_token(token) for token in tokens)
+            for point in points:
+                normalized_name = self._normalize_token(point.point_name)
+                if any(token in normalized_name for token in token_set) and isinstance(point.present_value, (int, float)):
+                    return float(point.present_value)
+            return None
+
+        def percent_value(*tokens: str) -> str:
+            value = analog_value(*tokens)
+            return f"{round(value, 1):g}%" if value is not None else "--"
+
+        supply_air_temp = analog_value("AHU-1 SAT", "AHU-1 DAT", "SUPPLY AIR TEMP")
+        return_air_temp = analog_value("AHU-1 RAT", "RETURN AIR TEMP")
+        mixed_air_temp = analog_value("AHU-1 MAT", "MIXED AIR TEMP")
+        zone_temp = self._average_matching_points(points, "ZNT", "ZONE TEMP", "SPACE TEMP")
+        supply_static = analog_value("DUCT SP", "STATIC PRESSURE", "FILTER DP")
+
+        return {
+            "weather": weather,
+            "station": station,
+            "outdoor_air_temp": self._format_value(weather.get("outdoor_air_temp"), "degF"),
+            "outdoor_air_humidity": self._format_value(weather.get("outdoor_air_humidity"), "%"),
+            "wind_mph": self._format_value(weather.get("wind_mph"), "mph"),
+            "conditions": str(weather.get("conditions") or "unknown").replace("_", " ").title(),
+            "supply_air_temp": self._format_value(supply_air_temp, "degF"),
+            "return_air_temp": self._format_value(return_air_temp, "degF"),
+            "mixed_air_temp": self._format_value(mixed_air_temp, "degF"),
+            "avg_zone_temp": self._format_value(zone_temp, "degF"),
+            "supply_static": self._format_value(supply_static, "inWC"),
+            "cooling_valve": percent_value("CLG VALVE", "COOLING VALVE"),
+            "heating_valve": percent_value("HTG VALVE", "HEATING VALVE"),
+            "outside_air_damper": percent_value("OA DAMPER", "OUTSIDE AIR DAMPER"),
+        }
+
+    def _average_matching_points(self, points, *tokens: str) -> float | None:
+        token_set = tuple(self._normalize_token(token) for token in tokens)
+        values: list[float] = []
+        for point in points:
+            normalized_name = self._normalize_token(point.point_name)
+            if any(token in normalized_name for token in token_set) and isinstance(point.present_value, (int, float)):
+                values.append(float(point.present_value))
+        if not values:
+            return None
+        return round(sum(values) / len(values), 1)
+
+    def _format_value(self, value: object, units: str = "") -> str:
+        if not isinstance(value, (int, float)):
+            return "--"
+        if units == "%":
+            return f"{round(float(value), 1):g}%"
+        if units:
+            decimals = 2 if units in {"inWC", "psi"} else 1
+            numeric = f"{float(value):.{decimals}f}".rstrip("0").rstrip(".")
+            return f"{numeric} {units}"
+        return f"{float(value):.1f}"
+
+    def _normalize_token(self, value: str) -> str:
+        return "".join(ch for ch in value.upper() if ch.isalnum())

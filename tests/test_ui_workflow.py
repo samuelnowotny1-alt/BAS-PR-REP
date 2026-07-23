@@ -220,6 +220,9 @@ def test_project_detail_page_renders_engineering_status_summary() -> None:
     text = response_text(response)
     assert response.status_code == 200
     assert "Engineering Status" in text
+    assert "Project Live Conditions" in text
+    assert "Supply Air" in text
+    assert "Outdoor Humidity" in text
     assert "Development Status" in text
     assert "Controller Assignment Coverage" in text
     assert "Controller Addressing" in text
