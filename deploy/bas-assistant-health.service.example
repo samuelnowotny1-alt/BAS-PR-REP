@@ -1,0 +1,10 @@
+[Unit]
+Description=Probe BAS Assistant application health
+After=bas-assistant.service
+
+[Service]
+Type=oneshot
+User=bas
+Group=bas
+WorkingDirectory=/home/bas/bas-assistant
+ExecStart=/home/bas/bas-assistant/scripts/healthcheck.sh

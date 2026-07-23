@@ -189,7 +189,20 @@ For an authentication-enabled deployment, provide credentials through
 `BAS_SMOKE_USERNAME` and `BAS_SMOKE_PASSWORD`. The checker reads them from the
 environment and does not print them.
 
-## 10. Logs and troubleshooting
+## 10. Backups And Monitoring
+
+Install the daily runtime backup and five-minute health timers:
+
+```bash
+./scripts/install_vps_operations.sh
+```
+
+The backup contains production configuration, data, uploads, and generated
+outputs. Archives default to `/home/bas/bas-assistant-backups`, use owner-only
+permissions, and retain 14 days. Override with `BAS_BACKUP_DIR` and
+`BAS_BACKUP_RETENTION_DAYS` in the service environment when needed.
+
+## 11. Logs and troubleshooting
 
 Application logs:
 
