@@ -12,6 +12,7 @@ Last updated: 2026-07-23
 - Release ID: `20260723T161607Z`
 - Target: `http://155.138.193.113/`
 - Runtime: `bas-assistant.service` behind Nginx
+- Service migration: stale unmanaged listener removed; systemd owns port `8000`
 - Persistent state: `data/`, `uploads/`, `output/`, `logs/`, and `config/bas-assistant.env`
 
 ## Included

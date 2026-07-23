@@ -151,7 +151,7 @@ bas emulate project.json -o emulation --serve --host 0.0.0.0 --port 8787
 Current reviewed production mode:
 
 - app managed by `bas-assistant.service`
-- service launches `scripts/start_production.sh`
+- service launches Uvicorn from the repository virtual environment
 - bound to `127.0.0.1:8000`
 - Nginx in front on `80/443`
 - persistent runtime state in `data/`, `output/`, `uploads/`, and `logs/`

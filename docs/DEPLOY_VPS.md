@@ -166,6 +166,7 @@ The deployer:
 - preserves `config/bas-assistant.env`, data, uploads, outputs, and logs
 - creates a code-only snapshot under `/home/bas/bas-assistant-releases`
 - installs and restarts `bas-assistant.service`
+- reuses an installed supervised service when the deploy account cannot run sudo
 - runs migrations and health verification
 - restores the prior code snapshot automatically if health verification fails
 

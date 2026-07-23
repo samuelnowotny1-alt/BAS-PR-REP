@@ -53,17 +53,37 @@ if [ -x .venv/bin/alembic ]; then
     .venv/bin/alembic upgrade head
 fi
 
-sudo install -m 0644 deploy/bas-assistant.service.example "/etc/systemd/system/${service_name}"
-sudo systemctl daemon-reload
-if ! sudo systemctl is-active --quiet "${service_name}"; then
-    pid="$(ss -ltnp | sed -n 's/.*127.0.0.1:8000.*pid=\([0-9]\+\).*/\1/p' | head -n1)"
-    if [ -n "${pid:-}" ]; then
-        kill "${pid}"
-        sleep 2
+can_sudo=0
+if sudo -n true 2>/dev/null; then
+    can_sudo=1
+    sudo install -m 0644 deploy/bas-assistant.service.example "/etc/systemd/system/${service_name}"
+    sudo systemctl daemon-reload
+elif ! systemctl cat "${service_name}" >/dev/null 2>&1; then
+    echo "${service_name} is not installed and passwordless sudo is unavailable." >&2
+    exit 1
+fi
+
+restart_service() {
+    if [ "${can_sudo}" -eq 1 ]; then
+        sudo systemctl enable "${service_name}" >/dev/null
+        sudo systemctl restart "${service_name}"
+        return
     fi
+    main_pid="$(systemctl show "${service_name}" -p MainPID --value)"
+    if [ -z "${main_pid}" ] || [ "${main_pid}" = "0" ]; then
+        echo "${service_name} is not running and cannot be started without sudo." >&2
+        return 1
+    fi
+    kill "${main_pid}"
+}
+
+if systemctl is-active --quiet "${service_name}"; then
+    restart_service
+elif [ "${can_sudo}" -eq 1 ]; then
     sudo systemctl enable --now "${service_name}"
 else
-    sudo systemctl restart "${service_name}"
+    echo "${service_name} is inactive and cannot be started without sudo." >&2
+    exit 1
 fi
 
 healthy=0
@@ -75,7 +95,6 @@ for _ in $(seq 1 15); do
     sleep 1
 done
 if [ "${healthy}" -ne 1 ]; then
-    sudo systemctl stop "${service_name}" || true
     rsync -a --delete \
       --exclude '.venv' --exclude 'config/bas-assistant.env' \
       --exclude 'data' --exclude 'logs' --exclude 'output' --exclude 'uploads' \
@@ -83,12 +102,12 @@ if [ "${healthy}" -ne 1 ]; then
       "${backup_dir}/" "${remote_dir}/"
     cd "${remote_dir}"
     .venv/bin/pip install -e .
-    sudo systemctl start "${service_name}"
+    restart_service || true
     echo "Deployment failed health checks and code was rolled back from ${backup_dir}." >&2
     exit 1
 fi
 
-sudo systemctl is-active "${service_name}"
+systemctl is-active "${service_name}"
 curl -fsS http://127.0.0.1:8000/healthz
 REMOTE
 then
