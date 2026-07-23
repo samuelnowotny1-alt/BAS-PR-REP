@@ -299,8 +299,8 @@ class UIVerifier:
         dead_patterns = []
         for link in internal_links:
             url = link['url']
-            # Check for placeholder URLs
-            if url in ('#', '/', 'javascript:void(0)', 'javascript:;'):
+            # Check for placeholder URLs. Real app routes like "/" should not be flagged.
+            if url in ('javascript:void(0)', 'javascript:;'):
                 dead_patterns.append(f"  ⚠️  Placeholder link: '{link['text']}' -> {url} (from {link['from_page']})")
             # Check for template variables not replaced
             if '{{' in url or '}}' in url:
