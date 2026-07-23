@@ -838,3 +838,19 @@ def test_full_system_generation_includes_airside_and_plant_overviews() -> None:
     assert {"BLR-1", "HWP-1", "HX-1", "AHU-1"} <= heating_ids
     assert {binding.point_name for binding in cooling.bindings} >= {"CHLR-1 STATUS", "CHLR-1 CHWST"}
     assert {binding.point_name for binding in heating.bindings} >= {"BLR-1 STATUS", "BLR-1 HWS"}
+
+    assert cooling.metadata["visual_system"] == "fieldline"
+    assert cooling.metadata["media"] == ["chilled_water", "condenser_water"]
+    assert heating.metadata["media"] == ["heating_water"]
+    assert any(element.css_class == "system-zone" for element in cooling.elements)
+
+    cooling_svg = generator._graphic_to_svg(cooling)
+    assert 'aria-labelledby="graphic-title graphic-description"' in cooling_svg
+    assert 'id="canvas-gradient"' in cooling_svg
+    assert 'id="canvas-grid"' in cooling_svg
+    assert 'id="flow-arrow"' in cooling_svg
+    assert "SYSTEM NORMAL" in cooling_svg
+    assert "CHILLED WATER" in cooling_svg
+    assert "CONDENSER WATER" in cooling_svg
+    assert 'class="media-label"' in cooling_svg
+    assert 'fill="#1464a5"' in cooling_svg

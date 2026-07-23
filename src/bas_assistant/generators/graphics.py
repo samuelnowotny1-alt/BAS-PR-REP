@@ -8,6 +8,7 @@ from datetime import datetime
 from enum import Enum
 from html import escape
 from pathlib import Path
+from typing import ClassVar
 
 from ..models import Equipment, EquipmentType, Point, PointKind, Project, default_isometric_asset_library
 from ..validation import ValidationEngine
@@ -103,6 +104,24 @@ class GraphicSection:
 
 class GraphicsGenerator:
     """Generates graphics definitions from project data."""
+
+    SYSTEM_PALETTE: ClassVar[dict[str, str]] = {
+        "ink": "#17211b",
+        "muted": "#607069",
+        "line": "#cbd5cf",
+        "panel": "#f8faf8",
+        "canvas": "#eef3ef",
+        "supply_air": "#168aad",
+        "return_air": "#c66a2b",
+        "chilled_supply": "#1464a5",
+        "chilled_return": "#55a6d9",
+        "condenser_supply": "#147d74",
+        "condenser_return": "#55b8aa",
+        "heating_supply": "#c64e2c",
+        "heating_return": "#e28b51",
+        "normal": "#21865c",
+        "alarm": "#c43d35",
+    }
 
     AHU_SECTION_DETAIL_Y = {
         "outside_air": 0.5,
@@ -4854,44 +4873,66 @@ class GraphicsGenerator:
             metadata={
                 "system_type": f"{system_kind}_plant",
                 "equipment_ids": [equip.id for equip in equipment],
+                "visual_system": "fieldline",
+                "media": (
+                    ["chilled_water", "condenser_water"]
+                    if is_cooling
+                    else ["heating_water"]
+                ),
             },
+        )
+        self._append_system_zone(
+            graphic,
+            x=0.04,
+            y=0.05,
+            width=0.54,
+            height=0.82,
+            label="PLANT EQUIPMENT",
+        )
+        self._append_system_zone(
+            graphic,
+            x=0.60,
+            y=0.05,
+            width=0.37,
+            height=0.82,
+            label="DISTRIBUTION & LOADS",
         )
 
         if is_cooling:
             self._append_system_pipe(
                 graphic, x=0.07, y=0.62, width=0.78, height=0,
-                color="#2563eb", css_class="water-path chilled-water-supply",
+                color=self.SYSTEM_PALETTE["chilled_supply"], css_class="water-path chilled-water-supply",
             )
             self._append_system_pipe(
                 graphic, x=0.07, y=0.76, width=0.78, height=0,
-                color="#60a5fa", css_class="water-path chilled-water-return",
+                color=self.SYSTEM_PALETTE["chilled_return"], css_class="water-path chilled-water-return",
             )
             self._append_system_pipe(
                 graphic, x=0.42, y=0.32, width=0.44, height=0,
-                color="#0f766e", css_class="water-path condenser-water-supply",
+                color=self.SYSTEM_PALETTE["condenser_supply"], css_class="water-path condenser-water-supply",
             )
             self._append_system_pipe(
                 graphic, x=0.42, y=0.44, width=0.44, height=0,
-                color="#2dd4bf", css_class="water-path condenser-water-return",
+                color=self.SYSTEM_PALETTE["condenser_return"], css_class="water-path condenser-water-return",
             )
             pipe_labels = [
-                (0.08, 0.60, "CHWS", "#1d4ed8"),
-                (0.08, 0.74, "CHWR", "#2563eb"),
-                (0.61, 0.30, "CWS", "#0f766e"),
-                (0.61, 0.42, "CWR", "#0f766e"),
+                (0.08, 0.60, "CHWS", self.SYSTEM_PALETTE["chilled_supply"]),
+                (0.08, 0.74, "CHWR", self.SYSTEM_PALETTE["chilled_return"]),
+                (0.61, 0.30, "CWS", self.SYSTEM_PALETTE["condenser_supply"]),
+                (0.61, 0.42, "CWR", self.SYSTEM_PALETTE["condenser_return"]),
             ]
         else:
             self._append_system_pipe(
                 graphic, x=0.07, y=0.58, width=0.79, height=0,
-                color="#ea580c", css_class="water-path heating-water-supply",
+                color=self.SYSTEM_PALETTE["heating_supply"], css_class="water-path heating-water-supply",
             )
             self._append_system_pipe(
                 graphic, x=0.07, y=0.75, width=0.79, height=0,
-                color="#fb923c", css_class="water-path heating-water-return",
+                color=self.SYSTEM_PALETTE["heating_return"], css_class="water-path heating-water-return",
             )
             pipe_labels = [
-                (0.08, 0.56, "HWS", "#c2410c"),
-                (0.08, 0.73, "HWR", "#ea580c"),
+                (0.08, 0.56, "HWS", self.SYSTEM_PALETTE["heating_supply"]),
+                (0.08, 0.73, "HWR", self.SYSTEM_PALETTE["heating_return"]),
             ]
 
         for x, y, text, color in pipe_labels:
@@ -4901,9 +4942,10 @@ class GraphicsGenerator:
                 y=y,
                 text=text,
                 font_size=10,
-                font_family="Arial",
+                font_family="'IBM Plex Sans', 'Segoe UI', sans-serif",
                 fill=color,
                 layer="labels",
+                css_class="media-label",
             ))
 
         positions = self._plant_system_positions(system_kind, equipment)
@@ -4941,8 +4983,9 @@ class GraphicsGenerator:
                 y=y + height + 0.025,
                 text=equip.id,
                 font_size=10,
-                font_family="Arial",
+                font_family="'IBM Plex Sans', 'Segoe UI', sans-serif",
                 layer="labels",
+                css_class="equipment-label",
             ))
             self._add_system_summary_bindings(
                 graphic,
@@ -5012,6 +5055,41 @@ class GraphicsGenerator:
             stroke_width=5,
             layer="piping",
             css_class=css_class,
+        ))
+
+    def _append_system_zone(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        label: str,
+    ) -> None:
+        """Add a quiet grouping surface without obscuring the process diagram."""
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            fill="#f8faf8",
+            stroke="#cbd5cf",
+            stroke_width=1,
+            layer="canvas",
+            css_class="system-zone",
+        ))
+        graphic.elements.append(GraphicElement(
+            element_type="text",
+            x=x + 0.012,
+            y=y + 0.027,
+            text=label,
+            font_size=9,
+            font_family="'IBM Plex Sans', 'Segoe UI', sans-serif",
+            fill=self.SYSTEM_PALETTE["muted"],
+            layer="labels",
+            css_class="system-zone-label",
         ))
 
     def _append_heat_exchanger_system_asset(
@@ -5109,11 +5187,11 @@ class GraphicsGenerator:
                 y=y,
                 width=0.1,
                 height=0.065,
-                fill="#e2e8f0",
-                stroke="#475569",
+                fill="#ffffff",
+                stroke="#b7c4bd",
                 stroke_width=1.2,
                 layer="equipment",
-                css_class="equipment-shell",
+                css_class="load-card",
             ))
             graphic.elements.append(GraphicElement(
                 element_type="text",
@@ -5121,8 +5199,9 @@ class GraphicsGenerator:
                 y=y + 0.04,
                 text=equip.id,
                 font_size=8,
-                font_family="Arial",
+                font_family="'IBM Plex Sans', 'Segoe UI', sans-serif",
                 layer="labels",
+                css_class="equipment-label",
             ))
             self._record_asset_placement(
                 graphic,
@@ -5167,7 +5246,28 @@ class GraphicsGenerator:
             equipment_id=ahu.id,
             width=1600,
             height=1000,
-            metadata={"system_type": "AHU", "ahu": ahu.id},
+            metadata={
+                "system_type": "AHU",
+                "ahu": ahu.id,
+                "visual_system": "fieldline",
+                "media": ["supply_air", "return_air"],
+            },
+        )
+        self._append_system_zone(
+            graphic,
+            x=0.025,
+            y=0.055,
+            width=0.50,
+            height=0.76,
+            label="AIR HANDLING",
+        )
+        self._append_system_zone(
+            graphic,
+            x=0.62,
+            y=0.055,
+            width=0.35,
+            height=0.84,
+            label="TERMINAL NETWORK",
         )
         self._record_asset_placement(
             graphic,
@@ -5215,7 +5315,7 @@ class GraphicsGenerator:
         ))
         graphic.elements.append(GraphicElement(
             element_type="line", x=0.49, y=0.44, width=0.17, height=0,
-            stroke="#1976d2", stroke_width=4, layer="piping",
+            stroke=self.SYSTEM_PALETTE["supply_air"], stroke_width=4, layer="piping",
             css_class="airflow-path airflow-supply",
         ))
         self._add_system_summary_bindings(
@@ -5232,12 +5332,12 @@ class GraphicsGenerator:
             box_y = y
             graphic.elements.append(GraphicElement(
                 element_type="rect", x=0.69, y=box_y, width=0.17, height=0.11,
-                fill="url(#equipment-shell-gradient)", stroke="#6b7280", stroke_width=1.4, layer="equipment",
+                fill="#ffffff", stroke="#9eaaa3", stroke_width=1.4, layer="equipment",
                 css_class="vav-shell",
             ))
             graphic.elements.append(GraphicElement(
                 element_type="rect", x=0.70, y=box_y + 0.01, width=0.15, height=0.09,
-                fill="url(#equipment-face-gradient)", stroke="#cbd5e1", stroke_width=0.8, layer="equipment",
+                fill="#f4f7f4", stroke="#d7dfda", stroke_width=0.8, layer="equipment",
                 css_class="vav-face",
             ))
             graphic.elements.append(GraphicElement(
@@ -5273,7 +5373,7 @@ class GraphicsGenerator:
             ))
             graphic.elements.append(GraphicElement(
                 element_type="line", x=0.65, y=y + 0.05, width=0.05, height=0,
-                stroke="#1976d2", stroke_width=2, layer="piping",
+                stroke=self.SYSTEM_PALETTE["supply_air"], stroke_width=2, layer="piping",
                 css_class="airflow-path airflow-supply airflow-branch",
             ))
 
@@ -5297,7 +5397,7 @@ class GraphicsGenerator:
         ))
         graphic.elements.append(GraphicElement(
             element_type="line", x=0.49, y=0.58, width=0.14, height=0,
-            stroke="#ef6c00", stroke_width=3, layer="piping",
+            stroke=self.SYSTEM_PALETTE["return_air"], stroke_width=3, layer="piping",
             css_class="airflow-path airflow-return",
         ))
 
@@ -5377,13 +5477,19 @@ class GraphicsGenerator:
         }
 
     def _graphic_to_svg(self, graphic: GraphicDefinition) -> str:
-        """Generate basic SVG representation."""
+        """Generate a responsive operator graphic with shared visual chrome."""
         margin_x = 200
         margin_y = 90
         lines = [
             f'<svg width="{graphic.width}" height="{graphic.height}" '
             f'viewBox="{-margin_x} {-margin_y} {graphic.width + (margin_x * 2)} {graphic.height + (margin_y * 2)}" '
-            f'xmlns="http://www.w3.org/2000/svg">',
+            f'xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="graphic-title graphic-description">',
+            f'  <title id="graphic-title">{escape(graphic.name)}</title>',
+            (
+                '  <desc id="graphic-description">'
+                f'{escape(graphic.graphic_type.value.title())} building automation graphic'
+                '</desc>'
+            ),
             "  <defs>",
             self._svg_visual_defs(),
             "    <style>",
@@ -5393,8 +5499,14 @@ class GraphicsGenerator:
             (
                 f'  <rect x="{-margin_x}" y="{-margin_y}" '
                 f'width="{graphic.width + (margin_x * 2)}" '
-                f'height="{graphic.height + (margin_y * 2)}" fill="{graphic.background}"/>'
+                f'height="{graphic.height + (margin_y * 2)}" fill="url(#canvas-gradient)"/>'
             ),
+            (
+                f'  <rect x="{-margin_x}" y="{-margin_y}" '
+                f'width="{graphic.width + (margin_x * 2)}" '
+                f'height="{graphic.height + (margin_y * 2)}" fill="url(#canvas-grid)" opacity="0.42"/>'
+            ),
+            self._svg_canvas_chrome(graphic, margin_x=margin_x, margin_y=margin_y),
         ]
 
         # Group by layer
@@ -5402,7 +5514,7 @@ class GraphicsGenerator:
         for elem in graphic.elements:
             layers.setdefault(elem.layer, []).append(elem)
 
-        layer_order = ["piping", "symbol", "equipment", "labels", "bindings"]
+        layer_order = ["canvas", "piping", "symbol", "equipment", "labels", "bindings"]
         for layer in layer_order:
             if layer in layers:
                 lines.append(f'  <g class="layer-{layer}">')
@@ -5418,6 +5530,59 @@ class GraphicsGenerator:
 
         lines.append('</svg>')
         return "\n".join(lines)
+
+    def _svg_canvas_chrome(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        margin_x: int,
+        margin_y: int,
+    ) -> str:
+        """Render title, operating state, and process legend outside the work area."""
+        left = -margin_x + 34
+        right = graphic.width + margin_x - 34
+        title_y = -margin_y + 38
+        type_label = graphic.graphic_type.value.replace("_", " ").upper()
+        media = graphic.metadata.get("media", [])
+        media_tokens = {
+            "supply_air": ("SUPPLY AIR", self.SYSTEM_PALETTE["supply_air"]),
+            "return_air": ("RETURN AIR", self.SYSTEM_PALETTE["return_air"]),
+            "chilled_water": ("CHILLED WATER", self.SYSTEM_PALETTE["chilled_supply"]),
+            "condenser_water": ("CONDENSER WATER", self.SYSTEM_PALETTE["condenser_supply"]),
+            "heating_water": ("HEATING WATER", self.SYSTEM_PALETTE["heating_supply"]),
+        }
+        legend_parts = []
+        legend_x = left
+        legend_y = graphic.height + 55
+        for media_id in media:
+            label, color = media_tokens.get(media_id, (str(media_id).upper(), self.SYSTEM_PALETTE["muted"]))
+            legend_parts.append(
+                f'<line x1="{legend_x}" y1="{legend_y}" x2="{legend_x + 30}" y2="{legend_y}" '
+                f'stroke="{color}" stroke-width="5" stroke-linecap="round"/>'
+            )
+            legend_parts.append(
+                f'<text x="{legend_x + 40}" y="{legend_y + 4}" class="canvas-legend">{escape(label)}</text>'
+            )
+            legend_x += 40 + (len(label) * 8.1) + 34
+
+        return "\n".join([
+            '  <g class="canvas-chrome">',
+            f'    <text x="{left}" y="{title_y}" class="canvas-kicker">{escape(type_label)}</text>',
+            f'    <text x="{left}" y="{title_y + 28}" class="canvas-title">{escape(graphic.name)}</text>',
+            (
+                f'    <g class="canvas-state" transform="translate({right - 132} {title_y - 17})">'
+                '<rect width="132" height="30" rx="15"/>'
+                '<circle cx="17" cy="15" r="5"/>'
+                '<text x="31" y="19">SYSTEM NORMAL</text>'
+                '</g>'
+            ),
+            *[f"    {part}" for part in legend_parts],
+            (
+                f'    <text x="{right}" y="{legend_y + 4}" text-anchor="end" class="canvas-caption">'
+                'LIVE POINTS / AUTO-GENERATED SCHEMATIC</text>'
+            ),
+            '  </g>',
+        ])
 
     def _binding_to_svg(self, binding: GraphicBinding, width: int, height: int, index: int) -> str:
         px = binding.x * width
@@ -5538,6 +5703,7 @@ class GraphicsGenerator:
             return (f'    <text x="{px}" y="{py}" '
                     f'{class_attr}'
                     f'font-size="{elem.font_size}" font-family="{elem.font_family}" '
+                    f'fill="{elem.fill or "#17211b"}" '
                     f'text-anchor="middle" dominant-baseline="middle">{escape(elem.text or "")}</text>')
         return ""
 
@@ -5561,6 +5727,10 @@ class GraphicsGenerator:
       }
       .airflow-path {
         opacity: 0.9;
+        marker-end: url(#flow-arrow);
+      }
+      .water-path {
+        marker-end: url(#flow-arrow);
       }
       .fan-blade {
         transform-box: fill-box;
@@ -5583,6 +5753,63 @@ class GraphicsGenerator:
       .airflow-branch {
         stroke-dasharray: 10 8;
       }
+      .canvas-kicker, .canvas-legend, .canvas-caption, .canvas-state text, .system-zone-label, .media-label {
+        font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+        letter-spacing: 0.11em;
+        font-weight: 700;
+      }
+      .canvas-kicker {
+        fill: #607069;
+        font-size: 12px;
+      }
+      .canvas-title {
+        fill: #17211b;
+        font-family: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+        font-size: 24px;
+        font-weight: 650;
+      }
+      .canvas-legend {
+        fill: #44524b;
+        font-size: 10px;
+      }
+      .canvas-caption {
+        fill: #78857e;
+        font-family: 'IBM Plex Mono', 'Cascadia Mono', monospace;
+        font-size: 9px;
+        letter-spacing: 0.08em;
+      }
+      .canvas-state rect {
+        fill: #e1f1e8;
+        stroke: #a9d3bb;
+      }
+      .canvas-state circle {
+        fill: #21865c;
+      }
+      .canvas-state text {
+        fill: #1f6749;
+        font-size: 9px;
+      }
+      .system-zone {
+        filter: url(#zone-shadow);
+        rx: 18px;
+      }
+      .system-zone-label {
+        font-size: 9px;
+      }
+      .equipment-label {
+        fill: #2d3933;
+        font-weight: 700;
+      }
+      .media-label {
+        font-weight: 800;
+      }
+      .load-card {
+        filter: url(#card-shadow);
+        rx: 9px;
+      }
+      .station-widget-card {
+        filter: url(#card-shadow);
+      }
       @keyframes fan-spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
@@ -5603,12 +5830,23 @@ class GraphicsGenerator:
         """.strip()
 
     def _svg_visual_defs(self) -> str:
-        """SVG defs for more dimensional equipment rendering."""
+        """SVG defs for restrained industrial equipment and dashboard surfaces."""
         return """
+    <linearGradient id="canvas-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f6f8f5"/>
+      <stop offset="55%" stop-color="#edf2ee"/>
+      <stop offset="100%" stop-color="#e5ece7"/>
+    </linearGradient>
+    <pattern id="canvas-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="1.1" fill="#aab8b0"/>
+    </pattern>
+    <marker id="flow-arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
+    </marker>
     <linearGradient id="equipment-shell-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#f4f5f7"/>
-      <stop offset="45%" stop-color="#c8ccd1"/>
-      <stop offset="100%" stop-color="#8a9199"/>
+      <stop offset="0%" stop-color="#fafcf9"/>
+      <stop offset="48%" stop-color="#dfe5e0"/>
+      <stop offset="100%" stop-color="#aeb8b1"/>
     </linearGradient>
     <linearGradient id="equipment-face-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#fdfdfd"/>
@@ -5633,9 +5871,9 @@ class GraphicsGenerator:
       <stop offset="100%" stop-color="#111827"/>
     </linearGradient>
     <linearGradient id="return-duct-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#fed7aa"/>
-      <stop offset="55%" stop-color="#fb923c"/>
-      <stop offset="100%" stop-color="#9a3412"/>
+      <stop offset="0%" stop-color="#f1d8c3"/>
+      <stop offset="55%" stop-color="#d89662"/>
+      <stop offset="100%" stop-color="#9e5830"/>
     </linearGradient>
     <linearGradient id="coil-face-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#f0f9ff"/>
@@ -5668,13 +5906,19 @@ class GraphicsGenerator:
       <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.04"/>
     </linearGradient>
     <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0f172a" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#26352d" flood-opacity="0.13"/>
     </filter>
     <filter id="metal-shadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.22"/>
     </filter>
     <filter id="inner-depth" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#ffffff" flood-opacity="0.35"/>
+    </filter>
+    <filter id="zone-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#314039" flood-opacity="0.08"/>
+    </filter>
+    <filter id="card-shadow" x="-20%" y="-30%" width="140%" height="170%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#314039" flood-opacity="0.12"/>
     </filter>
         """.strip()
 
