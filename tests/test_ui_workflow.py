@@ -2765,6 +2765,37 @@ def test_import_page_surfaces_mapping_review_handoff() -> None:
     assert "Some imported relationships still need explicit review." in text
 
 
+def test_import_snapshot_restores_structured_project_state() -> None:
+    project_id = create_project("import-rollback-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    snapshot_path = main.create_import_snapshot(project)
+
+    project.equipment.clear()
+    main.save_project(project)
+    response = run_async(main.rollback_latest_import(project_id))
+
+    assert snapshot_path.exists()
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/project/{project_id}/import?rolled_back=1"
+    assert main.get_project(project_id).get_equipment("AHU-1") is not None
+
+
+def test_import_page_includes_csv_preflight_and_rollback_controls() -> None:
+    project_id = create_project("import-preflight-project")
+    project = main.get_project(project_id)
+    main.create_import_snapshot(project)
+
+    response = run_async(main.import_page(request(f"/project/{project_id}/import"), project_id))
+    text = response_text(response)
+
+    assert response.status_code == 200
+    assert 'data-import-type="equipment"' in text
+    assert "Headers ready for import" in text
+    assert f"/project/{project_id}/import/rollback" in text
+
+
 def test_add_assumption_redirects_with_valid_category() -> None:
     project_id = create_project()
 

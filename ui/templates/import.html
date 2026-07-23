@@ -219,6 +219,14 @@
             <div class="mt-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-900/20 dark:text-sky-100">
                 Common contractor headings such as <strong>Equip ID</strong>, <strong>Point Tag</strong>, <strong>I/O</strong>, <strong>Panel ID</strong>, and <strong>IP</strong> are mapped automatically. The import result records every applied mapping before you use the inline editors.
             </div>
+            {% if import_snapshot_count %}
+            <div class="mt-3 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-amber-900/40 dark:bg-amber-900/20">
+                <p class="text-sm text-amber-900 dark:text-amber-100">{{ import_snapshot_count }} structured import snapshot{% if import_snapshot_count != 1 %}s{% endif %} available. Latest: {{ latest_import_snapshot }}</p>
+                <form method="post" action="/project/{{ project.metadata.project_id }}/import/rollback" onsubmit="return confirm('Restore the structured project to its state before the latest import? Upload and task audit history will remain.');">
+                    <button type="submit" class="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-amber-800 dark:border-amber-700 dark:bg-slate-950 dark:text-amber-200">Rollback Latest Import</button>
+                </form>
+            </div>
+            {% endif %}
         </div>
         <div class="grid gap-6">
             <!-- Equipment Schedule -->
@@ -228,7 +236,8 @@
                     Equipment Schedule
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Equipment ID, Equipment Type. Optional: Subtype, Building, Floor, Room, Served Area, Controller ID, Parent/Child Equipment, Points, Design CFM/Tonnage/GPM/kW, Voltage, Phase, Status, Graphic Sections, Tags, Notes</p>
-                <input type="file" name="equipment_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
+                <input type="file" name="equipment_file" accept=".csv,.xlsx,.xls" class="input-field w-full" data-import-type="equipment">
+                <div class="mt-3 text-xs text-slate-500 dark:text-slate-400" data-import-preflight="equipment">Select a CSV to preview and validate its headers.</div>
             </div>
 
             <!-- Point List -->
@@ -238,7 +247,8 @@
                     Point List
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Point Name, Equipment ID, Point Kind, Direction. Optional: Units, Range Min/Max, Controller ID, BACnet/Modbus config, Source, Description, Tags</p>
-                <input type="file" name="points_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
+                <input type="file" name="points_file" accept=".csv,.xlsx,.xls" class="input-field w-full" data-import-type="points">
+                <div class="mt-3 text-xs text-slate-500 dark:text-slate-400" data-import-preflight="points">Select a CSV to preview and validate its headers.</div>
             </div>
 
             <!-- Controller Schedule -->
@@ -248,7 +258,8 @@
                     Controller Schedule
                 </h3>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Required columns: Controller ID. Optional: Name, Vendor, Model, Firmware, Type, Protocols, IP Address, Panel Location, Serves Equipment, Owned Points, I/O Capacity, Status, Notes</p>
-                <input type="file" name="controllers_file" accept=".csv,.xlsx,.xls" class="input-field w-full">
+                <input type="file" name="controllers_file" accept=".csv,.xlsx,.xls" class="input-field w-full" data-import-type="controllers">
+                <div class="mt-3 text-xs text-slate-500 dark:text-slate-400" data-import-preflight="controllers">Select a CSV to preview and validate its headers.</div>
             </div>
 
             <div class="card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -361,11 +372,95 @@
 
 {% block extra_scripts %}
 <script>
-    // Enable submit button when at least one file is selected
+    const importColumnContracts = {{ import_column_contracts|tojson }};
+    const normalizeImportHeading = (value) => value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+
+    function parseCsvHeader(line) {
+        const values = [];
+        let current = '';
+        let quoted = false;
+        for (let index = 0; index < line.length; index += 1) {
+            const character = line[index];
+            if (character === '"') {
+                if (quoted && line[index + 1] === '"') {
+                    current += '"';
+                    index += 1;
+                } else {
+                    quoted = !quoted;
+                }
+            } else if (character === ',' && !quoted) {
+                values.push(current.trim());
+                current = '';
+            } else {
+                current += character;
+            }
+        }
+        values.push(current.trim());
+        return values.filter(Boolean);
+    }
+
+    function updateImportSubmitState() {
+        const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
+        const hasFile = inputs.some((input) => input.files.length > 0);
+        const hasInvalidCsv = inputs.some((input) => input.dataset.preflightValid === 'false');
+        document.querySelector('button[type="submit"]').disabled = !hasFile || hasInvalidCsv;
+    }
+
+    function renderImportPreflight(input, headers) {
+        const importType = input.dataset.importType;
+        const host = document.querySelector(`[data-import-preflight="${importType}"]`);
+        const contract = importColumnContracts[importType];
+        if (!host || !contract) return;
+
+        const sourceByNormalized = Object.fromEntries(
+            headers.map((header) => [normalizeImportHeading(header), header]),
+        );
+        const mappings = [];
+        const resolved = new Set();
+        Object.entries(contract.aliases).forEach(([canonical, aliases]) => {
+            [canonical, ...aliases].some((candidate) => {
+                const source = sourceByNormalized[normalizeImportHeading(candidate)];
+                if (!source) return false;
+                resolved.add(canonical);
+                mappings.push(source === canonical ? canonical : `${source} → ${canonical}`);
+                return true;
+            });
+        });
+        const missing = contract.required.filter((required) => !resolved.has(required));
+        input.dataset.preflightValid = String(missing.length === 0);
+        host.className = `mt-3 rounded-xl border px-3 py-3 text-xs ${missing.length ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-900/20 dark:text-rose-200' : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200'}`;
+        host.innerHTML = `
+            <p class="font-semibold">${missing.length ? `Missing required: ${missing.join(', ')}` : 'Headers ready for import'}</p>
+            <p class="mt-1">${mappings.length ? `Detected: ${mappings.join(' · ')}` : `Columns: ${headers.join(' · ')}`}</p>
+        `;
+        updateImportSubmitState();
+    }
+
     document.querySelectorAll('input[type="file"]').forEach(input => {
         input.addEventListener('change', function() {
-            const hasFile = Array.from(document.querySelectorAll('input[type="file"]')).some(i => i.files.length > 0);
-            document.querySelector('button[type="submit"]').disabled = !hasFile;
+            const file = input.files[0];
+            if (!file || !input.dataset.importType) {
+                delete input.dataset.preflightValid;
+                updateImportSubmitState();
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                input.dataset.preflightValid = 'true';
+                const host = document.querySelector(`[data-import-preflight="${input.dataset.importType}"]`);
+                if (host) host.textContent = 'Spreadsheet selected. Headers will be validated by the server before rows are applied.';
+                updateImportSubmitState();
+                return;
+            }
+            const reader = new FileReader();
+            reader.addEventListener('load', () => {
+                const firstLine = String(reader.result || '').split(/\r?\n/, 1)[0];
+                renderImportPreflight(input, parseCsvHeader(firstLine));
+            });
+            reader.readAsText(file.slice(0, 16384));
         });
     });
 

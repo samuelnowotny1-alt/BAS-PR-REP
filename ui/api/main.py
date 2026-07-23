@@ -246,6 +246,26 @@ def save_project(project: Project) -> None:
     projects[project.metadata.project_id] = project
 
 
+def _import_snapshot_dir(project_id: str) -> Path:
+    return DATA_DIR / "projects" / project_id / "import_snapshots"
+
+
+def list_import_snapshots(project_id: str) -> list[Path]:
+    snapshot_dir = _import_snapshot_dir(project_id)
+    if not snapshot_dir.exists():
+        return []
+    return sorted(snapshot_dir.glob("*.json"), reverse=True)
+
+
+def create_import_snapshot(project: Project) -> Path:
+    snapshot_dir = _import_snapshot_dir(project.metadata.project_id)
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    snapshot_path = snapshot_dir / f"before-import-{timestamp}.json"
+    snapshot_path.write_text(project.model_dump_json(indent=2), encoding="utf-8")
+    return snapshot_path
+
+
 def record_project_ledger_event(
     *,
     project_id: str | None,
@@ -2163,6 +2183,21 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
     workspace_view = container.project_queries.import_workspace_view(project_id)
     template_downloads = build_import_template_downloads(project_id)
     mapping_review = build_mapping_review_summary(project)
+    snapshots = list_import_snapshots(project_id)
+    column_contracts = {
+        "equipment": {
+            "required": ["Equipment ID", "Equipment Type"],
+            "aliases": CSVImporter.COLUMN_ALIASES["equipment"],
+        },
+        "points": {
+            "required": ["Point Name", "Equipment ID", "Point Kind", "Direction"],
+            "aliases": CSVImporter.COLUMN_ALIASES["points"],
+        },
+        "controllers": {
+            "required": ["Controller ID"],
+            "aliases": CSVImporter.COLUMN_ALIASES["controllers"],
+        },
+    }
     if workspace_view is None:
         return {
             "project": project,
@@ -2173,6 +2208,9 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
             "inline_editors": build_import_editor_views(project),
             "template_downloads": template_downloads,
             "mapping_review": mapping_review,
+            "import_snapshot_count": len(snapshots),
+            "latest_import_snapshot": snapshots[0].name if snapshots else None,
+            "import_column_contracts": column_contracts,
         }
     return {
         "project": project,
@@ -2183,6 +2221,9 @@ def _import_page_context(project: Project, project_id: str) -> dict[str, object]
         "inline_editors": build_import_editor_views(project),
         "template_downloads": template_downloads,
         "mapping_review": mapping_review,
+        "import_snapshot_count": len(snapshots),
+        "latest_import_snapshot": snapshots[0].name if snapshots else None,
+        "import_column_contracts": column_contracts,
     }
 
 
@@ -4927,6 +4968,9 @@ async def import_data(
     importer = CSVImporter(project)
     results = {}
     current_user = None
+    structured_files = (equipment_file, points_file, controllers_file)
+    if any(upload and getattr(upload, "filename", None) for upload in structured_files):
+        create_import_snapshot(project)
 
     if equipment_file and getattr(equipment_file, "filename", None):
         task_id = container.tasks.create_task(
@@ -5179,6 +5223,27 @@ async def import_data(
             },
         )
     return RedirectResponse(url=f"/project/{project_id}?imported=1", status_code=303)
+
+
+@app.post("/project/{project_id}/import/rollback")
+async def rollback_latest_import(project_id: str):
+    current_project = get_project(project_id)
+    snapshots = list_import_snapshots(project_id)
+    if not snapshots:
+        raise HTTPException(status_code=404, detail="No import snapshot is available")
+    restored = Project.model_validate_json(snapshots[0].read_text(encoding="utf-8"))
+    if restored.metadata.project_id != current_project.metadata.project_id:
+        raise HTTPException(status_code=409, detail="Import snapshot project mismatch")
+    save_project(restored)
+    record_project_ledger_event(
+        project_id=project_id,
+        event_type="import.rollback_applied",
+        summary=f"Structured project restored from {snapshots[0].name}",
+        entity_type="project",
+        entity_key=project_id,
+        payload={"snapshot": snapshots[0].name},
+    )
+    return RedirectResponse(url=f"/project/{project_id}/import?rolled_back=1", status_code=303)
 
 
 @app.get("/project/{project_id}/validate", response_class=HTMLResponse)
