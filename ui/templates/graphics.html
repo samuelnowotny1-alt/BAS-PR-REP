@@ -177,7 +177,7 @@
                         </div>
                         <div class="min-w-0">
                             <p class="text-xs font-semibold uppercase tracking-[0.22em] text-gray-500 dark:text-gray-400">Critical Readouts</p>
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">High-value signals stay visible on the canvas. Lower-priority points remain here so the page reads cleanly.</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">High-value signals stay visible on the canvas. Lower-priority points remain here so the page still reads cleanly while exposing more BAS telemetry.</p>
                             <div id="preview-summary" class="mt-3 grid gap-2 sm:grid-cols-2"></div>
                             <div id="binding-list" class="mt-3 max-h-[280px] space-y-2 overflow-auto pr-1"></div>
                         </div>
@@ -273,11 +273,11 @@
                         <div class="border-b border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800/70">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">Connected Points</p>
                             <div class="mt-3 flex flex-wrap gap-2">
-                                {% for binding in record.binding_details[:10] %}
+                                {% for binding in record.binding_details[:16] %}
                                 <span class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300">{{ binding.point_name }} · {{ binding.binding_type }}</span>
                                 {% endfor %}
-                                {% if record.binding_details|length > 10 %}
-                                <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">+{{ record.binding_details|length - 10 }} more</span>
+                                {% if record.binding_details|length > 16 %}
+                                <span class="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">+{{ record.binding_details|length - 16 }} more</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -339,7 +339,7 @@
     const emulationClearOverridesUrl = "/api/project/{{ project.metadata.project_id }}/emulation/overrides/clear";
     const emulationControllerBaseUrl = "/api/project/{{ project.metadata.project_id }}/emulation/controllers/";
     const telemetryState = { frame: 0, active: [], rafId: null, emulationTimerId: null, mode: "synthetic" };
-    const MAX_CANVAS_BINDINGS = 6;
+    const MAX_CANVAS_BINDINGS = 10;
 
     function componentColor(component) {
         const slotType = component.slotType || "";
@@ -501,6 +501,7 @@
         const onCanvas = items.filter((item) => item.canvasVisible).length;
         return [
             { label: "On Canvas", value: onCanvas },
+            { label: "Readout Only", value: Math.max(items.length - onCanvas, 0) },
             { label: "Sensors", value: sensors },
             { label: "Commands", value: commands },
             { label: "Statuses", value: statuses },

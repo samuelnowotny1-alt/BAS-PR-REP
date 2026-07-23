@@ -90,7 +90,7 @@ Reviewer checks:
 
 - Active graphics and library are clearly separated.
 - Isometric asset library is presented as reusable building blocks.
-- Legacy flat symbols are labeled as compatibility/reference, not as the forward default.
+- Legacy flat symbols are hidden by default and labeled as compatibility/reference when revealed.
 
 Questions:
 

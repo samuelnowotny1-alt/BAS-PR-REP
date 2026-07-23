@@ -149,5 +149,5 @@ Current supporting docs for this slice:
 
 1. Add a reviewer walkthrough for the graphics workbench, detail page, library, and fullscreen mode.
 2. Mark the lab bench scripts and fixtures as support infrastructure in docs and release notes.
-3. Decide whether the legacy flat symbol reference remains visible by default or moves behind a clearer compatibility label.
+3. Keep the legacy flat symbol reference behind an explicit compatibility toggle so the default library stays focused on canonical isometric assets.
 4. Validate that every repo-retained lab asset has a documented reason to exist.

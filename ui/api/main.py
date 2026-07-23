@@ -5197,13 +5197,17 @@ async def graphics_page(request: Request, project_id: str):
 @app.get("/project/{project_id}/graphics/library", response_class=HTMLResponse)
 async def graphics_library_page(request: Request, project_id: str):
     project = get_project(project_id)
+    show_legacy_symbols = request.query_params.get("legacy", "").lower() in {"1", "true", "yes", "on"}
+    legacy_symbols = graphics_symbol_library()
     return templates.TemplateResponse(
         request=request,
         name="graphics_library.html",
         context={
             "project": project,
             "graphics_symbol_library": graphics_isometric_library(),
-            "legacy_symbol_library": graphics_symbol_library(),
+            "legacy_symbol_library": legacy_symbols if show_legacy_symbols else [],
+            "legacy_symbol_count": len(legacy_symbols),
+            "show_legacy_symbols": show_legacy_symbols,
         },
     )
 

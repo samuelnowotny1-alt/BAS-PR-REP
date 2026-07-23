@@ -40,6 +40,11 @@ class DashboardSnapshot:
     recent_uploads: list[dict[str, object]]
     health: dict[str, object]
     projects: dict[str, dict[str, object]]
+    total_object_count: int
+    points_per_equipment: float
+    controllers_per_project: float
+    featured_project: dict[str, object] | None
+    top_projects: list[dict[str, object]]
 
 
 class DashboardService:
@@ -98,6 +103,21 @@ class DashboardService:
                 limit=8,
             )
         ]
+        project_cards = list(projects.values())
+        total_object_count = equipment_count + point_count + controller_count
+        points_per_equipment = round(point_count / equipment_count, 1) if equipment_count else 0.0
+        controllers_per_project = round(controller_count / project_count, 1) if project_count else 0.0
+        featured_project = project_cards[0] if project_cards else None
+        top_projects = sorted(
+            project_cards,
+            key=lambda card: (
+                int(card.get("point_count", 0)),
+                int(card.get("equipment_count", 0)),
+                int(card.get("controller_count", 0)),
+                str(card.get("name", "")),
+            ),
+            reverse=True,
+        )[:3]
         return DashboardSnapshot(
             project_count=project_count,
             equipment_count=equipment_count,
@@ -110,6 +130,11 @@ class DashboardService:
             recent_uploads=recent_uploads,
             health=self.health_report_factory(),
             projects=projects,
+            total_object_count=total_object_count,
+            points_per_equipment=points_per_equipment,
+            controllers_per_project=controllers_per_project,
+            featured_project=featured_project,
+            top_projects=top_projects,
         )
 
     def _count_related(self, session, model, project_db_ids: list[int]) -> int:

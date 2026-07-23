@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import datetime, timedelta
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -28,13 +28,14 @@ def run_async(awaitable: Any) -> Any:
 
 
 def request(path: str = "/", method: str = "GET", headers: list[tuple[bytes, bytes]] | None = None) -> Request:
+    split = urlsplit(path)
     return Request(
         {
             "type": "http",
             "method": method,
-            "path": path,
+            "path": split.path,
             "headers": headers or [],
-            "query_string": b"",
+            "query_string": split.query.encode(),
             "server": ("testserver", 80),
             "client": ("testclient", 50000),
             "scheme": "http",
@@ -118,6 +119,9 @@ def test_home_and_new_project_pages_load() -> None:
     home = run_async(main.index(request("/")))
     assert home.status_code == 200
     home_text = response_text(home)
+    assert "Featured Project" in home_text
+    assert "Structured Objects" in home_text
+    assert "Project Portfolio" in home_text
     assert 'hx-post="/api/load-demo"' in home_text
     assert "Load Demo Project" in home_text
 
@@ -1418,7 +1422,7 @@ def test_graphics_preview_pages_prefers_equipment_pages() -> None:
     assert all(str(page.get("slotPath", "")).startswith("/Px/Equipment/") for page in pages)
 
 
-def test_graphics_library_page_includes_symbol_library() -> None:
+def test_graphics_library_page_defaults_to_isometric_library() -> None:
     project_id = create_project()
     project = main.projects[project_id]
     project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU))
@@ -1439,7 +1443,36 @@ def test_graphics_library_page_includes_symbol_library() -> None:
     assert "Known Unit Graphics" in text
     assert "Isometric Asset Library" in text
     assert "Legacy Flat Symbol Reference" in text
+    assert "Show Compatibility Symbols" in text
+    assert "Compatibility symbols are hidden by default" in text
+    assert "Hide Compatibility Symbols" not in text
+    assert "Legacy Symbol" not in text
     assert "ahu" in text
+
+
+def test_graphics_library_page_can_show_legacy_symbols() -> None:
+    project_id = create_project()
+    project = main.projects[project_id]
+    project.equipment.append(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    project.points.append(
+        main.Point(
+            name="AHU-1_SAT",
+            equipment_id="AHU-1",
+            kind=main.PointKind.SENSOR,
+            direction=main.PointDirection.INPUT,
+            units="degF",
+        )
+    )
+
+    response = run_async(
+        main.graphics_library_page(request(f"/project/{project_id}/graphics/library?legacy=1"), project_id)
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Hide Compatibility Symbols" in text
+    assert "Show Compatibility Symbols" not in text
+    assert "Legacy Symbol" in text
 
 
 def test_station_sync_save_persists_configuration() -> None:
