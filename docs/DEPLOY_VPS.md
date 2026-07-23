@@ -185,6 +185,10 @@ python scripts/release_smoke.py \
   --project-id codex-test-project
 ```
 
+For an authentication-enabled deployment, provide credentials through
+`BAS_SMOKE_USERNAME` and `BAS_SMOKE_PASSWORD`. The checker reads them from the
+environment and does not print them.
+
 ## 10. Logs and troubleshooting
 
 Application logs:
