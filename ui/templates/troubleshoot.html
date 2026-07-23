@@ -6,7 +6,7 @@
 <div class="max-w-4xl mx-auto">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Troubleshooting Assistant</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">Analyze trends, alarms, and control loops to identify issues</p>
+        <p class="ui-wrap-tight text-gray-500 dark:text-gray-400 mt-1">Analyze trends, alarms, and control loops to identify issues</p>
     </div>
 
     <form action="/project/{{ project.metadata.project_id }}/troubleshoot/analyze" hx-post="/project/{{ project.metadata.project_id }}/troubleshoot/analyze" hx-target="#troubleshoot-result" hx-swap="innerHTML" class="card bg-white dark:bg-gray-800 rounded-xl p-8 border border-gray-200 dark:border-gray-700" enctype="multipart/form-data">
@@ -40,18 +40,18 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Trends CSV</label>
                         <input type="file" name="trends_file" accept=".csv" class="input-field w-full">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, value</p>
+                        <p class="ui-wrap-tight text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, value</p>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alarms CSV</label>
                         <input type="file" name="alarms_file" accept=".csv" class="input-field w-full">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, severity, message, acknowledged</p>
+                        <p class="ui-wrap-tight text-xs text-gray-500 dark:text-gray-400 mt-1">Columns: timestamp, point_name, severity, message, acknowledged</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="mt-8 flex justify-end gap-4">
+        <div class="mt-8 flex flex-wrap justify-end gap-4">
             <a href="/project/{{ project.metadata.project_id }}" class="btn-secondary">
                 <i class="fas fa-arrow-left mr-2"></i>
                 Back

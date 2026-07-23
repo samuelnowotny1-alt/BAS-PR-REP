@@ -266,7 +266,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="ui-table w-full min-w-[1120px]">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Severity</th>
@@ -301,7 +301,7 @@
                             data-title="{{ finding.title }}"
                             data-search="{{ search_text }}"
                         >
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <td class="px-6 py-4 text-sm">
                                 <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
                                     {% if finding.severity == 'error' %}
                                         bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
@@ -315,7 +315,7 @@
                                 </span>
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200">
-                                <p class="font-medium text-gray-800 dark:text-white">{{ finding.object_id }}</p>
+                                <p class="ui-wrap-tight font-medium text-gray-800 dark:text-white">{{ finding.object_id }}</p>
                                 <div class="mt-1 flex flex-wrap items-center gap-2">
                                     <p class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{{ finding.object_type }}</p>
                                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-700 dark:bg-slate-800 dark:text-slate-300">{{ finding.issue_stream_label }}</span>
@@ -324,10 +324,10 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600 dark:text-gray-300">{{ finding.rule_id }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{{ finding.category.replace('_', ' ')|title }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ finding.field or "—" }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200">{{ finding.message }}</td>
+                            <td class="px-6 py-4 text-sm font-mono text-gray-600 dark:text-gray-300"><span class="ui-wrap-tight">{{ finding.rule_id }}</span></td>
+                            <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-300"><span class="ui-wrap-tight">{{ finding.category.replace('_', ' ')|title }}</span></td>
+                            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span class="ui-wrap-tight">{{ finding.field or "—" }}</span></td>
+                            <td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-200"><span class="ui-wrap-tight">{{ finding.message }}</span></td>
                             <td class="px-6 py-4 text-right">
                                 <button type="button" class="validation-inspect rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                                     Inspect

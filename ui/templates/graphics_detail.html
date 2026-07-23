@@ -118,7 +118,9 @@
         font-size: 11px;
         font-weight: 700;
         box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
-        white-space: nowrap;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.3;
     }
     .station-point-card::before {
         content: "";
@@ -283,8 +285,8 @@
         <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Graphic Inspect</p>
-                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.payload_title }}</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                <h1 class="ui-wrap-tight mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ graphic_detail.payload_title }}</h1>
+                <p class="ui-wrap-tight mt-2 text-sm text-gray-600 dark:text-gray-300">
                     {% if graphic_detail.equipment %}{{ graphic_detail.equipment.id }}{% else %}Unassigned graphic{% endif %}
                     {% if graphic_detail.controller %} · Controller {{ graphic_detail.controller.id }}{% endif %}
                     · {{ graphic_detail.binding_count }} bindings · {{ graphic_detail.element_count }} elements · {{ graphic_detail.asset_placement_count }} physical assets · {{ graphic_detail.asset_point_relation_count }} explicit relations
@@ -331,7 +333,7 @@
                                     <span class="station-chip">{{ graphic_detail.error_count }} errors</span>
                                     <span class="station-chip">{{ graphic_detail.warning_count }} warnings</span>
                                     {% if graphic_detail.preview_page %}
-                                    <span class="station-chip">{{ graphic_detail.preview_page.slotPath }}</span>
+                                    <span class="station-chip ui-wrap-tight">{{ graphic_detail.preview_page.slotPath }}</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -356,7 +358,7 @@
                                             <div class="station-point-marker" style="background: {{ color }};"></div>
                                             <div class="station-point-card">
                                                 <span class="station-point-dot" style="background: {{ color }};"></span>
-                                                <span>{{ binding.display_label }}</span>
+                                                <span class="ui-wrap-tight">{{ binding.display_label }}</span>
                                             </div>
                                         </div>
                                         {% endfor %}
@@ -385,8 +387,8 @@
                                         {% set ns.count = ns.count + 1 %}
                                         <div class="station-point-row">
                                             <div>
-                                                <div class="station-point-name">{{ binding.display_label }}</div>
-                                                <div class="station-point-meta">
+                                                <div class="station-point-name ui-wrap-tight">{{ binding.display_label }}</div>
+                                                <div class="station-point-meta ui-wrap-tight">
                                                     {{ binding.point_name }}
                                                     {% if binding.units %} · {{ binding.units }}{% endif %}
                                                     {% if binding.direction %} · {{ binding.direction }}{% endif %}
@@ -407,12 +409,12 @@
                                 <div class="station-panel">
                                     <div class="station-panel-head">Graphic Status</div>
                                     <div class="station-panel-body text-sm text-slate-700 space-y-2">
-                                        <div><strong>Equipment:</strong> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Unassigned" }}</div>
-                                        <div><strong>Controller:</strong> {{ graphic_detail.controller.id if graphic_detail.controller else "Unassigned" }}</div>
-                                        <div><strong>Relations:</strong> {{ graphic_detail.asset_point_relation_count }}</div>
-                                        <div><strong>Layers:</strong> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
+                                        <div class="ui-wrap-tight"><strong>Equipment:</strong> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Unassigned" }}</div>
+                                        <div class="ui-wrap-tight"><strong>Controller:</strong> {{ graphic_detail.controller.id if graphic_detail.controller else "Unassigned" }}</div>
+                                        <div class="ui-wrap-tight"><strong>Relations:</strong> {{ graphic_detail.asset_point_relation_count }}</div>
+                                        <div class="ui-wrap-tight"><strong>Layers:</strong> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
                                         {% if graphic_detail.summary.graphic_sections %}
-                                        <div><strong>Sections:</strong> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
+                                        <div class="ui-wrap-tight"><strong>Sections:</strong> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -437,19 +439,19 @@
                             <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                                 <div class="space-y-2">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ asset.asset_label }}</p>
+                                        <p class="ui-wrap-tight text-lg font-semibold text-gray-900 dark:text-white">{{ asset.asset_label }}</p>
                                         {% if asset.asset_category %}
                                         <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-200">{{ asset.asset_category }}</span>
                                         {% endif %}
                                         <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ asset.role_label }}</span>
                                     </div>
-                                    <p class="text-sm text-gray-700 dark:text-gray-200">{{ asset.asset_description }}</p>
-                                    <p class="text-sm text-gray-600 dark:text-gray-300">{{ asset.role_description }}</p>
+                                    <p class="ui-wrap-tight text-sm text-gray-700 dark:text-gray-200">{{ asset.asset_description }}</p>
+                                    <p class="ui-wrap-tight text-sm text-gray-600 dark:text-gray-300">{{ asset.role_description }}</p>
                                 </div>
                                 <div class="rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 shadow-sm dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
-                                    <div><span class="font-semibold text-gray-900 dark:text-white">Frame:</span> x {{ asset.x }}, y {{ asset.y }}, w {{ asset.width }}, h {{ asset.height }}</div>
-                                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Equipment:</span> {{ asset.equipment_id or "unassigned" }}</div>
-                                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Asset ID:</span> {{ asset.asset_id }}</div>
+                                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Frame:</span> x {{ asset.x }}, y {{ asset.y }}, w {{ asset.width }}, h {{ asset.height }}</div>
+                                    <div class="ui-wrap-tight mt-1"><span class="font-semibold text-gray-900 dark:text-white">Equipment:</span> {{ asset.equipment_id or "unassigned" }}</div>
+                                    <div class="ui-wrap-tight mt-1"><span class="font-semibold text-gray-900 dark:text-white">Asset ID:</span> {{ asset.asset_id }}</div>
                                 </div>
                             </div>
 
@@ -467,8 +469,8 @@
                                     <div class="mt-3 space-y-2">
                                         {% for target in asset.target_descriptions %}
                                         <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900/50">
-                                            <p class="font-semibold text-gray-900 dark:text-white">{{ target.label }}</p>
-                                            <p class="mt-1 text-gray-600 dark:text-gray-300">{{ target.description }}</p>
+                                            <p class="ui-wrap-tight font-semibold text-gray-900 dark:text-white">{{ target.label }}</p>
+                                            <p class="ui-wrap-tight mt-1 text-gray-600 dark:text-gray-300">{{ target.description }}</p>
                                         </div>
                                         {% endfor %}
                                         {% if not asset.target_descriptions %}
@@ -483,13 +485,13 @@
                                         {% for point in asset.related_points %}
                                         <div class="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm dark:border-blue-800 dark:bg-blue-950/20">
                                             <div class="flex items-center justify-between gap-3">
-                                                <p class="font-semibold text-blue-900 dark:text-blue-100">{{ point.display_label }}</p>
+                                                <p class="ui-wrap-tight font-semibold text-blue-900 dark:text-blue-100">{{ point.display_label }}</p>
                                                 <span class="rounded-full border border-blue-200 bg-white px-2 py-0.5 text-[11px] uppercase tracking-[0.16em] text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ point.binding_type }}</span>
                                             </div>
-                                            <p class="mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.point_name }}{% if point.units %} · {{ point.units }}{% endif %}</p>
-                                            <p class="mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.description }}</p>
+                                            <p class="ui-wrap-tight mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.point_name }}{% if point.units %} · {{ point.units }}{% endif %}</p>
+                                            <p class="ui-wrap-tight mt-1 text-blue-900/80 dark:text-blue-100/85">{{ point.description }}</p>
                                             {% if point.component or point.target_key or point.anchor_key %}
-                                            <p class="mt-1 text-[12px] uppercase tracking-[0.14em] text-blue-800/75 dark:text-blue-200/75">
+                                            <p class="ui-wrap-tight mt-1 text-[12px] uppercase tracking-[0.14em] text-blue-800/75 dark:text-blue-200/75">
                                                 {% if point.component %}Component {{ point.component }}{% endif %}
                                                 {% if point.target_key %} · Target {{ point.target_key }}{% endif %}
                                                 {% if point.anchor_key %} · Anchor {{ point.anchor_key }}{% endif %}
@@ -529,21 +531,21 @@
                             <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-900/40">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
-                                        <p class="font-semibold text-gray-900 dark:text-white">{{ element.display_label }}</p>
+                                <p class="ui-wrap-tight font-semibold text-gray-900 dark:text-white">{{ element.display_label }}</p>
                                         <p class="mt-1 text-xs uppercase tracking-[0.16em] text-sky-700 dark:text-sky-300">{{ element.role }}</p>
                                     </div>
                                     <span class="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ element.layer }}</span>
                                 </div>
-                                <p class="mt-2 text-gray-600 dark:text-gray-300">x {{ element.x }}, y {{ element.y }}, w {{ element.width }}, h {{ element.height }}</p>
-                                <p class="mt-2 text-gray-700 dark:text-gray-200">{{ element.program_explanation }}</p>
+                                <p class="ui-wrap-tight mt-2 text-gray-600 dark:text-gray-300">x {{ element.x }}, y {{ element.y }}, w {{ element.width }}, h {{ element.height }}</p>
+                                <p class="ui-wrap-tight mt-2 text-gray-700 dark:text-gray-200">{{ element.program_explanation }}</p>
                                 {% if element.text %}
-                                <p class="mt-1 text-gray-600 dark:text-gray-300">Text: {{ element.text }}</p>
+                                <p class="ui-wrap-tight mt-1 text-gray-600 dark:text-gray-300">Text: {{ element.text }}</p>
                                 {% endif %}
                                 {% if element.symbol_name %}
-                                <p class="mt-1 text-gray-600 dark:text-gray-300">Symbol: {{ element.symbol_name }}</p>
+                                <p class="ui-wrap-tight mt-1 text-gray-600 dark:text-gray-300">Symbol: {{ element.symbol_name }}</p>
                                 {% endif %}
                                 {% if element.stroke %}
-                                <p class="mt-1 text-gray-600 dark:text-gray-300">Stroke: {{ element.stroke }}</p>
+                                <p class="ui-wrap-tight mt-1 text-gray-600 dark:text-gray-300">Stroke: {{ element.stroke }}</p>
                                 {% endif %}
                             </div>
                             {% endfor %}
@@ -556,16 +558,16 @@
                             <div class="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm dark:border-blue-800 dark:bg-blue-900/20">
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
-                                        <p class="font-semibold text-blue-900 dark:text-blue-100">{{ binding.display_label }}</p>
-                                        <p class="mt-1 text-xs text-blue-900/80 dark:text-blue-100/85">{{ binding.description }}</p>
+                                        <p class="ui-wrap-tight font-semibold text-blue-900 dark:text-blue-100">{{ binding.display_label }}</p>
+                                        <p class="ui-wrap-tight mt-1 text-xs text-blue-900/80 dark:text-blue-100/85">{{ binding.description }}</p>
                                     </div>
                                     <span class="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[11px] uppercase tracking-[0.16em] text-blue-700 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{{ binding.binding_type }}</span>
                                 </div>
-                                <p class="mt-2 text-blue-900/80 dark:text-blue-100/90">
+                                <p class="ui-wrap-tight mt-2 text-blue-900/80 dark:text-blue-100/90">
                                     {% if binding.equipment_id %}{{ binding.equipment_id }} · {% endif %}
                                     {{ binding.kind or "point" }}{% if binding.units %} · {{ binding.units }}{% endif %}{% if binding.direction %} · {{ binding.direction }}{% endif %}
                                 </p>
-                                <p class="mt-1 text-blue-900/80 dark:text-blue-100/90">x {{ binding.x }}, y {{ binding.y }}{% if binding.label %} · Label {{ binding.label }}{% endif %}{% if binding.format %} · Format {{ binding.format }}{% endif %}</p>
+                                <p class="ui-wrap-tight mt-1 text-blue-900/80 dark:text-blue-100/90">x {{ binding.x }}, y {{ binding.y }}{% if binding.label %} · Label {{ binding.label }}{% endif %}{% if binding.format %} · Format {{ binding.format }}{% endif %}</p>
                             </div>
                             {% endfor %}
                             {% if not graphic_detail.binding_details %}
@@ -582,7 +584,7 @@
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ graphic_detail.json_path.name }}</p>
                 </div>
                 <div class="bg-gray-950 p-5 text-[12px] leading-5 text-gray-200">
-                    <pre class="max-h-[420px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.payload_excerpt }}{% if graphic_detail.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
+                    <pre class="ui-wrap-tight max-h-[420px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.payload_excerpt }}{% if graphic_detail.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
                 </div>
             </article>
         </div>
@@ -591,20 +593,20 @@
             <article class="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">Graphic Summary</p>
                 <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Graphic Type:</span> {{ graphic_detail.summary.graphic_type or "unknown" }}</div>
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Review:</span> {{ graphic_detail.summary.sequence_review_status }}</div>
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Layers:</span> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Connected Points:</span> {{ graphic_detail.binding_point_names|length }}</div>
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Physical Assets:</span> {{ graphic_detail.asset_placement_count }}</div>
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Explicit Relations:</span> {{ graphic_detail.asset_point_relation_count }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Graphic Type:</span> {{ graphic_detail.summary.graphic_type or "unknown" }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Sequence Review:</span> {{ graphic_detail.summary.sequence_review_status }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Layers:</span> {{ graphic_detail.layer_names|join(', ') if graphic_detail.layer_names else "default" }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Connected Points:</span> {{ graphic_detail.binding_point_names|length }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Physical Assets:</span> {{ graphic_detail.asset_placement_count }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Explicit Relations:</span> {{ graphic_detail.asset_point_relation_count }}</div>
                     {% if graphic_detail.summary.sequence_reference %}
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Sequence Reference:</span> {{ graphic_detail.summary.sequence_reference }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Sequence Reference:</span> {{ graphic_detail.summary.sequence_reference }}</div>
                     {% endif %}
                     {% if graphic_detail.summary.graphic_sections %}
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Sections:</span> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Sections:</span> {{ graphic_detail.summary.graphic_sections|join(', ') }}</div>
                     {% endif %}
                     {% if graphic_detail.navigation_targets %}
-                    <div><span class="font-semibold text-gray-900 dark:text-white">Navigation:</span> {{ graphic_detail.navigation_targets|join(', ') }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">Navigation:</span> {{ graphic_detail.navigation_targets|join(', ') }}</div>
                     {% endif %}
                 </div>
             </article>
@@ -629,10 +631,10 @@
                     {% for finding in graphic_detail.validation_findings[:8] %}
                     <a href="{{ finding.object_url }}" class="block rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
                         <div class="flex items-center justify-between gap-3">
-                            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }}</p>
+                        <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }}</p>
                             <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if finding.severity == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% elif finding.severity == 'warning' %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% else %}bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300{% endif %}">{{ finding.severity }}</span>
                         </div>
-                        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ finding.message }}</p>
+                        <p class="ui-wrap-tight mt-2 text-sm text-gray-600 dark:text-gray-300">{{ finding.message }}</p>
                     </a>
                     {% endfor %}
                     {% if not graphic_detail.validation_findings %}
@@ -647,8 +649,8 @@
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ station_delivery.station_plan.items|length }} sync plan items · {{ station_delivery.station_connection.last_test_status or "not tested" }}</p>
                 {% if graphic_detail.preview_page %}
                 <div class="mt-4 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
-                    <div><span class="font-semibold text-gray-900 dark:text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
-                    <div class="mt-1"><span class="font-semibold text-gray-900 dark:text-white">Bindings:</span> {{ graphic_detail.preview_page.bindings|length }} · <span class="font-semibold text-gray-900 dark:text-white">Components:</span> {{ graphic_detail.preview_page.components.root.children|length if graphic_detail.preview_page.components and graphic_detail.preview_page.components.root else 0 }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-900 dark:text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
+                    <div class="ui-wrap-tight mt-1"><span class="font-semibold text-gray-900 dark:text-white">Bindings:</span> {{ graphic_detail.preview_page.bindings|length }} · <span class="font-semibold text-gray-900 dark:text-white">Components:</span> {{ graphic_detail.preview_page.components.root.children|length if graphic_detail.preview_page.components and graphic_detail.preview_page.components.root else 0 }}</div>
                 </div>
                 {% endif %}
             </article>

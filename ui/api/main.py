@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from io import StringIO
 from pathlib import Path
 from typing import Optional, List
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from xml.sax.saxutils import escape
 
 from fastapi import FastAPI, Request, Form, File, UploadFile, HTTPException
@@ -3000,6 +3000,15 @@ def build_project_live_conditions(project: Project, *, snapshot: object | None =
     def percent_value(*tokens: str) -> str:
         return _format_live_value(analog_value(*tokens), "%")
 
+    def first_matching_point_name(*tokens: str) -> str | None:
+        token_set = tuple(_normalize_live_point_token(token) for token in tokens)
+        for point in points:
+            point_name = str(getattr(point, "point_name", ""))
+            normalized_name = _normalize_live_point_token(point_name)
+            if any(token in normalized_name for token in token_set):
+                return point_name
+        return None
+
     supply_air_temp = analog_value("AHU-1 SAT", "AHU-1 DAT", "SUPPLY AIR TEMP")
     return_air_temp = analog_value("AHU-1 RAT", "RETURN AIR TEMP")
     mixed_air_temp = analog_value("AHU-1 MAT", "MIXED AIR TEMP")
@@ -3012,6 +3021,12 @@ def build_project_live_conditions(project: Project, *, snapshot: object | None =
     heating_valve = analog_value("HTG VALVE", "HEATING VALVE")
     outside_air_damper = analog_value("OA DAMPER", "OUTSIDE AIR DAMPER")
     station_alarm_count = int(station.get("alarm_count", 0) or 0)
+    point_detail_base = f"/project/{project.metadata.project_id}/points"
+
+    def point_url(point_name: str | None, *, fallback: str = "") -> str:
+        if point_name:
+            return f"{point_detail_base}/{quote(point_name, safe='')}"
+        return fallback or point_detail_base
 
     return {
         "weather": weather,
@@ -3042,6 +3057,19 @@ def build_project_live_conditions(project: Project, *, snapshot: object | None =
             "outside_air_damper": _live_point_status("outside_air_damper", outside_air_damper, station_alarm_count=station_alarm_count),
             "cooling_valve": _live_point_status("cooling_valve", cooling_valve, station_alarm_count=station_alarm_count),
             "heating_valve": _live_point_status("heating_valve", heating_valve, station_alarm_count=station_alarm_count),
+        },
+        "links": {
+            "outdoor_air_temp": point_url(first_matching_point_name("AHU-1 OAT", "OUTSIDE AIR TEMP")),
+            "outdoor_air_humidity": point_url(first_matching_point_name("AHU-1 OAH", "OUTSIDE AIR HUM")),
+            "wind_mph": point_detail_base,
+            "supply_air_temp": point_url(first_matching_point_name("AHU-1 SAT", "AHU-1 DAT", "SUPPLY AIR TEMP")),
+            "return_air_temp": point_url(first_matching_point_name("AHU-1 RAT", "RETURN AIR TEMP")),
+            "mixed_air_temp": point_url(first_matching_point_name("AHU-1 MAT", "MIXED AIR TEMP")),
+            "avg_zone_temp": point_url(first_matching_point_name("ZNT", "ZONE TEMP", "SPACE TEMP"), fallback=point_detail_base),
+            "supply_static": point_url(first_matching_point_name("DUCT SP", "STATIC PRESSURE", "FILTER DP")),
+            "outside_air_damper": point_url(first_matching_point_name("OA DAMPER", "OUTSIDE AIR DAMPER")),
+            "cooling_valve": point_url(first_matching_point_name("CLG VALVE", "COOLING VALVE")),
+            "heating_valve": point_url(first_matching_point_name("HTG VALVE", "HEATING VALVE")),
         },
     }
 

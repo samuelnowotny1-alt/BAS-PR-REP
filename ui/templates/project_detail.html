@@ -123,105 +123,105 @@
             <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="mode">Mode: {{ project_view.live_conditions.station.schedule_mode|replace('_', ' ')|title }}</span>
         </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outdoor_air_temp" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_temp }}">
+            <a href="{{ project_view.live_conditions.links.outdoor_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_temp" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_temp }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Air</p>
                     <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAT</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_temp">{{ project_view.live_conditions.outdoor_air_temp }}</p>
                 <div class="mt-3 h-10" data-live-trend="outdoor_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Present Value</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outdoor_air_humidity" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_humidity }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Present Value · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.outdoor_air_humidity }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_humidity" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_humidity }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Humidity</p>
                     <span class="rounded-full border border-sky-900/80 bg-sky-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">OAH</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_humidity">{{ project_view.live_conditions.outdoor_air_humidity }}</p>
                 <div class="mt-3 h-10" data-live-trend="outdoor_air_humidity"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Relative Humidity</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="wind_mph" data-live-status="{{ project_view.live_conditions.statuses.wind_mph }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Relative Humidity · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.wind_mph }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="wind_mph" data-live-status="{{ project_view.live_conditions.statuses.wind_mph }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Wind</p>
                     <span class="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">WIND</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="wind_mph">{{ project_view.live_conditions.wind_mph }}</p>
                 <div class="mt-3 h-10" data-live-trend="wind_mph"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Weather Feed</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="supply_air_temp" data-live-status="{{ project_view.live_conditions.statuses.supply_air_temp }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Weather Feed · Open related points</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.supply_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_air_temp" data-live-status="{{ project_view.live_conditions.statuses.supply_air_temp }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Air</p>
                     <span class="rounded-full border border-emerald-900/80 bg-emerald-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">SAT</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-emerald-300" data-live-condition="supply_air_temp">{{ project_view.live_conditions.supply_air_temp }}</p>
                 <div class="mt-3 h-10" data-live-trend="supply_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Discharge Temperature</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="return_air_temp" data-live-status="{{ project_view.live_conditions.statuses.return_air_temp }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Discharge Temperature · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.return_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="return_air_temp" data-live-status="{{ project_view.live_conditions.statuses.return_air_temp }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Return Air</p>
                     <span class="rounded-full border border-orange-900/80 bg-orange-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-300">RAT</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-orange-300" data-live-condition="return_air_temp">{{ project_view.live_conditions.return_air_temp }}</p>
                 <div class="mt-3 h-10" data-live-trend="return_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Return Path Sensor</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="mixed_air_temp" data-live-status="{{ project_view.live_conditions.statuses.mixed_air_temp }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Return Path Sensor · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.mixed_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="mixed_air_temp" data-live-status="{{ project_view.live_conditions.statuses.mixed_air_temp }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Mixed Air</p>
                     <span class="rounded-full border border-violet-900/80 bg-violet-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300">MAT</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-violet-300" data-live-condition="mixed_air_temp">{{ project_view.live_conditions.mixed_air_temp }}</p>
                 <div class="mt-3 h-10" data-live-trend="mixed_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Mixing Section</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="avg_zone_temp" data-live-status="{{ project_view.live_conditions.statuses.avg_zone_temp }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Mixing Section · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.avg_zone_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="avg_zone_temp" data-live-status="{{ project_view.live_conditions.statuses.avg_zone_temp }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Avg Zone Temp</p>
                     <span class="rounded-full border border-fuchsia-900/80 bg-fuchsia-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fuchsia-300">ZNT</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-fuchsia-300" data-live-condition="avg_zone_temp">{{ project_view.live_conditions.avg_zone_temp }}</p>
                 <div class="mt-3 h-10" data-live-trend="avg_zone_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Average Zone Sensor</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="supply_static" data-live-status="{{ project_view.live_conditions.statuses.supply_static }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Average Zone Sensor · Open points</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.supply_static }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_static" data-live-status="{{ project_view.live_conditions.statuses.supply_static }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Static</p>
                     <span class="rounded-full border border-amber-900/80 bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">D-SP</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-amber-300" data-live-condition="supply_static">{{ project_view.live_conditions.supply_static }}</p>
                 <div class="mt-3 h-10" data-live-trend="supply_static"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Static Pressure</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="outside_air_damper" data-live-status="{{ project_view.live_conditions.statuses.outside_air_damper }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Static Pressure · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.outside_air_damper }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outside_air_damper" data-live-status="{{ project_view.live_conditions.statuses.outside_air_damper }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">OA Damper</p>
                     <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAD</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outside_air_damper">{{ project_view.live_conditions.outside_air_damper }}</p>
                 <div class="mt-3 h-10" data-live-trend="outside_air_damper"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Command Output</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="cooling_valve" data-live-status="{{ project_view.live_conditions.statuses.cooling_valve }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Command Output · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.cooling_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="cooling_valve" data-live-status="{{ project_view.live_conditions.statuses.cooling_valve }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Cooling Valve</p>
                     <span class="rounded-full border border-blue-900/80 bg-blue-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">CLG</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-blue-300" data-live-condition="cooling_valve">{{ project_view.live_conditions.cooling_valve }}</p>
                 <div class="mt-3 h-10" data-live-trend="cooling_valve"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position</p>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)]" data-live-card="heating_valve" data-live-status="{{ project_view.live_conditions.statuses.heating_valve }}">
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position · Open point</p>
+            </a>
+            <a href="{{ project_view.live_conditions.links.heating_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="heating_valve" data-live-status="{{ project_view.live_conditions.statuses.heating_valve }}">
                 <div class="flex items-center justify-between gap-3">
                     <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Heating Valve</p>
                     <span class="rounded-full border border-rose-900/80 bg-rose-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">HTG</span>
                 </div>
                 <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-rose-300" data-live-condition="heating_valve">{{ project_view.live_conditions.heating_valve }}</p>
                 <div class="mt-3 h-10" data-live-trend="heating_valve"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position</p>
-            </div>
+                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position · Open point</p>
+            </a>
         </div>
         <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
             <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="scenario_label">{{ project_view.live_conditions.station.scenario_label }}</span>
@@ -527,7 +527,7 @@
             <span class="text-sm text-gray-500 dark:text-gray-400">{{ project_view.equipment_count }} items</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="w-full">
+            <table class="ui-table w-full min-w-[1240px]">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">ID</th>
@@ -542,16 +542,16 @@
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     {% for equip in project_view.equipment %}
                     <tr class="table-row">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td class="px-6 py-4 text-sm font-medium">
                             <a href="/project/{{ project_view.project_id }}/equipment/{{ equip.id }}" class="text-orange-600 hover:text-orange-700 dark:text-orange-300 dark:hover:text-orange-200">
                                 {{ equip.id }}
                             </a>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.type }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ equip.building or '-' }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span class="ui-wrap-tight">{{ equip.type }}</span></td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400"><span class="ui-wrap-tight">{{ equip.building or '-' }}</span></td>
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {% if equip.controller_id %}
-                            <a href="/project/{{ project_view.project_id }}/controllers/{{ equip.controller_id }}" class="hover:text-blue-500">
+                            <a href="/project/{{ project_view.project_id }}/controllers/{{ equip.controller_id }}" class="ui-wrap-tight hover:text-blue-500">
                                 {{ equip.controller_id }}
                             </a>
                             {% else %}
@@ -607,11 +607,11 @@
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                                     placeholder="Public reference URL or document ID"
                                 >
-                                <div class="flex items-center justify-between gap-3">
-                                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <p class="ui-wrap-tight text-xs text-gray-500 dark:text-gray-400">
                                         Store section order plus manual-backed duct profile context used to shape the graphic.
                                     </p>
-                                    <button type="submit" class="btn-secondary text-sm whitespace-nowrap">Save</button>
+                                    <button type="submit" class="btn-secondary shrink-0 text-sm">Save</button>
                                 </div>
                             </form>
                             {% set preset_map = graphic_presets_for(project.get_equipment(equip.id)) %}
@@ -628,10 +628,10 @@
                             </div>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
                             {{ equip.point_count }}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
+                        <td class="px-6 py-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                                 {% if equip.status == 'operational' %}bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                                 {% elif equip.status == 'commissioned' %}bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200
@@ -640,7 +640,7 @@
                                 {{ equip.status|capitalize }}
                             </span>
                             {% if equip.provenance %}
-                            <p class="mt-2 text-xs text-gray-400">{{ equip.provenance.parser }} · {{ equip.provenance.source_name }}</p>
+                            <p class="ui-wrap-tight mt-2 text-xs text-gray-400">{{ equip.provenance.parser }} · {{ equip.provenance.source_name }}</p>
                             {% endif %}
                         </td>
                     </tr>

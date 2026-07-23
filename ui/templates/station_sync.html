@@ -147,7 +147,7 @@
             {% if probe_result %}
             <div class="mt-6 rounded-xl border px-4 py-3 text-sm {% if probe_result.success %}border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-200{% else %}border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-200{% endif %}">
                 <div class="font-semibold">{{ probe_result.message }}</div>
-                <div class="mt-1 font-mono text-xs">{{ probe_result.endpoint }}</div>
+                <div class="ui-wrap-tight mt-1 font-mono text-xs">{{ probe_result.endpoint }}</div>
             </div>
             {% elif station_connection.last_test_message %}
             <div class="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-900/40 dark:text-gray-300">
@@ -170,7 +170,7 @@
                 {% endif %}
 
                 <div class="mt-5 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
-                    <table class="w-full text-left text-sm">
+                    <table class="ui-table w-full min-w-[720px] text-left text-sm">
                         <thead class="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
                                 <th class="px-4 py-3 font-semibold text-gray-600 dark:text-gray-300">Category</th>
@@ -181,9 +181,9 @@
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                             {% for item in station_plan.items[:18] %}
                             <tr class="bg-white dark:bg-gray-800">
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ item.category }}</td>
-                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white">{{ item.name }}</td>
-                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300">{{ item.action }}</td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400"><span class="ui-wrap-tight">{{ item.category }}</span></td>
+                                <td class="px-4 py-3 font-medium text-gray-900 dark:text-white"><span class="ui-wrap-tight">{{ item.name }}</span></td>
+                                <td class="px-4 py-3 text-gray-600 dark:text-gray-300"><span class="ui-wrap-tight">{{ item.action }}</span></td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -199,9 +199,9 @@
             <div class="card rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-white">Current Target</h2>
                 <div class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
-                    <div><span class="font-semibold text-gray-800 dark:text-white">Base URL:</span> {{ station_connection.base_url() if station_connection.host else "Not configured" }}</div>
-                    <div><span class="font-semibold text-gray-800 dark:text-white">oBIX URL:</span> {{ station_connection.obix_url() if station_connection.host else "Not configured" }}</div>
-                    <div><span class="font-semibold text-gray-800 dark:text-white">Target:</span> {{ station_connection.target.value }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-800 dark:text-white">Base URL:</span> {{ station_connection.base_url() if station_connection.host else "Not configured" }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-800 dark:text-white">oBIX URL:</span> {{ station_connection.obix_url() if station_connection.host else "Not configured" }}</div>
+                    <div class="ui-wrap-tight"><span class="font-semibold text-gray-800 dark:text-white">Target:</span> {{ station_connection.target.value }}</div>
                     <div><span class="font-semibold text-gray-800 dark:text-white">Mode:</span> {{ "Enabled" if station_connection.enabled else "Disabled" }}</div>
                 </div>
             </div>

@@ -6,10 +6,10 @@
 <div class="max-w-6xl mx-auto space-y-6">
     <div class="card p-6">
         <div class="flex items-start justify-between gap-4">
-            <div>
+            <div class="min-w-0">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">{{ detail.entity_type }}</p>
-                <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ detail.title }}</h1>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ detail.subtitle }}</p>
+                <h1 class="ui-wrap-tight mt-2 text-3xl font-bold text-gray-900 dark:text-white">{{ detail.title }}</h1>
+                <p class="ui-wrap-tight mt-1 text-sm text-gray-500 dark:text-gray-400">{{ detail.subtitle }}</p>
             </div>
             <a href="/project/{{ project.metadata.project_id }}" class="btn-secondary">Back To Project</a>
         </div>
@@ -29,7 +29,7 @@
         </div>
         <div class="card p-5">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Provenance</p>
-            <p class="mt-3 text-sm font-semibold text-gray-900 dark:text-white">{{ detail.review.provenance }}</p>
+            <p class="ui-wrap-tight mt-3 text-sm font-semibold text-gray-900 dark:text-white">{{ detail.review.provenance }}</p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ detail.artifact_links|length }} artifact links recorded</p>
         </div>
     </div>
@@ -121,7 +121,7 @@
                 <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if detail.validation.sequence_review.status == 'covered' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% elif detail.validation.sequence_review.status == 'attention' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300{% else %}bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300{% endif %}">{{ detail.validation.sequence_review.status.replace('_', ' ') }}</span>
             </div>
             {% if detail.validation.sequence_review.documents %}
-            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">Sources: {{ detail.validation.sequence_review.documents|join(', ') }}</p>
+            <p class="ui-wrap-tight mt-2 text-xs text-gray-500 dark:text-gray-400">Sources: {{ detail.validation.sequence_review.documents|join(', ') }}</p>
             {% endif %}
             <div class="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
@@ -158,14 +158,14 @@
             <div class="rounded-xl border border-white/60 bg-white/70 px-4 py-4 dark:border-gray-700 dark:bg-gray-900/40">
                 <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }} · {{ finding.object_id }}</p>
-                        <p class="mt-1 text-xs uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">{{ finding.object_type }} · {{ finding.category }}</p>
+                        <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ finding.rule_id }} · {{ finding.object_id }}</p>
+                        <p class="ui-wrap-tight mt-1 text-xs uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">{{ finding.object_type }} · {{ finding.category }}</p>
                     </div>
                     <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if finding.severity == 'error' %}bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300{% elif finding.severity == 'warning' %}bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300{% else %}bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300{% endif %}">{{ finding.severity }}</span>
                 </div>
-                <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">{{ finding.message }}</p>
+                <p class="ui-wrap-tight mt-2 text-sm text-gray-700 dark:text-gray-300">{{ finding.message }}</p>
                 <div class="mt-2 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ finding.remediation }}</p>
+                    <p class="ui-wrap-tight text-xs text-gray-500 dark:text-gray-400">{{ finding.remediation }}</p>
                     {% if finding.object_url %}
                     <a href="{{ finding.object_url }}" class="text-xs font-semibold text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200">Open object</a>
                     {% endif %}
@@ -198,12 +198,12 @@
 
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Structured Data</h2>
             <div class="mt-4 overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
-                <table class="w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <table class="ui-table w-full min-w-[760px] divide-y divide-gray-200 dark:divide-gray-700">
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                         {% for key, value in detail.payload.items() %}
                         <tr>
                             <td class="w-56 px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200">{{ key }}</td>
-                            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><pre class="whitespace-pre-wrap font-mono text-xs">{{ value }}</pre></td>
+                            <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400"><pre class="ui-wrap-tight whitespace-pre-wrap font-mono text-xs">{{ value }}</pre></td>
                         </tr>
                         {% else %}
                         <tr>
@@ -246,13 +246,13 @@
                 <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
                     <div class="flex items-center justify-between gap-3">
                         {% if link.document_detail_url %}
-                        <a href="{{ link.document_detail_url }}" class="text-sm font-semibold text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-200">{{ link.document_name }}</a>
+                        <a href="{{ link.document_detail_url }}" class="ui-wrap-tight text-sm font-semibold text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-200">{{ link.document_name }}</a>
                         {% else %}
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ link.document_name }}</p>
+                        <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ link.document_name }}</p>
                         {% endif %}
                         <span class="text-[11px] uppercase tracking-[0.18em] text-gray-400">{{ link.relationship_type }}</span>
                     </div>
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ link.document_type }} · {{ link.parser_name }}</p>
+                    <p class="ui-wrap-tight mt-1 text-xs text-gray-500 dark:text-gray-400">{{ link.document_type }} · {{ link.parser_name }}</p>
                     {% if link.metadata %}
                     <div class="mt-3 flex flex-wrap gap-2">
                         {% for meta_key, meta_value in link.metadata.items() %}

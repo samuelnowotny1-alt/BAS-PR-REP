@@ -13,7 +13,7 @@
                     This page is separate from active project graphics. Use it to review known unit symbols and reusable graphic structures without mixing them into the live device view.
                 </p>
             </div>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap gap-3">
                 <a href="/project/{{ project.metadata.project_id }}/graphics" class="btn-secondary">Back To Active Graphics</a>
             </div>
         </div>
@@ -28,11 +28,11 @@
             {% for symbol in graphics_symbol_library %}
             <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
                 <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                    <div>
+                    <div class="min-w-0">
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
-                        <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
+                        <p class="ui-wrap-tight mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
                     </div>
-                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                    <span class="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
                         {{ symbol.category }}
                     </span>
                 </div>
@@ -40,13 +40,13 @@
                     {{ symbol.svg|safe }}
                 </div>
                 <div class="space-y-3 px-5 py-4 text-xs text-gray-500 dark:text-gray-400">
-                    <p>{{ symbol.description }}</p>
-                    <div class="flex items-center justify-between">
-                        <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
-                        <span>{{ symbol.anchor_count }} anchors · {{ symbol.binding_target_count }} targets</span>
+                    <p class="ui-wrap-tight">{{ symbol.description }}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="ui-wrap-tight">Base {{ symbol.width }} x {{ symbol.height }}</span>
+                        <span class="ui-wrap-tight">{{ symbol.anchor_count }} anchors · {{ symbol.binding_target_count }} targets</span>
                     </div>
                     {% if symbol.equipment_types %}
-                    <p>Equipment: {{ symbol.equipment_types|join(", ") }}</p>
+                    <p class="ui-wrap-tight">Equipment: {{ symbol.equipment_types|join(", ") }}</p>
                     {% endif %}
                     {% if symbol.tags %}
                     <div class="flex flex-wrap gap-2">
@@ -80,20 +80,20 @@
             {% for symbol in legacy_symbol_library %}
             <article class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
                 <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                    <div>
+                    <div class="min-w-0">
                         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">{{ symbol.label }}</h3>
-                        <p class="mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
+                        <p class="ui-wrap-tight mt-1 text-xs font-mono text-gray-500 dark:text-gray-400">{{ symbol.key }}</p>
                     </div>
-                    <span class="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
+                    <span class="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-gray-800 dark:text-gray-300">
                         {{ symbol.element_count }} elems
                     </span>
                 </div>
                 <div class="border-b border-gray-200 bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f5f5_62%,#e5e7eb_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_62%,#0b1220_100%)]">
                     {{ symbol.svg|safe }}
                 </div>
-                <div class="flex items-center justify-between px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
-                    <span>Base {{ symbol.width }} x {{ symbol.height }}</span>
-                    <span>Legacy Symbol</span>
+                <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span class="ui-wrap-tight">Base {{ symbol.width }} x {{ symbol.height }}</span>
+                    <span class="ui-wrap-tight">Legacy Symbol</span>
                 </div>
             </article>
             {% endfor %}

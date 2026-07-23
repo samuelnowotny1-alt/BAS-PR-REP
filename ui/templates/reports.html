@@ -32,8 +32,8 @@
     <div class="space-y-4">
         {% for name, path in report_paths.items() %}
         <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
+            <div class="px-6 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex min-w-0 items-start gap-4">
                     <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                         {% if path.name.endswith('.xlsx') %}
                         <i class="fas fa-file-excel text-blue-500 text-xl"></i>
@@ -43,12 +43,12 @@
                         <i class="fas fa-file text-blue-500 text-xl"></i>
                         {% endif %}
                     </div>
-                    <div>
-                        <h3 class="font-semibold text-gray-800 dark:text-white">{{ name|replace('_', ' ')|title }}</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 font-mono">{{ path }}</p>
+                    <div class="min-w-0">
+                        <h3 class="ui-wrap-tight font-semibold text-gray-800 dark:text-white">{{ name|replace('_', ' ')|title }}</h3>
+                        <p class="ui-wrap-tight text-sm text-gray-500 dark:text-gray-400 font-mono">{{ path }}</p>
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <a href="/output/{{ project.metadata.project_id }}/reports/{{ path.name }}" target="_blank" class="btn-secondary">
                         <i class="fas fa-eye mr-1"></i>
                         View
@@ -69,23 +69,23 @@
         <ul class="space-y-2">
             <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                 <i class="fas fa-check text-green-500"></i>
-                <span><strong>00_Project_Summary.md</strong> - Project overview, counts, and metadata</span>
+                <span class="ui-wrap-tight"><strong>00_Project_Summary.md</strong> - Project overview, counts, and metadata</span>
             </li>
             <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                 <i class="fas fa-check text-green-500"></i>
-                <span><strong>01_Equipment_Schedule.xlsx</strong> - Equipment list with design data, points summary</span>
+                <span class="ui-wrap-tight"><strong>01_Equipment_Schedule.xlsx</strong> - Equipment list with design data, points summary</span>
             </li>
             <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                 <i class="fas fa-check text-green-500"></i>
-                <span><strong>02_Point_Schedule.xlsx</strong> - Complete point list with BACnet/Modbus config, pivots</span>
+                <span class="ui-wrap-tight"><strong>02_Point_Schedule.xlsx</strong> - Complete point list with BACnet/Modbus config, pivots</span>
             </li>
             <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                 <i class="fas fa-check text-green-500"></i>
-                <span><strong>03_Controller_Schedule.xlsx</strong> - Controller details, network addresses, I/O capacity</span>
+                <span class="ui-wrap-tight"><strong>03_Controller_Schedule.xlsx</strong> - Controller details, network addresses, I/O capacity</span>
             </li>
             <li class="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                 <i class="fas fa-check text-green-500"></i>
-                <span><strong>04_Validation_Report.md</strong> - Validation status, errors, warnings</span>
+                <span class="ui-wrap-tight"><strong>04_Validation_Report.md</strong> - Validation status, errors, warnings</span>
             </li>
         </ul>
     </div>

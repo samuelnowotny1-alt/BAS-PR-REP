@@ -9,7 +9,7 @@
             <div>
                 <p class="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700 dark:text-sky-300">Project Status</p>
                 <h1 class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">Development Status</h1>
-                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+                <p class="ui-wrap-tight mt-2 text-sm text-gray-600 dark:text-gray-300">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
             </div>
             <div class="text-right">
                 <p class="text-4xl font-bold text-gray-900 dark:text-white">{{ development_status.score_pct }}%</p>
@@ -23,10 +23,10 @@
             {% for check in development_status.checks %}
             <article class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div class="flex items-center justify-between gap-3">
-                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">{{ check.label }}</h2>
+                    <h2 class="ui-wrap-tight text-base font-semibold text-gray-900 dark:text-white">{{ check.label }}</h2>
                     <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] {% if check.status == 'ready' %}bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300{% else %}bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300{% endif %}">{{ check.status }}</span>
                 </div>
-                <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">{{ check.detail }}</p>
+                <p class="ui-wrap-tight mt-3 text-sm text-gray-500 dark:text-gray-400">{{ check.detail }}</p>
             </article>
             {% endfor %}
         </div>
@@ -38,8 +38,8 @@
                 <div class="mt-4 space-y-3">
                     {% for action in next_actions %}
                     <a href="{{ action.url }}" class="block rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 transition hover:border-sky-300 hover:bg-sky-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:border-sky-800 dark:hover:bg-sky-900/10">
-                        <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ action.title }}</p>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ action.detail }}</p>
+                        <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ action.title }}</p>
+                        <p class="ui-wrap-tight mt-1 text-xs text-gray-500 dark:text-gray-400">{{ action.detail }}</p>
                     </a>
                     {% endfor %}
                 </div>
@@ -48,17 +48,17 @@
             <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Sequence Debt</p>
                 <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ development_status.sequence_summary.attention }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ development_status.sequence_summary.missing_refs }} missing refs · {{ development_status.sequence_summary.missing_checks }} missing checks</p>
+                <p class="ui-wrap-tight mt-1 text-sm text-gray-500 dark:text-gray-400">{{ development_status.sequence_summary.missing_refs }} missing refs · {{ development_status.sequence_summary.missing_checks }} missing checks</p>
             </div>
             <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Generator Readiness</p>
                 <p class="mt-3 text-3xl font-bold text-gray-900 dark:text-white">{{ development_status.generation_readiness.blockers|length }}</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">blockers · {{ development_status.generation_readiness.cautions|length }} cautions</p>
+                <p class="ui-wrap-tight mt-1 text-sm text-gray-500 dark:text-gray-400">blockers · {{ development_status.generation_readiness.cautions|length }} cautions</p>
             </div>
             <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <p class="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">Topology</p>
                 <p class="mt-3 text-lg font-semibold text-gray-900 dark:text-white">{{ development_status.equipment_with_controller }}/{{ development_status.equipment_total }} equipment assigned</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ development_status.controllers_with_addresses }}/{{ development_status.controllers_total }} controllers addressed</p>
+                <p class="ui-wrap-tight mt-1 text-sm text-gray-500 dark:text-gray-400">{{ development_status.controllers_with_addresses }}/{{ development_status.controllers_total }} controllers addressed</p>
             </div>
         </aside>
     </section>

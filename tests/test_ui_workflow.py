@@ -648,6 +648,7 @@ def test_generation_readiness_surfaces_sequence_coverage_debt() -> None:
     assert response.status_code == 200
     assert "Generation Readiness" in text
     assert "sequence-reviewed equipment items still have missing point coverage or control-family gaps" in text
+    assert "No Reports Generated" in text
 
 
 def test_export_page_blocks_submission_when_project_not_ready() -> None:
@@ -711,6 +712,8 @@ def test_object_list_pages_render() -> None:
     assert "MPC-1" in response_text(controllers_response)
     assert "BACnet/IP" in response_text(controllers_response)
     assert "10.0.0.5" in response_text(controllers_response)
+    assert 'class="ui-table w-full min-w-[980px]"' in response_text(equipment_response)
+    assert 'class="ui-wrap-tight text-orange-600 dark:text-orange-300"' in response_text(points_response)
 
 
 def test_project_documents_page_and_download_render() -> None:
@@ -741,6 +744,8 @@ def test_project_documents_page_and_download_render() -> None:
     assert "Document Library" in response_text(page_response)
     assert "Knowledge Status" in response_text(detail_response)
     assert "Knowledge Library" in response_text(knowledge_response)
+    assert 'class="ui-table w-full min-w-[980px]"' in response_text(page_response)
+    assert 'class="ui-table w-full min-w-[860px]"' in response_text(knowledge_response)
     assert page_response.status_code == 200
     assert detail_response.status_code == 200
     assert knowledge_response.status_code == 200
@@ -1451,6 +1456,7 @@ def test_graphics_library_page_defaults_to_isometric_library() -> None:
     assert "Hide Compatibility Symbols" not in text
     assert "Legacy Symbol" not in text
     assert "ahu" in text
+    assert 'class="ui-wrap-tight mt-1 text-xs font-mono text-gray-500 dark:text-gray-400"' in text
 
 
 def test_graphics_library_page_can_show_legacy_symbols() -> None:
@@ -1562,7 +1568,10 @@ def test_station_sync_probe_updates_last_probe_status(monkeypatch: pytest.Monkey
     assert project.station_connection is not None
     assert project.station_connection.last_test_status == "success"
     assert project.station_connection.last_test_message == "Station endpoint responded."
-    assert "Station endpoint responded." in response_text(response)
+    text = response_text(response)
+    assert "Station endpoint responded." in text
+    assert 'class="ui-wrap-tight mt-1 font-mono text-xs"' in text
+    assert 'class="ui-table w-full min-w-[720px] text-left text-sm"' in text
 
 
 def test_validate_page_includes_filters_and_export_link(
@@ -1598,6 +1607,8 @@ def test_validate_page_includes_filters_and_export_link(
     assert f'/project/{project_id}/validate/report.json' in text
     assert f'/project/{project_id}/validate/report.csv' in text
     assert "Re-run Validation" in text
+    assert 'class="ui-table w-full min-w-[1120px]"' in text
+    assert 'class="ui-wrap-tight font-medium text-gray-800 dark:text-white"' in text
 
 
 def test_validation_report_export_returns_json() -> None:
@@ -3590,6 +3601,8 @@ def test_graphics_fullscreen_page_renders_graphic_context() -> None:
     assert "Graphic Payload" in text
     assert "Object Context" in text
     assert "AHU-1" in text
+    assert 'class="ui-wrap-tight mt-3 max-w-3xl text-sm text-slate-300"' in text
+    assert 'class="ui-wrap-tight"><span class="font-semibold text-white">PX Slot:</span>' in text
 
 
 def test_graphics_detail_page_renders_elements_and_bindings() -> None:
@@ -3660,6 +3673,7 @@ def test_graphics_detail_page_renders_elements_and_bindings() -> None:
     assert "Explicit Relations" in text
     assert "AHU-1 SF STATUS" in text
     assert f"/output/{project_id}/graphics/graphics_json/{graphic_name}.json" in text
+    assert "ui-wrap-tight" in text
 
 
 def test_read_only_project_api_endpoints() -> None:

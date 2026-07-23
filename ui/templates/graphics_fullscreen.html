@@ -162,7 +162,7 @@
                 <div>
                     <p class="text-sm font-semibold uppercase tracking-[0.28em] text-sky-300">Realtime Simulation Deck</p>
                     <h1 class="mt-3 text-3xl font-bold text-white md:text-4xl">{{ graphic_detail.payload_title }}</h1>
-                    <p class="mt-3 max-w-3xl text-sm text-slate-300">
+                    <p class="ui-wrap-tight mt-3 max-w-3xl text-sm text-slate-300">
                         Pseudo-3D live scene driven by graphic asset placements and linked BAS points.
                         {% if graphic_detail.equipment %}{{ graphic_detail.equipment.id }}{% else %}Unassigned graphic{% endif %}
                         {% if graphic_detail.controller %} · Controller {{ graphic_detail.controller.id }}{% endif %}
@@ -205,8 +205,8 @@
                     <div class="sim-haze"></div>
                     <div class="absolute inset-x-6 top-6 z-20 flex flex-wrap items-center gap-3">
                         <span class="rounded-full border border-sky-300/25 bg-slate-950/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">Scene Mode: Live</span>
-                        <span class="rounded-full border border-slate-500/25 bg-slate-950/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Graphic Type: {{ graphic_detail.summary.graphic_type or "unknown" }}</span>
-                        <span class="rounded-full border border-slate-500/25 bg-slate-950/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Sequence Review: {{ graphic_detail.summary.sequence_review_status }}</span>
+                        <span class="ui-wrap-tight rounded-full border border-slate-500/25 bg-slate-950/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Graphic Type: {{ graphic_detail.summary.graphic_type or "unknown" }}</span>
+                        <span class="ui-wrap-tight rounded-full border border-slate-500/25 bg-slate-950/55 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">Sequence Review: {{ graphic_detail.summary.sequence_review_status }}</span>
                     </div>
                     <div id="hvac-sim-scene" class="sim-scene">
                         <div id="hvac-sim-ducts" class="sim-layer"></div>
@@ -227,12 +227,12 @@
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-xl font-semibold text-white">Graphic Payload</h2>
-                            <p class="mt-1 text-sm text-slate-400">{{ graphic_detail.json_path.name }}</p>
+                            <p class="ui-wrap-tight mt-1 text-sm text-slate-400">{{ graphic_detail.json_path.name }}</p>
                         </div>
                         <div class="rounded-full border border-slate-600/60 bg-slate-900/60 px-3 py-1 text-xs uppercase tracking-[0.16em] text-slate-300">JSON Source</div>
                     </div>
                     <div class="mt-4 rounded-[20px] bg-slate-950 p-5 text-[12px] leading-5 text-slate-200">
-                        <pre class="max-h-[360px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.payload_excerpt }}{% if graphic_detail.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
+                        <pre class="ui-wrap-tight max-h-[360px] overflow-auto whitespace-pre-wrap">{{ graphic_detail.payload_excerpt }}{% if graphic_detail.payload_excerpt|length >= 3200 %}...{% endif %}</pre>
                     </div>
                 </article>
             </div>
@@ -241,11 +241,11 @@
                 <article class="rounded-[24px] border border-slate-700/80 bg-slate-950/35 p-5 shadow-[0_18px_42px_rgba(2,6,23,0.34)]">
                     <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Object Context</p>
                     <div class="mt-4 space-y-3 text-sm text-slate-300">
-                        <div><span class="font-semibold text-white">Equipment:</span> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Not linked" }}</div>
-                        <div><span class="font-semibold text-white">Controller:</span> {{ graphic_detail.controller.id if graphic_detail.controller else "Not linked" }}</div>
-                        <div><span class="font-semibold text-white">Points:</span> {{ graphic_detail.point_names|length }}</div>
+                        <div class="ui-wrap-tight"><span class="font-semibold text-white">Equipment:</span> {{ graphic_detail.equipment.id if graphic_detail.equipment else "Not linked" }}</div>
+                        <div class="ui-wrap-tight"><span class="font-semibold text-white">Controller:</span> {{ graphic_detail.controller.id if graphic_detail.controller else "Not linked" }}</div>
+                        <div class="ui-wrap-tight"><span class="font-semibold text-white">Points:</span> {{ graphic_detail.point_names|length }}</div>
                         {% if graphic_detail.preview_page %}
-                        <div><span class="font-semibold text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
+                        <div class="ui-wrap-tight"><span class="font-semibold text-white">PX Slot:</span> {{ graphic_detail.preview_page.slotPath }}</div>
                         {% endif %}
                     </div>
                 </article>
