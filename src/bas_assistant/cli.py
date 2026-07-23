@@ -339,8 +339,12 @@ def graphics(project: str, output: str):
     result = generate_graphics(proj, Path(output))
 
     console.print("[green]✓[/green] Generated graphics")
-    for fmt, paths in result.items():
-        console.print(f"  {fmt}: {len(paths)} files")
+    for output_type, value in result.items():
+        if isinstance(value, list):
+            noun = "records" if output_type == "summaries" else "files"
+            console.print(f"  {output_type}: {len(value)} {noun}")
+        else:
+            console.print(f"  {output_type}: {value}")
 
 
 @main.command()
