@@ -30,18 +30,19 @@ rsync -a --delete --no-owner --no-group --omit-dir-times \
   "${backup_dir}/" "${remote_dir}/"
 cd "${remote_dir}"
 .venv/bin/pip install -e .
+old_pid="$(systemctl show "${service_name}" -p MainPID --value 2>/dev/null || true)"
+old_pid="${old_pid:-0}"
 if sudo -n true 2>/dev/null; then
     sudo systemctl restart "${service_name}"
-else
-    main_pid="$(systemctl show "${service_name}" -p MainPID --value)"
-    if [ -z "${main_pid}" ] || [ "${main_pid}" = "0" ]; then
-        echo "${service_name} is not running and cannot be restarted without sudo." >&2
-        exit 1
-    fi
-    kill "${main_pid}"
+elif [ "${old_pid}" != "0" ]; then
+    kill "${old_pid}" 2>/dev/null || true
 fi
-for _ in $(seq 1 15); do
-    if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
+for _ in $(seq 1 30); do
+    main_pid="$(systemctl show "${service_name}" -p MainPID --value 2>/dev/null || true)"
+    main_pid="${main_pid:-0}"
+    if [ "${main_pid}" != "0" ] && [ "${main_pid}" != "${old_pid}" ] \
+      && systemctl is-active --quiet "${service_name}" \
+      && curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
         echo "Rollback to ${backup_dir} completed."
         exit 0
     fi

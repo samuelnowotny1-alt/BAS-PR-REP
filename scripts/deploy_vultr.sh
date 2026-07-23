@@ -80,37 +80,32 @@ elif ! systemctl cat "${service_name}" >/dev/null 2>&1; then
 fi
 
 restart_service() {
+    old_pid="$(systemctl show "${service_name}" -p MainPID --value 2>/dev/null || true)"
+    old_pid="${old_pid:-0}"
     if [ "${can_sudo}" -eq 1 ]; then
         sudo systemctl enable "${service_name}" >/dev/null
         sudo systemctl restart "${service_name}"
-        return
+    elif [ "${old_pid}" != "0" ]; then
+        kill "${old_pid}" 2>/dev/null || true
     fi
-    main_pid="$(systemctl show "${service_name}" -p MainPID --value)"
-    if [ -z "${main_pid}" ] || [ "${main_pid}" = "0" ]; then
-        echo "${service_name} is not running and cannot be started without sudo." >&2
-        return 1
-    fi
-    kill "${main_pid}"
+
+    # Restart=always may leave the unit briefly inactive before a replacement
+    # process appears. Require a new PID so a stale listener cannot pass health.
+    for _ in $(seq 1 30); do
+        main_pid="$(systemctl show "${service_name}" -p MainPID --value 2>/dev/null || true)"
+        main_pid="${main_pid:-0}"
+        if [ "${main_pid}" != "0" ] && [ "${main_pid}" != "${old_pid}" ] \
+          && systemctl is-active --quiet "${service_name}" \
+          && curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "${service_name} did not produce a healthy replacement process." >&2
+    return 1
 }
 
-if systemctl is-active --quiet "${service_name}"; then
-    restart_service
-elif [ "${can_sudo}" -eq 1 ]; then
-    sudo systemctl enable --now "${service_name}"
-else
-    echo "${service_name} is inactive and cannot be started without sudo." >&2
-    exit 1
-fi
-
-healthy=0
-for _ in $(seq 1 15); do
-    if curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
-        healthy=1
-        break
-    fi
-    sleep 1
-done
-if [ "${healthy}" -ne 1 ]; then
+if ! restart_service; then
     rsync -a --delete --no-owner --no-group --omit-dir-times \
       --exclude '.git' --exclude '.venv' --exclude 'config/bas-assistant.env' \
       --exclude '__pycache__' --exclude '*.pyc' \
