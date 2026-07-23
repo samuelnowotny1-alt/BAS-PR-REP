@@ -13,8 +13,9 @@ REMOTE_BACKUP_DIR="${REMOTE_RELEASES_DIR}/${RELEASE_ID}"
 echo "Deploying ${PROJECT_ROOT} to ${REMOTE_HOST}:${REMOTE_DIR}"
 
 ssh "${REMOTE_HOST}" "mkdir -p '${REMOTE_DIR}' '${REMOTE_BACKUP_DIR}'"
-ssh "${REMOTE_HOST}" "rsync -a --delete \
+ssh "${REMOTE_HOST}" "rsync -a --delete --no-owner --no-group --omit-dir-times \
   --exclude '.git' --exclude '.venv' --exclude 'config/bas-assistant.env' \
+  --exclude '__pycache__' --exclude '*.pyc' \
   --exclude 'data' --exclude 'logs' --exclude 'output' --exclude 'uploads' \
   --exclude 'ui/data' --exclude 'ui/output' \
   '${REMOTE_DIR}/' '${REMOTE_BACKUP_DIR}/'"
@@ -56,11 +57,12 @@ if [ ! -x .venv/bin/python ]; then
 fi
 .venv/bin/pip install -e .
 if [ -x .venv/bin/alembic ]; then
-    migration_state="$(
+    current_revision="$(.venv/bin/alembic current 2>/dev/null)"
+    table_count="$(
         .venv/bin/python -c \
-          'from sqlalchemy import create_engine, inspect; from bas_assistant.config import get_settings; tables=set(inspect(create_engine(get_settings().database_url)).get_table_names()); print("versioned" if "alembic_version" in tables else "populated" if tables else "empty")'
+          'from sqlalchemy import create_engine, inspect; from bas_assistant.config import get_settings; tables=set(inspect(create_engine(get_settings().database_url)).get_table_names())-{"alembic_version"}; print(len(tables))'
     )"
-    if [ "${migration_state}" = "populated" ]; then
+    if [ -z "${current_revision}" ] && [ "${table_count}" -gt 0 ]; then
         .venv/bin/alembic stamp head
     else
         .venv/bin/alembic upgrade head
@@ -109,8 +111,9 @@ for _ in $(seq 1 15); do
     sleep 1
 done
 if [ "${healthy}" -ne 1 ]; then
-    rsync -a --delete \
-      --exclude '.venv' --exclude 'config/bas-assistant.env' \
+    rsync -a --delete --no-owner --no-group --omit-dir-times \
+      --exclude '.git' --exclude '.venv' --exclude 'config/bas-assistant.env' \
+      --exclude '__pycache__' --exclude '*.pyc' \
       --exclude 'data' --exclude 'logs' --exclude 'output' --exclude 'uploads' \
       --exclude 'ui/data' --exclude 'ui/output' \
       "${backup_dir}/" "${remote_dir}/"

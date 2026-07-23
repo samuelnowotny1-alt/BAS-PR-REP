@@ -22,8 +22,9 @@ remote_dir="$1"
 backup_dir="$2"
 service_name="$3"
 
-rsync -a --delete \
-  --exclude '.venv' --exclude 'config/bas-assistant.env' \
+rsync -a --delete --no-owner --no-group --omit-dir-times \
+  --exclude '.git' --exclude '.venv' --exclude 'config/bas-assistant.env' \
+  --exclude '__pycache__' --exclude '*.pyc' \
   --exclude 'data' --exclude 'logs' --exclude 'output' --exclude 'uploads' \
   --exclude 'ui/data' --exclude 'ui/output' \
   "${backup_dir}/" "${remote_dir}/"
