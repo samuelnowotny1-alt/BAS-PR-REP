@@ -35,6 +35,7 @@ class UIVerifier:
         self.results: List[Dict] = []
         self.errors: List[str] = []
         self.warnings: List[str] = []
+        self.probed_links: Dict[str, int] = {}
         
     def start_server(self):
         """Start the FastAPI server in background."""
@@ -111,6 +112,14 @@ class UIVerifier:
             return resp
         except Exception as e:
             self.errors.append(f"POST {path}: {e}")
+            return None
+
+    async def probe(self, path: str) -> httpx.Response:
+        """Probe a rendered link without affecting crawl dedupe."""
+        try:
+            return await self.client.get(path)
+        except Exception as e:
+            self.errors.append(f"PROBE {path}: {e}")
             return None
     
     def check_response(self, path: str, resp: httpx.Response, expected_codes: List[int] = None) -> bool:
@@ -200,6 +209,7 @@ class UIVerifier:
             'links': links,
             'forms': forms,
             'content_length': len(resp.text),
+            'html': resp.text,
         })
         
         return True
@@ -225,14 +235,21 @@ class UIVerifier:
             (f"/project/{PROJECT_ID}/import", "Import Data"),
             (f"/project/{PROJECT_ID}/validate", "Validate Project"),
             (f"/project/{PROJECT_ID}/gaps", "Gap Analysis"),
+            (f"/project/{PROJECT_ID}/review", "Review Release"),
+            (f"/project/{PROJECT_ID}/mappings", "Mappings"),
             (f"/project/{PROJECT_ID}/checkout", "Checkout Sheets"),
             (f"/project/{PROJECT_ID}/reports", "Reports"),
             (f"/project/{PROJECT_ID}/graphics", "Graphics"),
+            (f"/project/{PROJECT_ID}/graphics/library", "Graphics Library"),
             (f"/project/{PROJECT_ID}/logic", "Logic Diagrams"),
             (f"/project/{PROJECT_ID}/export", "Export"),
             (f"/project/{PROJECT_ID}/sequence", "Sequence Parser"),
             (f"/project/{PROJECT_ID}/troubleshoot", "Troubleshooting"),
             (f"/project/{PROJECT_ID}/assumptions", "Assumptions Tracker"),
+            (f"/project/{PROJECT_ID}/documents", "Project Documents"),
+            (f"/project/{PROJECT_ID}/knowledge", "Project Knowledge"),
+            (f"/project/{PROJECT_ID}/status", "Project Status"),
+            (f"/project/{PROJECT_ID}/activity", "Project Activity"),
         ]
         
         for path, desc in project_pages:
@@ -250,6 +267,46 @@ class UIVerifier:
         
         for path, desc in api_endpoints:
             await self.verify_page(path, desc)
+
+    async def verify_rendered_links(self) -> List[Dict]:
+        """Probe discovered internal links from rendered pages."""
+        broken_links = []
+        seen_paths: Set[str] = set()
+        for result in self.results:
+            for url, text, link_type in result['links']:
+                if link_type != 'link' or not url.startswith('/'):
+                    continue
+                if not self.should_probe_link(url):
+                    continue
+                if url in seen_paths:
+                    continue
+                seen_paths.add(url)
+                response = await self.probe(url)
+                if response is None:
+                    continue
+                self.probed_links[url] = response.status_code
+                if response.status_code >= 400:
+                    broken_links.append({
+                        'url': url,
+                        'status': response.status_code,
+                        'text': text,
+                        'from_page': result['path'],
+                    })
+        return broken_links
+
+    def should_probe_link(self, url: str) -> bool:
+        """Limit active probing to first-party app routes we expect to own."""
+        if url.startswith("/output/") or url.startswith("/static/"):
+            return False
+        if url in {"/", "/project/new", "/activity/ledger", "/healthz"}:
+            return True
+        if url.startswith("/activity/ledger?"):
+            return True
+        if url.startswith(f"/project/{PROJECT_ID}"):
+            return True
+        if url.startswith(f"/api/project/{PROJECT_ID}"):
+            return True
+        return False
     
     def analyze_results(self):
         """Analyze and report findings."""
@@ -385,7 +442,10 @@ async def main():
     
     async with UIVerifier() as verifier:
         await verifier.verify_all_pages()
+        broken_rendered_links = await verifier.verify_rendered_links()
         results = verifier.analyze_results()
+        results["broken_rendered_links"] = broken_rendered_links
+        results["probed_link_count"] = len(verifier.probed_links)
     
     # Save detailed report
     import json
@@ -395,7 +455,12 @@ async def main():
     print(f"\n📄 Detailed report saved to: {report_path}")
     
     # Exit code
-    if results['failed'] > 0 or results['dead_links'] or results['form_issues'] or results['errors']:
+    if results.get("broken_rendered_links"):
+        print("\n🔴 BROKEN RENDERED LINKS:")
+        for item in results["broken_rendered_links"][:30]:
+            print(f"  ❌ HTTP {item['status']}: '{item['text']}' -> {item['url']} (from {item['from_page']})")
+
+    if results['failed'] > 0 or results['dead_links'] or results['form_issues'] or results['errors'] or results.get("broken_rendered_links"):
         print("\n❌ VERIFICATION FAILED - Issues found!")
         sys.exit(1)
     else:

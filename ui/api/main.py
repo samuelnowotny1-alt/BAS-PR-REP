@@ -4404,6 +4404,12 @@ async def system_ledger_page(
         date_to=date_to,
         page=page,
     )
+    for event in ledger_view["events"]:
+        public_project_id = str(event.get("project_id") or "").strip()
+        event["project_link_active"] = bool(
+            public_project_id
+            and (DATA_DIR / "projects" / public_project_id / "project.json").exists()
+        )
     return templates.TemplateResponse(
         request=request,
         name="system_ledger.html",

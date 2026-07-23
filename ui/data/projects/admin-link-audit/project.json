@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "project_id": "admin-link-audit",
+    "name": "Pytest Project",
+    "number": null,
+    "client": "Test Client",
+    "location": "Test Lab",
+    "timezone": null,
+    "unit_system": "IP",
+    "created_at": "2026-07-22T21:57:32.971579",
+    "updated_at": "2026-07-22T21:57:32.971664",
+    "design_phase": "CD",
+    "naming_standard": "ASHRAE-135",
+    "bacnet_network_number": null,
+    "engineer_of_record": "Test Engineer",
+    "programmer": "Test Programmer",
+    "commissioning_agent": "Test Cx"
+  },
+  "equipment": [],
+  "points": [],
+  "controllers": [],
+  "source_documents": [],
+  "review_state": {
+    "assumptions": [],
+    "gap_decisions": [],
+    "mapping_decisions": [],
+    "approvals": []
+  },
+  "station_connection": null,
+  "validation_status": "pending",
+  "last_validated": null
+}

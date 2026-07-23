@@ -124,6 +124,8 @@ def test_home_and_new_project_pages_load() -> None:
     assert "Project Portfolio" in home_text
     assert 'hx-post="/api/load-demo"' in home_text
     assert "Load Demo Project" in home_text
+    assert ">Uploads<" not in home_text
+    assert ">Knowledge<" not in home_text
 
     new_project = run_async(main.new_project_page(request("/project/new")))
 
@@ -275,6 +277,44 @@ def test_project_memberships_page_renders_for_admin() -> None:
 
     assert response.status_code == 200
     assert "Bulk Membership Management" in response_text(response)
+
+
+def test_index_filters_out_stale_project_links() -> None:
+    project_id = create_project("stale-dashboard-project")
+    stale_path = main.DATA_DIR / "projects" / project_id / "project.json"
+    stale_path.unlink()
+    main.projects.clear()
+    main.container.projects.clear_cache()
+
+    response = run_async(main.index(request("/")))
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert f"/project/{project_id}" not in text
+    assert "stale-dashboard-project" not in text
+
+
+def test_system_ledger_does_not_link_missing_project_activity_page() -> None:
+    project_id = create_project("stale-ledger-project")
+    stale_path = main.DATA_DIR / "projects" / project_id / "project.json"
+    stale_path.unlink()
+    main.projects.clear()
+    main.container.projects.clear_cache()
+
+    response = run_async(
+        main.system_ledger_page(
+            request("/activity/ledger"),
+            project_id=project_id,
+            event_type="project.created",
+            entity_type="project",
+        )
+    )
+
+    text = response_text(response)
+    assert response.status_code == 200
+    assert "Project created: Pytest Project" in text
+    assert f"/project/{project_id}/activity" not in text
+    assert project_id in text
 
 
 def test_object_detail_page_renders_artifact_provenance() -> None:

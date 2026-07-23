@@ -133,8 +133,11 @@
                 <div>
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">{{ event.summary }}</p>
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {% if event.project_id %}
+                        {% if event.project_id and event.project_link_active %}
                         <a href="/project/{{ event.project_id }}/activity" class="font-medium text-sky-700 underline dark:text-sky-300">{{ event.project_name or event.project_id }}</a>
+                        <span> · {{ event.project_id }}</span>
+                        {% elif event.project_id %}
+                        <span>{{ event.project_name or event.project_id }}</span>
                         <span> · {{ event.project_id }}</span>
                         {% else %}
                         <span>System-wide</span>

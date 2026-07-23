@@ -324,6 +324,34 @@ class GraphicsGenerator:
                 return True
         return False
 
+    def _graphics_context_mentions(self, equip: Equipment, points: list[Point], phrases: tuple[str, ...]) -> bool:
+        lowered_phrases = tuple(phrase.lower() for phrase in phrases)
+        context = self._equipment_graphics_context(equip, points)
+        return any(phrase in context for phrase in lowered_phrases)
+
+    def _equipment_graphics_context(self, equip: Equipment, points: list[Point]) -> str:
+        parts = [
+            equip.id,
+            equip.type.value,
+            equip.subtype or "",
+            equip.notes or "",
+            equip.served_area or "",
+            " ".join(equip.tags),
+            self._equipment_graphic_param(equip, "graphic_sections"),
+            self._equipment_graphic_param(equip, "ahu_sections"),
+            self._equipment_graphic_param(equip, "graphics_model_family"),
+            self._equipment_graphic_param(equip, "graphics_manufacturer"),
+            self._equipment_graphic_param(equip, "duct_source"),
+        ]
+        if equip.design_cfm is not None:
+            parts.append(f"{equip.design_cfm:.0f} cfm")
+        for point in points:
+            parts.append(self._normalize_point_text(point))
+        normalized = " ".join(part for part in parts if part).lower()
+        for char in "-_/()[],":
+            normalized = normalized.replace(char, " ")
+        return " ".join(normalized.split())
+
     # Standard symbol templates - detailed BAS equipment graphics
 # Standard symbol templates - detailed BAS equipment graphics
     SYMBOLS = {
@@ -1082,28 +1110,39 @@ class GraphicsGenerator:
             return configured
 
         inferred = [self.AHU_SECTION_LIBRARY["outside_air"]]
-        if self._ahu_has_component(points, ("mixed_temp", "return_damper", "return_temp")) or self._section_mentions(
+        if self._ahu_has_component(points, ("mixed_temp", "return_damper", "return_temp")) or self._graphics_context_mentions(
+            equip,
             points,
             ("mixed air", "mixing box", "economizer", "return air", "relief air"),
         ):
             inferred.append(self.AHU_SECTION_LIBRARY["mixed_air"])
-        if self._section_mentions(points, ("prefilter", "pre filter", "merv 8", "merv8", "merv 11", "merv11")):
+        if self._graphics_context_mentions(equip, points, ("prefilter", "pre filter", "merv 8", "merv8", "merv 11", "merv11", "panel filter")):
             inferred.append(self.AHU_SECTION_LIBRARY["prefilter"])
+        if self._graphics_context_mentions(
+            equip,
+            points,
+            ("energy recovery", "energy wheel", "enthalpy wheel", "heat wheel", "erv", "runaround coil"),
+        ):
+            inferred.append(self.AHU_SECTION_LIBRARY["energy_recovery"])
         inferred.extend([
             self.AHU_SECTION_LIBRARY["filter"],
             self.AHU_SECTION_LIBRARY["cooling_coil"],
         ])
         if self._ahu_has_component(points, ("heating_valve", "heating_coil", "reheat_valve")):
             inferred.append(self.AHU_SECTION_LIBRARY["heating_coil"])
-        if self._section_mentions(points, ("uv", "uv c", "uvc", "ultraviolet", "irradiance")):
+        if self._graphics_context_mentions(equip, points, ("uv", "uv c", "uvc", "ultraviolet", "irradiance", "lamp bank")):
             inferred.append(self.AHU_SECTION_LIBRARY["uv"])
         if self._ahu_has_component(points, ("humidity",)):
             inferred.append(self.AHU_SECTION_LIBRARY["humidifier"])
         inferred.append(self.AHU_SECTION_LIBRARY["supply_fan"])
-        if self._section_mentions(points, ("silencer", "attenuator", "sound trap", "nc level")):
+        if self._graphics_context_mentions(equip, points, ("silencer", "attenuator", "sound trap", "nc level", "duct silencer")):
             inferred.append(self.AHU_SECTION_LIBRARY["sound_attenuator"])
         inferred.append(self.AHU_SECTION_LIBRARY["discharge"])
-        if self._ahu_has_component(points, ("return_fan",)):
+        if self._ahu_has_component(points, ("return_fan",)) or self._graphics_context_mentions(
+            equip,
+            points,
+            ("return fan", "relief fan", "exhaust fan"),
+        ):
             inferred.append(self.AHU_SECTION_LIBRARY["return_fan"])
         return inferred
 
@@ -1587,27 +1626,45 @@ class GraphicsGenerator:
         return anchors
 
     def _asset_id_for_section(self, section_id: str, *, equip: Equipment, points: list[Point]) -> str:
+        if section_id == "prefilter":
+            return "filter_bank_panel"
         if section_id in {"outside_air", "mixed_air"}:
-            if self._section_mentions(points, ("low leak", "low-leak", "leakage class", "opposed blade")):
+            if self._graphics_context_mentions(equip, points, ("low leak", "low-leak", "leakage class", "opposed blade")):
                 return "mixing_damper_low_leak"
             return "mixing_damper_bank"
         if section_id == "filter":
-            if self._section_mentions(points, ("bag filter", "bag", "final filter", "hepa", "merv 14", "merv14", "merv 15", "merv15")):
+            if self._graphics_context_mentions(equip, points, ("bag filter", "bag", "final filter", "hepa", "merv 14", "merv14", "merv 15", "merv15")):
                 return "filter_bank_bag"
             return "filter_bank_vcell"
         if section_id == "cooling_coil":
-            if equip.type == EquipmentType.RTU or self._section_mentions(points, ("dx", "direct expansion", "refrigerant", "compressor", "suction")):
+            if equip.type == EquipmentType.RTU or self._graphics_context_mentions(
+                equip,
+                points,
+                ("dx", "direct expansion", "refrigerant", "compressor", "suction"),
+            ):
                 return "cooling_coil_dx"
             return "cooling_coil_chw"
         if section_id == "heating_coil":
-            if self._section_mentions(points, ("steam", "condensate", "trap")):
+            if self._graphics_context_mentions(equip, points, ("steam", "condensate", "trap")):
                 return "heating_coil_steam"
             return "heating_coil_hw"
         if section_id in {"supply_fan", "return_fan", "relief_fan"}:
+            if self._graphics_context_mentions(
+                equip,
+                points,
+                ("belt drive", "belt-driven", "belt driven", "forward curved", "scroll fan"),
+            ):
+                return "relief_fan_housed" if section_id in {"return_fan", "relief_fan"} else "supply_fan_scroll"
+            if self._graphics_context_mentions(
+                equip,
+                points,
+                ("plenum fan", "fan array", "fanwall", "direct drive", "direct-drive"),
+            ):
+                return "supply_fan_plenum"
+            if equip.type == EquipmentType.AHU and section_id == "supply_fan":
+                return "supply_fan_plenum"
             if section_id in {"return_fan", "relief_fan"}:
                 return "relief_fan_housed"
-            if equip.type in {EquipmentType.AHU} or self._section_mentions(points, ("plenum fan", "fan array", "direct drive", "direct-drive")):
-                return "supply_fan_plenum"
             return "supply_fan_scroll"
         if section_id == "discharge":
             return "rectangular_supply_duct"
@@ -1615,6 +1672,10 @@ class GraphicsGenerator:
             return "steam_humidifier_grid"
         if section_id == "energy_recovery":
             return "energy_recovery_wheel"
+        if section_id == "uv":
+            return "uv_c_lamp_bank"
+        if section_id == "sound_attenuator":
+            return "sound_attenuator_baffle"
         return "rectangular_supply_duct"
 
     def _record_asset_placement(
@@ -1728,6 +1789,9 @@ class GraphicsGenerator:
         if asset_id == "filter_bank_bag":
             self._append_filter_bank_asset(graphic, x=x, y=y, width=width, height=height, stroke=stroke, bag_filter=True)
             return
+        if asset_id == "filter_bank_panel":
+            self._append_filter_bank_asset(graphic, x=x, y=y, width=width, height=height, stroke=stroke, bag_filter=False, panel_filter=True)
+            return
         if asset_id == "cooling_coil_chw":
             self._append_coil_asset(graphic, x=x, y=y, width=width, height=height, stroke="#1976d2", coil_variant="chw")
             return
@@ -1754,6 +1818,12 @@ class GraphicsGenerator:
             return
         if asset_id == "energy_recovery_wheel":
             self._append_energy_recovery_asset(graphic, x=x, y=y, width=width, height=height, stroke=stroke)
+            return
+        if asset_id == "uv_c_lamp_bank":
+            self._append_uv_lamp_asset(graphic, x=x, y=y, width=width, height=height, stroke=stroke)
+            return
+        if asset_id == "sound_attenuator_baffle":
+            self._append_sound_attenuator_asset(graphic, x=x, y=y, width=width, height=height, stroke=stroke)
             return
         if asset_id == "rtu_packaged_rooftop":
             self._append_packaged_rtu_asset(graphic, x=x, y=y, width=width, height=height)
@@ -1919,8 +1989,18 @@ class GraphicsGenerator:
         height: float,
         stroke: str,
         bag_filter: bool = False,
+        panel_filter: bool = False,
     ) -> None:
-        if bag_filter:
+        if panel_filter:
+            self._append_panel_filter_symbol(
+                graphic,
+                x=x,
+                y=y + (height * 0.1),
+                width=width,
+                height=height * 0.76,
+                stroke=stroke,
+            )
+        elif bag_filter:
             self._append_bag_filter_symbol(
                 graphic,
                 x=x,
@@ -1960,6 +2040,84 @@ class GraphicsGenerator:
             stroke_width=0,
             layer="symbol",
         ))
+
+    def _append_uv_lamp_asset(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        stroke: str,
+    ) -> None:
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x + (width * 0.12),
+            y=y + (height * 0.14),
+            width=width * 0.76,
+            height=height * 0.58,
+            fill="#ede9fe",
+            stroke=stroke,
+            stroke_width=1.1,
+            layer="symbol",
+        ))
+        for offset in (0.24, 0.42, 0.6, 0.78):
+            graphic.elements.append(GraphicElement(
+                element_type="line",
+                x=x + (width * offset),
+                y=y + (height * 0.2),
+                width=0,
+                height=height * 0.46,
+                stroke=stroke,
+                stroke_width=2.4,
+                layer="symbol",
+            ))
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x + (width * 0.16),
+            y=y + (height * 0.14),
+            width=width * 0.68,
+            height=height * 0.08,
+            fill="#c4b5fd",
+            stroke="none",
+            stroke_width=0,
+            layer="symbol",
+        ))
+
+    def _append_sound_attenuator_asset(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        stroke: str,
+    ) -> None:
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x + (width * 0.08),
+            y=y + (height * 0.18),
+            width=width * 0.84,
+            height=height * 0.52,
+            fill="#cfd6de",
+            stroke="#5b6470",
+            stroke_width=1.1,
+            layer="symbol",
+        ))
+        for offset in (0.22, 0.4, 0.58, 0.76):
+            graphic.elements.append(GraphicElement(
+                element_type="rect",
+                x=x + (width * offset),
+                y=y + (height * 0.24),
+                width=max(width * 0.08, 0.01),
+                height=height * 0.4,
+                fill="#94a3b8",
+                stroke=stroke,
+                stroke_width=0.8,
+                layer="symbol",
+            ))
 
     def _append_coil_asset(
         self,
@@ -2887,6 +3045,61 @@ class GraphicsGenerator:
                 stroke_width=0.8,
                 layer="symbol",
             ))
+
+    def _append_panel_filter_symbol(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        stroke: str,
+    ) -> None:
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            fill="#cfd6de",
+            stroke="#5b6470",
+            stroke_width=1.2,
+            layer="symbol",
+            css_class="filter-bank",
+        ))
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x + (width * 0.1),
+            y=y + (height * 0.14),
+            width=width * 0.8,
+            height=height * 0.64,
+            fill="#f8fafc",
+            stroke="#cbd5e1",
+            stroke_width=0.8,
+            layer="symbol",
+        ))
+        for offset in (0.22, 0.38, 0.54, 0.7):
+            graphic.elements.append(GraphicElement(
+                element_type="line",
+                x=x + (width * offset),
+                y=y + (height * 0.2),
+                width=0,
+                height=height * 0.52,
+                stroke=stroke,
+                stroke_width=1.2,
+                layer="symbol",
+            ))
+        graphic.elements.append(GraphicElement(
+            element_type="line",
+            x=x + (width * 0.12),
+            y=y + (height * 0.28),
+            width=width * 0.76,
+            height=0,
+            stroke="#ffffff",
+            stroke_width=0.8,
+            layer="symbol",
+        ))
 
     def _append_coil_symbol(
         self,
@@ -4525,7 +4738,16 @@ class GraphicsGenerator:
     def _spread_anchor(self, anchor: tuple[float, float], index: int, horizontal: bool) -> tuple[float, float]:
         if index == 0:
             return anchor
-        step = 0.045
+        step = 0.04
+        if index > 4:
+            column = (index - 1) % 3
+            row = (index - 1) // 3
+            x_offset = (column - 1) * step
+            y_offset = row * step * 0.9
+            return (
+                self._clamp(anchor[0] + x_offset),
+                self._clamp(anchor[1] + y_offset),
+            )
         offset = ((index + 1) // 2) * step
         direction = 1 if index % 2 else -1
         if horizontal:

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 import re
 
 from sqlalchemy import func, select
@@ -863,6 +864,7 @@ class ProjectQueryService:
                 "metadata": metadata,
                 "mode": "generated" if document.document_type.startswith("generated_") else "uploaded",
             }
+            row.update(self._document_link_view(project.project_id, document.id, document.file_path))
             if normalized_document_type and row["document_type"] != normalized_document_type:
                 continue
             if normalized_mode and row["mode"] != normalized_mode:
@@ -922,6 +924,7 @@ class ProjectQueryService:
                     KnowledgeRecord.source_type == document.document_type,
                 )
             )
+        document_links = self._document_link_view(project.project_id, document.id, document.file_path)
         return {
             "project_id": project.project_id,
             "project_name": project.name,
@@ -931,6 +934,7 @@ class ProjectQueryService:
             "file_path": document.file_path,
             "created_at": document.created_at,
             "metadata": dict(document.metadata_json or {}),
+            **document_links,
             "linked_objects": [
                 {
                     "entity_type": entity_type,
@@ -939,6 +943,7 @@ class ProjectQueryService:
                     "parser_name": parser_name,
                     "metadata": dict(metadata_json or {}),
                     "object_url": self._entity_url(project.project_id, entity_type, entity_key),
+                    "object_url_active": self._entity_exists(project.project_id, entity_type, entity_key),
                 }
                 for entity_type, entity_key, relationship_type, parser_name, metadata_json in links
             ],
@@ -1141,6 +1146,17 @@ class ProjectQueryService:
                 if score <= 0:
                     continue
                 excerpt = self._build_knowledge_excerpt(chunk_text, query_terms)
+                document_link_view = (
+                    self._document_link_view(project.project_id, document.id, document.file_path)
+                    if document is not None
+                    else {
+                        "document_detail_url": None,
+                        "document_detail_url_active": False,
+                        "document_download_url": None,
+                        "document_download_url_active": False,
+                        "document_file_exists": False,
+                    }
+                )
                 results.append(
                     {
                         "knowledge_id": record.id,
@@ -1159,16 +1175,7 @@ class ProjectQueryService:
                         "content_format": metadata.get("content_format"),
                         "file_path": metadata.get("file_path"),
                         "document_id": document.id if document is not None else None,
-                        "document_detail_url": (
-                            f"/project/{project.project_id}/documents/{document.id}"
-                            if document is not None
-                            else None
-                        ),
-                        "document_download_url": (
-                            f"/project/{project.project_id}/documents/{document.id}/download"
-                            if document is not None
-                            else None
-                        ),
+                        **document_link_view,
                         "linked_objects": linked_objects,
                         "linked_object_count": sum(item["count"] for item in linked_objects),
                     }
@@ -1506,6 +1513,7 @@ class ProjectQueryService:
                     "best_score": float(row["score"]),
                     "exact_match_count": 0,
                     "document_detail_url": row.get("document_detail_url"),
+                    "document_detail_url_active": bool(row.get("document_detail_url_active")),
                     "linked_objects": list(row.get("linked_objects") or []),
                     "linked_object_count": int(row.get("linked_object_count") or 0),
                 },
@@ -1647,6 +1655,58 @@ class ProjectQueryService:
         plural = "equipment" if entity_type == "equipment" else ("points" if entity_type == "point" else "controllers")
         return f"/project/{project_id}/{plural}/{entity_key}"
 
+    def _entity_exists(self, project_id: str, entity_type: str, entity_key: str) -> bool:
+        with self.db.session() as session:
+            project = self._project_record(session, project_id)
+            if project is None:
+                return False
+            if entity_type == "equipment":
+                return bool(
+                    session.scalar(
+                        select(func.count())
+                        .select_from(EquipmentRecord)
+                        .where(
+                            EquipmentRecord.project_id == project.id,
+                            EquipmentRecord.equipment_key == entity_key,
+                        )
+                    )
+                )
+            if entity_type == "point":
+                return bool(
+                    session.scalar(
+                        select(func.count())
+                        .select_from(PointRecord)
+                        .where(
+                            PointRecord.project_id == project.id,
+                            PointRecord.point_name == entity_key,
+                        )
+                    )
+                )
+            if entity_type == "controller":
+                return bool(
+                    session.scalar(
+                        select(func.count())
+                        .select_from(ControllerRecord)
+                        .where(
+                            ControllerRecord.project_id == project.id,
+                            ControllerRecord.controller_key == entity_key,
+                        )
+                    )
+                )
+        return False
+
+    def _document_link_view(self, project_id: str, document_id: int, file_path: str | None) -> dict[str, object]:
+        detail_url = f"/project/{project_id}/documents/{document_id}"
+        download_url = f"{detail_url}/download"
+        file_exists = bool(file_path and Path(file_path).exists())
+        return {
+            "document_detail_url": detail_url,
+            "document_detail_url_active": True,
+            "document_download_url": download_url,
+            "document_download_url_active": file_exists,
+            "document_file_exists": file_exists,
+        }
+
     def _summarize_linked_objects(
         self,
         project_id: str,
@@ -1665,6 +1725,7 @@ class ProjectQueryService:
                     "entity_key": entity_key,
                     "count": 0,
                     "object_url": self._entity_url(project_id, entity_type, entity_key),
+                    "object_url_active": self._entity_exists(project_id, entity_type, entity_key),
                 }
             grouped[key]["count"] += 1
         return sorted(grouped.values(), key=lambda item: (str(item["entity_type"]), str(item["entity_key"])))

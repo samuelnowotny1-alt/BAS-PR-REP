@@ -105,7 +105,12 @@ class DashboardService:
                 limit=8,
             )
         ]
-        project_cards = list(projects.values())
+        available_projects = {
+            project_id: card
+            for project_id, card in projects.items()
+            if self.project_repository.get(project_id) is not None
+        }
+        project_cards = list(available_projects.values())
         total_object_count = equipment_count + point_count + controller_count
         points_per_equipment = round(point_count / equipment_count, 1) if equipment_count else 0.0
         controllers_per_project = round(controller_count / project_count, 1) if project_count else 0.0
@@ -132,7 +137,7 @@ class DashboardService:
             open_task_count=open_task_count,
             recent_uploads=recent_uploads,
             health=self.health_report_factory(),
-            projects=projects,
+            projects=available_projects,
             total_object_count=total_object_count,
             points_per_equipment=points_per_equipment,
             controllers_per_project=controllers_per_project,

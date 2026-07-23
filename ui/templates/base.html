@@ -347,14 +347,16 @@
                         <span class="sidebar-link-icon"><i class="fas fa-diagram-project"></i></span>
                         <span>Projects</span>
                     </a>
-                    <a href="{% if project %}/project/{{ project.metadata.project_id }}/documents{% else %}/{% endif %}" class="sidebar-link {% if '/documents' in request.url.path %}active{% endif %}">
+                    {% if project %}
+                    <a href="/project/{{ project.metadata.project_id }}/documents" class="sidebar-link {% if '/documents' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-upload"></i></span>
                         <span>Uploads</span>
                     </a>
-                    <a href="{% if project %}/project/{{ project.metadata.project_id }}/knowledge{% else %}/{% endif %}" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
+                    <a href="/project/{{ project.metadata.project_id }}/knowledge" class="sidebar-link {% if '/knowledge' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-book-open"></i></span>
                         <span>Knowledge</span>
                     </a>
+                    {% endif %}
                     <a href="{% if project %}/project/{{ project.metadata.project_id }}/activity{% else %}/activity/ledger{% endif %}" class="sidebar-link {% if '/activity' in request.url.path %}active{% endif %}">
                         <span class="sidebar-link-icon"><i class="fas fa-list-check"></i></span>
                         <span>Activity</span>

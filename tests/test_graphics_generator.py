@@ -619,6 +619,76 @@ def test_noisy_real_world_names_still_bind_core_ahu_components() -> None:
     assert confidence["score"] >= 0.75
 
 
+def test_ahu_sections_infer_from_equipment_metadata_and_select_realistic_assets() -> None:
+    equip = Equipment(
+        id="AHU-13",
+        type=EquipmentType.AHU,
+        controller_id="MPC-13",
+        subtype="Energy recovery draw-through air handler",
+        notes="Unit includes prefilter section, UV-C lamps, discharge attenuator, and return fan section.",
+        tags=["economizer", "fan-array-ready"],
+    )
+    points = [
+        Point(name="AHU-13 SAT", equipment_id="AHU-13", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="degF"),
+        Point(name="AHU-13 UV STATUS", equipment_id="AHU-13", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="AHU-13 FILTER DP", equipment_id="AHU-13", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="inwc"),
+    ]
+    generator = GraphicsGenerator(_project_with([equip], points))
+
+    generator.generate_all()
+    graphic = generator.graphics["graphic_ahu-13"]
+    sections = graphic.metadata["graphic_sections"]
+    placements = graphic.metadata.get("asset_placements", [])
+
+    assert "prefilter" in sections
+    assert "energy_recovery" in sections
+    assert "uv" in sections
+    assert "sound_attenuator" in sections
+    assert "return_fan" in sections
+    assert any(placement["asset_id"] == "filter_bank_panel" and placement["role"] == "section:prefilter" for placement in placements)
+    assert any(placement["asset_id"] == "energy_recovery_wheel" and placement["role"] == "section:energy_recovery" for placement in placements)
+    assert any(placement["asset_id"] == "uv_c_lamp_bank" and placement["role"] == "section:uv" for placement in placements)
+    assert any(placement["asset_id"] == "sound_attenuator_baffle" and placement["role"] == "section:sound_attenuator" for placement in placements)
+
+
+def test_standard_ahu_supply_fan_defaults_to_scroll_without_plenum_evidence() -> None:
+    equip = Equipment(
+        id="AHU-14",
+        type=EquipmentType.AHU,
+        controller_id="MPC-14",
+        notes="Draw-through office air handler with belt-driven supply fan.",
+        template=EquipmentTemplateRef(
+            template_name="ahu_custom",
+            parameters={
+                "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge",
+            },
+        ),
+    )
+    generator = GraphicsGenerator(_project_with([equip], []))
+
+    generator.generate_all()
+    placements = generator.graphics["graphic_ahu-14"].metadata.get("asset_placements", [])
+
+    assert any(placement["asset_id"] == "supply_fan_scroll" and placement["role"] == "section:supply_fan" for placement in placements)
+
+
+def test_dense_bindings_spread_across_grid_for_many_points_on_same_component() -> None:
+    equip = Equipment(id="AHU-15", type=EquipmentType.AHU, controller_id="MPC-15")
+    points = [
+        Point(name=f"AHU-15 SF STATUS {index}", equipment_id="AHU-15", kind=PointKind.STATUS, direction=PointDirection.INPUT)
+        for index in range(1, 8)
+    ]
+    generator = GraphicsGenerator(_project_with([equip], points))
+
+    generator.generate_all()
+    bindings = [binding for binding in generator.graphics["graphic_ahu-15"].bindings if "SF STATUS" in binding.point_name]
+    unique_x = {round(binding.x, 3) for binding in bindings}
+    unique_y = {round(binding.y, 3) for binding in bindings}
+
+    assert len(unique_x) > 1
+    assert len(unique_y) > 3
+
+
 def test_binding_labels_trim_equipment_prefix_for_operator_readability() -> None:
     equip = Equipment(id="AHU-10", type=EquipmentType.AHU, controller_id="MPC-10")
     points = [
