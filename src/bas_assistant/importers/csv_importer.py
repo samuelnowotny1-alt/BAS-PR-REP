@@ -39,6 +39,29 @@ class ImportResult(BaseModel):
 class CSVImporter:
     """Import project data from CSV files."""
 
+    COLUMN_ALIASES = {
+        "equipment": {
+            "Equipment ID": ("Equip ID", "Equipment", "Equipment Name", "Asset ID", "Tag"),
+            "Equipment Type": ("Equip Type", "Type", "Asset Type"),
+            "Controller ID": ("Controller", "Panel", "Panel ID"),
+            "Served Area": ("Area Served", "Serves"),
+        },
+        "points": {
+            "Point Name": ("Point", "Point ID", "Point Tag", "Name"),
+            "Equipment ID": ("Equip ID", "Equipment", "Asset ID"),
+            "Point Kind": ("Kind", "Point Type", "Object Kind"),
+            "Direction": ("I/O", "IO", "Input Output", "Point Direction"),
+            "Controller ID": ("Controller", "Panel", "Panel ID"),
+        },
+        "controllers": {
+            "Controller ID": ("Controller", "Panel ID", "Device ID"),
+            "Name": ("Controller Name", "Panel Name", "Device Name"),
+            "Type": ("Controller Type", "Device Type"),
+            "Protocols": ("Protocol", "Network Protocol"),
+            "IP Address": ("IP", "IP Addr", "Network Address"),
+        },
+    }
+
     def __init__(self, project: Project):
         self.project = project
 
@@ -61,6 +84,8 @@ class CSVImporter:
                 message=f"Failed to read schedule: {e}",
                 errors=[str(e)],
             )
+        df, mapping_warnings = self._apply_column_aliases(df, "equipment")
+        warnings.extend(mapping_warnings)
 
         required_cols = {"Equipment ID", "Equipment Type"}
         if not required_cols.issubset(set(df.columns)):
@@ -172,6 +197,8 @@ class CSVImporter:
                 message=f"Failed to read point list: {e}",
                 errors=[str(e)],
             )
+        df, mapping_warnings = self._apply_column_aliases(df, "points")
+        warnings.extend(mapping_warnings)
 
         required_cols = {"Point Name", "Equipment ID", "Point Kind", "Direction"}
         if not required_cols.issubset(set(df.columns)):
@@ -291,6 +318,8 @@ class CSVImporter:
                 message=f"Failed to read controller schedule: {e}",
                 errors=[str(e)],
             )
+        df, mapping_warnings = self._apply_column_aliases(df, "controllers")
+        warnings.extend(mapping_warnings)
 
         required_cols = {"Controller ID"}
         if not required_cols.issubset(set(df.columns)):
@@ -421,6 +450,29 @@ class CSVImporter:
         if suffix in {".xlsx", ".xls", ".xlsm"}:
             return pd.read_excel(file_path)
         raise ValueError(f"Unsupported tabular format: {suffix or 'unknown'}")
+
+    def _apply_column_aliases(self, df: pd.DataFrame, import_type: str) -> tuple[pd.DataFrame, list[str]]:
+        aliases = self.COLUMN_ALIASES.get(import_type, {})
+        normalized_columns = {
+            " ".join("".join(character.casefold() if character.isalnum() else " " for character in str(column)).split()): column
+            for column in df.columns
+        }
+        rename: dict[object, str] = {}
+        warnings: list[str] = []
+        for canonical, candidates in aliases.items():
+            if canonical in df.columns:
+                continue
+            for candidate in (canonical, *candidates):
+                normalized = " ".join(
+                    "".join(character.casefold() if character.isalnum() else " " for character in candidate).split()
+                )
+                source = normalized_columns.get(normalized)
+                if source is None or source in rename:
+                    continue
+                rename[source] = canonical
+                warnings.append(f"Mapped source column '{source}' to '{canonical}'.")
+                break
+        return df.rename(columns=rename), warnings
 
     def _parse_float(self, value) -> float | None:
         if value is None or (isinstance(value, float) and pd.isna(value)):

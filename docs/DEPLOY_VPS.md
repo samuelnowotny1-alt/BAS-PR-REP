@@ -9,7 +9,7 @@ Current standard production shape:
 - app auth enabled with bootstrap admin credentials and session-based login
 
 Note:
-Docker artifacts still exist in the repo for local and alternate deployment use, but the reviewed VPS path is the direct `uvicorn` runtime behind Nginx.
+Docker artifacts still exist for local and alternate deployment use, but the reviewed VPS path is the systemd-managed Uvicorn runtime behind Nginx.
 
 ## Prerequisites
 
@@ -157,10 +157,30 @@ sudo systemctl status bas-assistant.service --no-pager
 ## 9. Updating the deployment
 
 ```bash
-cd ~/apps/bas-assistant
-git pull
-.venv/bin/pip install -e .
-sudo systemctl restart bas-assistant.service
+./scripts/deploy_vultr.sh
+```
+
+The deployer:
+
+- syncs from the worktree that contains the script
+- preserves `config/bas-assistant.env`, data, uploads, outputs, and logs
+- creates a code-only snapshot under `/home/bas/bas-assistant-releases`
+- installs and restarts `bas-assistant.service`
+- runs migrations and health verification
+- restores the prior code snapshot automatically if health verification fails
+
+Manual rollback:
+
+```bash
+./scripts/rollback_vultr.sh <release-id>
+```
+
+Public acceptance:
+
+```bash
+python scripts/release_smoke.py \
+  --base-url http://155.138.193.113 \
+  --project-id codex-test-project
 ```
 
 ## 10. Logs and troubleshooting

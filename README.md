@@ -23,7 +23,7 @@ Turn sequences of operation → validated, vendor-ready deliverables (Niagara, B
 
 ## Quickstart
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker
 
 ```bash
 # Build and start
@@ -150,16 +150,22 @@ bas emulate project.json -o emulation --serve --host 0.0.0.0 --port 8787
 
 Current reviewed production mode:
 
-- app launched by `scripts/start_production.sh`
+- app managed by `bas-assistant.service`
+- service launches `scripts/start_production.sh`
 - bound to `127.0.0.1:8000`
 - Nginx in front on `80/443`
 - persistent runtime state in `data/`, `output/`, `uploads/`, and `logs/`
+- deployments create a code-only rollback snapshot before syncing
+- deployments preserve environment configuration and all runtime data
 
 Docker deployment artifacts remain available, but the current VPS path is the direct app runtime behind Nginx.
 
 - Environment example: `config/bas-assistant.env.example`
 - Local launcher: `scripts/run_ui_server.sh`
 - Production launcher: `scripts/start_production.sh`
+- VPS deployer: `scripts/deploy_vultr.sh`
+- VPS rollback: `scripts/rollback_vultr.sh <release-id>`
+- Release smoke check: `scripts/release_smoke.py --project-id <id> --base-url <url>`
 - Health check: `scripts/healthcheck.sh`
 - Example systemd unit: `deploy/bas-assistant.service.example`
 - Database migrations: `alembic upgrade head`
@@ -187,7 +193,7 @@ Environment variables:
 
 ```bash
 pytest tests/ -v
-# focused regression suite currently passes in CI/dev runs
+python scripts/release_smoke.py --project-id codex-test-project
 ```
 
 Current engineering snapshot:

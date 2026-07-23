@@ -3177,6 +3177,31 @@ def test_reimport_replaces_conflicting_rows_with_warning(tmp_path: Path) -> None
     assert project.get_point("AHU-1 SAT").units == "degC"
 
 
+def test_csv_importer_maps_common_contractor_column_headings(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="COLUMN-MAP", name="Column Mapping"))
+    importer = CSVImporter(project)
+    equipment_csv = tmp_path / "equipment.csv"
+    equipment_csv.write_text("Equip ID,Type,Panel ID\nAHU-1,AHU,MPC-1\n")
+    points_csv = tmp_path / "points.csv"
+    points_csv.write_text("Point Tag,Equipment,Point Type,I/O,Panel\nAHU-1 SAT,AHU-1,sensor,input,MPC-1\n")
+    controllers_csv = tmp_path / "controllers.csv"
+    controllers_csv.write_text("Device ID,Controller Name,Protocol,IP\nMPC-1,Main Panel,BACnet/IP,10.0.0.10\n")
+
+    equipment_result = importer.import_equipment_schedule(equipment_csv, "equipment-source")
+    points_result = importer.import_point_list(points_csv, "points-source")
+    controllers_result = importer.import_controller_schedule(controllers_csv, "controllers-source")
+
+    assert equipment_result.success
+    assert points_result.success
+    assert controllers_result.success
+    assert any("Equip ID" in warning and "Equipment ID" in warning for warning in equipment_result.warnings)
+    assert any("Point Tag" in warning and "Point Name" in warning for warning in points_result.warnings)
+    assert any("Device ID" in warning and "Controller ID" in warning for warning in controllers_result.warnings)
+    assert project.get_equipment("AHU-1").controller_id == "MPC-1"
+    assert project.get_point("AHU-1 SAT").controller_id == "MPC-1"
+    assert project.get_controller("MPC-1").name == "Main Panel"
+
+
 def test_mapping_decision_flows_into_niagara_and_bacnet_exports(tmp_path: Path) -> None:
     project = Project(metadata=ProjectMetadata(project_id="EXPORT-MAP", name="Export Mapping"))
     project.add_equipment(

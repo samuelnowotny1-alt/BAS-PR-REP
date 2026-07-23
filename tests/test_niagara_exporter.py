@@ -267,9 +267,9 @@ def test_niagara_export_uses_section_based_ahu_layout(tmp_path: Path) -> None:
         if component["slotType"] == "px:BoundLabel" and component["annotations"].get("fullPointName") == "AHU-1_CCV_CMD"
     )
 
-    assert bindings["CCV_CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
-    assert bindings["CCV_CMD"]["fullLabel"] == "AHU-1_CCV_CMD"
-    assert cooling_valve_widget["displayName"] == "CCV_CMD"
+    assert bindings["CCV CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
+    assert bindings["CCV CMD"]["fullLabel"] == "AHU-1_CCV_CMD"
+    assert cooling_valve_widget["displayName"] == "CCV CMD"
     assert cooling_valve_widget["position"]["width"] < 240
     assert 460 <= cooling_valve_widget["position"]["x"] <= 560
     assert cooling_valve_widget["position"]["y"] < 180

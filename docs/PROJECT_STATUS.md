@@ -1,14 +1,14 @@
 # Project Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-23
 
 ## Snapshot
 
 - Branch: `graphics-library-preview`
 - Deployment target: VPS at `http://155.138.193.113/`
 - Runtime status: deployed and responding through Nginx
-- Focused regression suite: `123 passed`
-- Current state: functional demo-to-deliverable pipeline with active consolidation work
+- Full regression suite: `203 passed`
+- Current state: release-candidate demo-to-deliverable pipeline with consolidated dashboard, link handling, import ergonomics, and VPS operations
 
 ## Done
 
@@ -26,20 +26,18 @@ Last updated: 2026-07-20
 - Project duplication flow
 - Pi / lab emulation foundations
 - VPS deployment path with live app verification
+- Project live-conditions operator dashboard with retained trend graphs
+- Common contractor CSV heading mapping and inline post-import correction
+- Rendered-link release smoke checks
 
 ## Partial
 
-- README and operator-facing docs are behind the actual shipped feature set
-- Queue and planning artifacts drifted behind the code and need ongoing correction
 - Graphics/library/lab-bench feature band exists but still needs packaging and scope trimming
 - Reasoning features exist in code, but still need a tighter product-grade walkthrough across UI surfaces
-- Production deployment is working, but runtime management is not yet standardized to one documented mode
 
 ## Missing
 
-- One current source-of-truth release checklist for end-to-end product acceptance
 - A clean release narrative for non-technical reviewers
-- Finalized production operating model: single documented service path, restart path, and recovery path
 - Deliberate milestone boundaries between demo-ready, graphics/library, and field-tooling work
 
 Note:
@@ -47,18 +45,17 @@ Note:
 
 ## Next Release Slice
 
-Current next slice: `Demo Ready Consolidation`
+Current next slice: `Release Candidate Acceptance`
 
 Purpose:
-Stabilize what already exists into a coherent demo and review experience before widening scope again.
+Complete acceptance evidence for the consolidated demo and establish the next bounded product slice.
 
 Included:
 
-- Refresh README and status docs so they match the running system
-- Lock in demo-load, output-link, and runtime storage behavior with tests
-- Reduce branch noise from generated runtime artifacts and tracked fixture mutation
-- Review graphics/library/lab-bench files for intentional inclusion
-- Keep the live VPS deployment aligned with the reviewed repo state
+- Run the complete local and public acceptance suites
+- Record the reviewed commit and VPS deployment state
+- Keep graphics/library product scope separate from lab support tooling
+- Prepare a concise reviewer walkthrough
 
 Deferred until after this slice:
 
@@ -69,7 +66,7 @@ Deferred until after this slice:
 
 ## Recommended Order
 
-1. Commit the current runtime/demo-storage and audit pass.
-2. Treat `docs/PROJECT_STATUS.md` and `docs/PROJECT_AUDIT.md` as the current planning baseline.
-3. Use `docs/DEMO_READY_CHECKLIST.md` as the acceptance gate for the current slice.
-4. Use `docs/GRAPHICS_LIBRARY_NEXT_SLICE.md` as the follow-on slice definition after demo-ready consolidation.
+1. Use `docs/DEMO_READY_CHECKLIST.md` as the release acceptance gate.
+2. Use `scripts/release_smoke.py` for local and public route/link verification.
+3. Record the accepted commit and deployment in `docs/RELEASE_HANDOFF.md`.
+4. Use `docs/GRAPHICS_LIBRARY_NEXT_SLICE.md` as the bounded follow-on slice.

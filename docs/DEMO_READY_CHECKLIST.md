@@ -1,6 +1,6 @@
 # Demo Ready Checklist
 
-Last updated: 2026-07-20
+Last updated: 2026-07-23
 
 Purpose:
 Provide one end-to-end acceptance checklist for the current BAS Assistant release slice.
@@ -78,9 +78,13 @@ Focused demo-ready regression suite:
   tests/test_ui_workflow.py -q
 ```
 
-Expected current result:
+Full release regression:
 
-- `123 passed`
+```bash
+pytest -q
+```
+
+Expected current result: `203 passed`.
 
 ## VPS Acceptance
 
@@ -99,6 +103,7 @@ Expected current result:
 - [ ] Home page loads through the public VPS
 - [ ] Demo project can be opened
 - [ ] Documents, Graphics, Validation, Logic, and Export pages are reachable
+- [ ] `scripts/release_smoke.py` passes against the public project
 
 ## Exit Criteria
 
