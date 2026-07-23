@@ -1195,6 +1195,8 @@ class GraphicsGenerator:
             return "vertical_downflow", "subtype_or_tag_inference", 0.86, ["vertical downflow"]
         if any(phrase in source_text for phrase in ("horizontal left", "left discharge", "discharge left")):
             return "horizontal_left", "subtype_or_tag_inference", 0.82, ["horizontal left"]
+        if any(phrase in source_text for phrase in ("blow through", "blow-through", "fan before coil", "fan ahead of coil")):
+            return "blow_through_horizontal", "subtype_or_tag_inference", 0.84, ["blow-through"]
         if equip.type == EquipmentType.RTU:
             return "horizontal_right", "equipment_type_default", 0.9, ["RTU default"]
         if any(phrase in source_text for phrase in ("horizontal right", "right discharge", "draw through", "draw-through")):
@@ -1241,6 +1243,8 @@ class GraphicsGenerator:
         graphic.metadata["duct_profile"] = duct_profile
         graphic.metadata["duct_source"] = duct_metadata.get("duct_source", "")
         graphic.metadata["graphics_model_family"] = duct_metadata.get("graphics_model_family", "")
+        rendered_sections = self._rendered_ahu_sections_for_profile(sections, duct_profile)
+        graphic.metadata["rendered_graphic_sections"] = [section.section_id for section in rendered_sections]
         self._record_graphics_inference(
             graphic,
             key="duct_profile",
@@ -1390,7 +1394,7 @@ class GraphicsGenerator:
             font_family="Arial",
             layer="labels",
         ))
-        total_weight = sum(section.width_weight for section in sections) or 1.0
+        total_weight = sum(section.width_weight for section in rendered_sections) or 1.0
         cursor_x = x0
         intake_on_left = duct_profile not in {"horizontal_left"}
         if intake_on_left:
@@ -1407,7 +1411,7 @@ class GraphicsGenerator:
         else:
             self._append_ahu_duct_stub(graphic, x=x0 + width, y=airflow_y - 0.09, width=0.05, height=0.18, louver=False)
 
-        for index, section in enumerate(sections):
+        for index, section in enumerate(rendered_sections):
             section_width = width * (section.width_weight / total_weight)
             sx = cursor_x
             body_y = y0 + 0.18
@@ -1624,6 +1628,29 @@ class GraphicsGenerator:
         anchors["generic_status"] = (x0 + 0.18, y0 + height + 0.08)
         anchors["generic_alarm"] = (x0 - 0.01, y0 + height + 0.08)
         return anchors
+
+    def _rendered_ahu_sections_for_profile(
+        self,
+        sections: list[GraphicSection],
+        duct_profile: str,
+    ) -> list[GraphicSection]:
+        if duct_profile != "blow_through_horizontal":
+            return list(sections)
+
+        fan_ids = {"supply_fan"}
+        fan_sections = [section for section in sections if section.section_id in fan_ids]
+        if not fan_sections:
+            return list(sections)
+
+        remaining = [section for section in sections if section.section_id not in fan_ids]
+        insert_after_ids = {"outside_air", "mixed_air", "prefilter", "filter"}
+        insert_index = 0
+        for index, section in enumerate(remaining, start=1):
+            if section.section_id in insert_after_ids:
+                insert_index = index
+            else:
+                break
+        return remaining[:insert_index] + fan_sections + remaining[insert_index:]
 
     def _asset_id_for_section(self, section_id: str, *, equip: Equipment, points: list[Point]) -> str:
         if section_id == "prefilter":

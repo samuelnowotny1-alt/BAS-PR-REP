@@ -2053,6 +2053,7 @@ class ProjectQueryService:
             session.execute(
                 select(
                     DocumentRecord.id,
+                    DocumentRecord.file_path,
                     ArtifactObjectLinkRecord.parser_name,
                     ArtifactObjectLinkRecord.relationship_type,
                     ArtifactObjectLinkRecord.metadata_json,
@@ -2075,9 +2076,9 @@ class ProjectQueryService:
                 "metadata": dict(metadata_json or {}),
                 "document_name": document_name,
                 "document_type": document_type,
-                "document_detail_url": f"/project/{project_id}/documents/{document_id}",
+                **self._document_link_view(project_id, document_id, file_path),
             }
-            for document_id, parser_name, relationship_type, metadata_json, document_name, document_type in rows
+            for document_id, file_path, parser_name, relationship_type, metadata_json, document_name, document_type in rows
         ]
 
     def _project_record(self, session, project_id: str) -> ProjectRecord | None:

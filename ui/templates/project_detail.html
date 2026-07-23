@@ -84,183 +84,273 @@
     </div>
 
     {% if project_view.live_conditions %}
-    <div class="mb-8 rounded-[24px] border border-slate-200 bg-[linear-gradient(135deg,#edf5ff_0%,#ffffff_28%,#f8fbff_100%)] p-6 dark:border-slate-700 dark:bg-[linear-gradient(135deg,#0f1720_0%,#131c28_42%,#172330_100%)]" id="project-live-conditions" data-project-id="{{ project_view.project_id }}">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Project Live Conditions</p>
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">BAS-style present-value readouts for this project’s current emulation snapshot.</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-3">
-                <label class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                    Scenario
-                    <select id="live-scenario-select" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
-                        {% for scenario in project_view.live_conditions.station.available_scenarios %}
-                        <option value="{{ scenario.id }}" {% if scenario.id == project_view.live_conditions.station.scenario_id %}selected{% endif %}>{{ scenario.label }}</option>
-                        {% endfor %}
-                    </select>
-                </label>
-                <label class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                    Refresh
-                    <select id="live-refresh-interval" class="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
-                        <option value="2000">2s</option>
-                        <option value="5000" selected>5s</option>
-                        <option value="10000">10s</option>
-                        <option value="0">Pause</option>
-                    </select>
-                </label>
-                <button type="button" id="live-refresh-now" class="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300">
-                    Refresh Now
-                </button>
-                <div class="flex items-center gap-2">
-                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" data-live-status-dot></span>
-                    <div class="text-sm font-semibold text-gray-900 dark:text-white" data-live-condition="conditions">{{ project_view.live_conditions.conditions }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="mt-3 flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
-            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="polling">Polling every 5s</span>
-            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="updated">Last update: {{ project_view.live_conditions.generated_at or 'initial load' }}</span>
-            <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 dark:border-slate-700 dark:bg-slate-900/60" data-live-meta="mode">Mode: {{ project_view.live_conditions.station.schedule_mode|replace('_', ' ')|title }}</span>
-        </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <a href="{{ project_view.live_conditions.links.outdoor_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_temp" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_temp }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Air</p>
-                    <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAT</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_temp">{{ project_view.live_conditions.outdoor_air_temp }}</p>
-                <div class="mt-3 h-10" data-live-trend="outdoor_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Present Value · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.outdoor_air_humidity }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_humidity" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_humidity }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Outdoor Humidity</p>
-                    <span class="rounded-full border border-sky-900/80 bg-sky-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">OAH</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_humidity">{{ project_view.live_conditions.outdoor_air_humidity }}</p>
-                <div class="mt-3 h-10" data-live-trend="outdoor_air_humidity"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Relative Humidity · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.wind_mph }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="wind_mph" data-live-status="{{ project_view.live_conditions.statuses.wind_mph }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Wind</p>
-                    <span class="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">WIND</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="wind_mph">{{ project_view.live_conditions.wind_mph }}</p>
-                <div class="mt-3 h-10" data-live-trend="wind_mph"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Weather Feed · Open related points</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.supply_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_air_temp" data-live-status="{{ project_view.live_conditions.statuses.supply_air_temp }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Air</p>
-                    <span class="rounded-full border border-emerald-900/80 bg-emerald-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">SAT</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-emerald-300" data-live-condition="supply_air_temp">{{ project_view.live_conditions.supply_air_temp }}</p>
-                <div class="mt-3 h-10" data-live-trend="supply_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Discharge Temperature · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.return_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="return_air_temp" data-live-status="{{ project_view.live_conditions.statuses.return_air_temp }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Return Air</p>
-                    <span class="rounded-full border border-orange-900/80 bg-orange-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-300">RAT</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-orange-300" data-live-condition="return_air_temp">{{ project_view.live_conditions.return_air_temp }}</p>
-                <div class="mt-3 h-10" data-live-trend="return_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Return Path Sensor · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.mixed_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="mixed_air_temp" data-live-status="{{ project_view.live_conditions.statuses.mixed_air_temp }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Mixed Air</p>
-                    <span class="rounded-full border border-violet-900/80 bg-violet-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300">MAT</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-violet-300" data-live-condition="mixed_air_temp">{{ project_view.live_conditions.mixed_air_temp }}</p>
-                <div class="mt-3 h-10" data-live-trend="mixed_air_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Mixing Section · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.avg_zone_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="avg_zone_temp" data-live-status="{{ project_view.live_conditions.statuses.avg_zone_temp }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Avg Zone Temp</p>
-                    <span class="rounded-full border border-fuchsia-900/80 bg-fuchsia-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fuchsia-300">ZNT</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-fuchsia-300" data-live-condition="avg_zone_temp">{{ project_view.live_conditions.avg_zone_temp }}</p>
-                <div class="mt-3 h-10" data-live-trend="avg_zone_temp"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Average Zone Sensor · Open points</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.supply_static }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_static" data-live-status="{{ project_view.live_conditions.statuses.supply_static }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Supply Static</p>
-                    <span class="rounded-full border border-amber-900/80 bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">D-SP</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-amber-300" data-live-condition="supply_static">{{ project_view.live_conditions.supply_static }}</p>
-                <div class="mt-3 h-10" data-live-trend="supply_static"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Static Pressure · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.outside_air_damper }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outside_air_damper" data-live-status="{{ project_view.live_conditions.statuses.outside_air_damper }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">OA Damper</p>
-                    <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAD</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outside_air_damper">{{ project_view.live_conditions.outside_air_damper }}</p>
-                <div class="mt-3 h-10" data-live-trend="outside_air_damper"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Command Output · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.cooling_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="cooling_valve" data-live-status="{{ project_view.live_conditions.statuses.cooling_valve }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Cooling Valve</p>
-                    <span class="rounded-full border border-blue-900/80 bg-blue-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">CLG</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-blue-300" data-live-condition="cooling_valve">{{ project_view.live_conditions.cooling_valve }}</p>
-                <div class="mt-3 h-10" data-live-trend="cooling_valve"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position · Open point</p>
-            </a>
-            <a href="{{ project_view.live_conditions.links.heating_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="heating_valve" data-live-status="{{ project_view.live_conditions.statuses.heating_valve }}">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Heating Valve</p>
-                    <span class="rounded-full border border-rose-900/80 bg-rose-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">HTG</span>
-                </div>
-                <p class="mt-3 font-mono text-[1.65rem] font-bold tracking-[0.08em] text-rose-300" data-live-condition="heating_valve">{{ project_view.live_conditions.heating_valve }}</p>
-                <div class="mt-3 h-10" data-live-trend="heating_valve"></div>
-                <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Valve Position · Open point</p>
-            </a>
-        </div>
-        <div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-400">
-            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="scenario_label">{{ project_view.live_conditions.station.scenario_label }}</span>
-            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="point_count">{{ project_view.live_conditions.station.point_count }} points simulated</span>
-            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="alarm_count">{{ project_view.live_conditions.station.alarm_count }} active alarms</span>
-            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="tick">Tick {{ project_view.live_conditions.tick }}</span>
-        </div>
-        <div class="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-            <div class="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Active Alarms</p>
-                    <span class="text-xs font-semibold text-slate-500" data-live-station="alarm_badge">{{ project_view.live_conditions.station.alarm_count }} active</span>
-                </div>
-                <div class="mt-3 flex flex-wrap gap-2" id="live-alarm-list">
-                    {% for alarm in project_view.live_conditions.station.active_alarms[:8] %}
-                    <span class="rounded-full border border-rose-800 bg-rose-950/60 px-3 py-1 text-xs font-semibold text-rose-200">{{ alarm }}</span>
-                    {% else %}
-                    <span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">No active alarms</span>
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
-                <div class="flex items-center justify-between gap-3">
-                    <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Controller States</p>
-                    <span class="text-xs font-semibold text-slate-500">Live summary</span>
-                </div>
-                <div class="mt-3 grid gap-2 md:grid-cols-2" id="live-controller-list">
-                    {% for controller in project_view.live_conditions.station.controllers[:4] %}
-                    <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="truncate text-sm font-semibold text-slate-100">{{ controller.display_name or controller.controller_id }}</p>
-                                <p class="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">{{ controller.protocol or '' }}{% if controller.address %} · {{ controller.address }}{% endif %}</p>
+    <div class="mb-8 overflow-hidden rounded-[30px] border border-slate-200/90 bg-[radial-gradient(circle_at_top_left,#d9ecff_0%,#f8fbff_26%,#fffaf0_54%,#eef8f3_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-[radial-gradient(circle_at_top_left,#1b3349_0%,#111a25_28%,#171521_56%,#12231a_100%)]" id="project-live-conditions" data-project-id="{{ project_view.project_id }}">
+        <div class="relative p-6 sm:p-7 xl:p-8">
+            <div class="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[linear-gradient(90deg,rgba(14,165,233,0.12),rgba(251,191,36,0.05),rgba(16,185,129,0.08))]"></div>
+            <div class="relative grid gap-5 xl:grid-cols-[minmax(0,1.3fr)_360px]">
+                <div class="rounded-[26px] border border-white/70 bg-white/70 p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.75),0_20px_45px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-700/80 dark:bg-slate-950/45 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_24px_50px_rgba(2,8,23,0.34)]">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-700 dark:text-sky-300">Project Live Conditions</p>
+                            <h2 class="mt-3 text-2xl font-bold text-slate-950 dark:text-white">Active Emulation Dashboard</h2>
+                            <p class="ui-wrap mt-2 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">Live BAS-style present values, short-horizon trends, and station health from the current project snapshot.</p>
+                            <div class="mt-4 flex flex-wrap items-center gap-3">
+                                <div class="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-slate-950 px-4 py-2 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)] dark:border-slate-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.8)]" data-live-status-dot></span>
+                                    <div class="text-sm font-semibold tracking-[0.02em]" data-live-condition="conditions">{{ project_view.live_conditions.conditions }}</div>
+                                </div>
+                                <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400" data-live-meta="polling">Polling every 5s</span>
+                                <span class="rounded-full border border-slate-300/70 bg-white/80 px-3 py-1 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400" data-live-meta="updated">Last update: {{ project_view.live_conditions.generated_at or 'initial load' }}</span>
                             </div>
-                            <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] {% if controller.state == 'online' %}bg-emerald-950/60 text-emerald-200 border border-emerald-800{% elif controller.state == 'degraded' %}bg-amber-950/60 text-amber-200 border border-amber-800{% else %}bg-rose-950/60 text-rose-200 border border-rose-800{% endif %}">{{ controller.state }}</span>
                         </div>
-                        <p class="mt-3 text-xs text-slate-400">{{ controller.health_pct }}% health · {{ controller.point_count }} points</p>
+                        <div class="grid gap-3 sm:grid-cols-3 lg:w-[30rem]">
+                            <label class="rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+                                <span class="block">Scenario</span>
+                                <select id="live-scenario-select" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                                    {% for scenario in project_view.live_conditions.station.available_scenarios %}
+                                    <option value="{{ scenario.id }}" {% if scenario.id == project_view.live_conditions.station.scenario_id %}selected{% endif %}>{{ scenario.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <label class="rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+                                <span class="block">Refresh</span>
+                                <select id="live-refresh-interval" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                                    <option value="2000">2s</option>
+                                    <option value="5000" selected>5s</option>
+                                    <option value="10000">10s</option>
+                                    <option value="0">Pause</option>
+                                </select>
+                            </label>
+                            <div class="rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+                                <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Control</p>
+                                <button type="button" id="live-refresh-now" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:border-sky-400 hover:text-sky-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-600 dark:hover:text-sky-300">
+                                    Refresh Now
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    {% endfor %}
+
+                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
+                        <div class="rounded-2xl border border-sky-200 bg-[linear-gradient(135deg,#f1f9ff_0%,#e4f2ff_100%)] px-4 py-4 dark:border-sky-900/50 dark:bg-[linear-gradient(135deg,rgba(12,74,110,0.3)_0%,rgba(15,23,42,0.46)_100%)]">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-700 dark:text-sky-300">Weather Feed</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-950 dark:text-white" data-live-condition="outdoor_air_temp">{{ project_view.live_conditions.outdoor_air_temp }}</p>
+                            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Outdoor air temp</p>
+                        </div>
+                        <div class="rounded-2xl border border-emerald-200 bg-[linear-gradient(135deg,#effcf4_0%,#e6f8ec_100%)] px-4 py-4 dark:border-emerald-900/50 dark:bg-[linear-gradient(135deg,rgba(6,95,70,0.28)_0%,rgba(15,23,42,0.46)_100%)]">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Unit Output</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-950 dark:text-white" data-live-condition="supply_air_temp">{{ project_view.live_conditions.supply_air_temp }}</p>
+                            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Supply air temp</p>
+                        </div>
+                        <div class="rounded-2xl border border-violet-200 bg-[linear-gradient(135deg,#f7f2ff_0%,#efe7ff_100%)] px-4 py-4 dark:border-violet-900/50 dark:bg-[linear-gradient(135deg,rgba(91,33,182,0.24)_0%,rgba(15,23,42,0.46)_100%)]">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-700 dark:text-violet-300">Building Average</p>
+                            <p class="mt-2 text-2xl font-bold text-slate-950 dark:text-white" data-live-condition="avg_zone_temp">{{ project_view.live_conditions.avg_zone_temp }}</p>
+                            <p class="mt-1 text-xs text-slate-600 dark:text-slate-300">Zone temperature</p>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="rounded-[26px] border border-slate-200/80 bg-[#08131d] p-5 text-slate-100 shadow-[0_24px_55px_rgba(2,8,23,0.32)] dark:border-slate-700/80">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-sky-300">Station Snapshot</p>
+                            <p class="mt-2 text-lg font-semibold text-white" data-live-station="scenario_label">{{ project_view.live_conditions.station.scenario_label }}</p>
+                        </div>
+                        <span class="rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300" data-live-meta="mode">Mode: {{ project_view.live_conditions.station.schedule_mode|replace('_', ' ')|title }}</span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 gap-3">
+                        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4">
+                            <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Simulated Points</p>
+                            <p class="mt-2 text-2xl font-bold text-white" data-live-station="point_count">{{ project_view.live_conditions.station.point_count }} points simulated</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4">
+                            <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Alarm State</p>
+                            <p class="mt-2 text-2xl font-bold text-white" data-live-station="alarm_count">{{ project_view.live_conditions.station.alarm_count }} active alarms</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4">
+                            <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Humidity</p>
+                            <p class="mt-2 text-xl font-bold text-sky-300" data-live-condition="outdoor_air_humidity">{{ project_view.live_conditions.outdoor_air_humidity }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4">
+                            <p class="text-[11px] uppercase tracking-[0.16em] text-slate-500">Tick</p>
+                            <p class="mt-2 text-xl font-bold text-amber-300" data-live-station="tick">Tick {{ project_view.live_conditions.tick }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-400">
+                        <span class="rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1" data-live-station="alarm_badge">{{ project_view.live_conditions.station.alarm_count }} active</span>
+                    </div>
+                </aside>
+            </div>
+
+            <div class="relative mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_340px]">
+                <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                    <a href="{{ project_view.live_conditions.links.outdoor_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_temp" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_temp }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Outdoor Air</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Present value</p>
+                            </div>
+                            <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAT</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_temp">{{ project_view.live_conditions.outdoor_air_temp }}</p>
+                        <div class="mt-3 h-10" data-live-trend="outdoor_air_temp"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.outdoor_air_humidity }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outdoor_air_humidity" data-live-status="{{ project_view.live_conditions.statuses.outdoor_air_humidity }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Outdoor Humidity</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Relative humidity</p>
+                            </div>
+                            <span class="rounded-full border border-sky-900/80 bg-sky-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-300">OAH</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outdoor_air_humidity">{{ project_view.live_conditions.outdoor_air_humidity }}</p>
+                        <div class="mt-3 h-10" data-live-trend="outdoor_air_humidity"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.wind_mph }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="wind_mph" data-live-status="{{ project_view.live_conditions.statuses.wind_mph }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Wind</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Weather feed</p>
+                            </div>
+                            <span class="rounded-full border border-slate-700 bg-slate-900/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-300">WIND</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="wind_mph">{{ project_view.live_conditions.wind_mph }}</p>
+                        <div class="mt-3 h-10" data-live-trend="wind_mph"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Related points</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.supply_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_air_temp" data-live-status="{{ project_view.live_conditions.statuses.supply_air_temp }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Supply Air</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Discharge temp</p>
+                            </div>
+                            <span class="rounded-full border border-emerald-900/80 bg-emerald-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300">SAT</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-emerald-300" data-live-condition="supply_air_temp">{{ project_view.live_conditions.supply_air_temp }}</p>
+                        <div class="mt-3 h-10" data-live-trend="supply_air_temp"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.return_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="return_air_temp" data-live-status="{{ project_view.live_conditions.statuses.return_air_temp }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Return Air</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Return path sensor</p>
+                            </div>
+                            <span class="rounded-full border border-orange-900/80 bg-orange-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-orange-300">RAT</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-orange-300" data-live-condition="return_air_temp">{{ project_view.live_conditions.return_air_temp }}</p>
+                        <div class="mt-3 h-10" data-live-trend="return_air_temp"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.mixed_air_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="mixed_air_temp" data-live-status="{{ project_view.live_conditions.statuses.mixed_air_temp }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Mixed Air</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Mixing section</p>
+                            </div>
+                            <span class="rounded-full border border-violet-900/80 bg-violet-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-300">MAT</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-violet-300" data-live-condition="mixed_air_temp">{{ project_view.live_conditions.mixed_air_temp }}</p>
+                        <div class="mt-3 h-10" data-live-trend="mixed_air_temp"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.avg_zone_temp }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="avg_zone_temp" data-live-status="{{ project_view.live_conditions.statuses.avg_zone_temp }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Avg Zone Temp</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Building average</p>
+                            </div>
+                            <span class="rounded-full border border-fuchsia-900/80 bg-fuchsia-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-fuchsia-300">ZNT</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-fuchsia-300" data-live-condition="avg_zone_temp">{{ project_view.live_conditions.avg_zone_temp }}</p>
+                        <div class="mt-3 h-10" data-live-trend="avg_zone_temp"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open points</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.supply_static }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="supply_static" data-live-status="{{ project_view.live_conditions.statuses.supply_static }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Supply Static</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Static pressure</p>
+                            </div>
+                            <span class="rounded-full border border-amber-900/80 bg-amber-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-300">D-SP</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-amber-300" data-live-condition="supply_static">{{ project_view.live_conditions.supply_static }}</p>
+                        <div class="mt-3 h-10" data-live-trend="supply_static"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.outside_air_damper }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="outside_air_damper" data-live-status="{{ project_view.live_conditions.statuses.outside_air_damper }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">OA Damper</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Command output</p>
+                            </div>
+                            <span class="rounded-full border border-cyan-900/80 bg-cyan-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-300">OAD</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-cyan-300" data-live-condition="outside_air_damper">{{ project_view.live_conditions.outside_air_damper }}</p>
+                        <div class="mt-3 h-10" data-live-trend="outside_air_damper"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.cooling_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="cooling_valve" data-live-status="{{ project_view.live_conditions.statuses.cooling_valve }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Cooling Valve</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Valve position</p>
+                            </div>
+                            <span class="rounded-full border border-blue-900/80 bg-blue-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-blue-300">CLG</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-blue-300" data-live-condition="cooling_valve">{{ project_view.live_conditions.cooling_valve }}</p>
+                        <div class="mt-3 h-10" data-live-trend="cooling_valve"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                    <a href="{{ project_view.live_conditions.links.heating_valve }}" class="block rounded-2xl border border-slate-700 bg-[#07111a] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(2,8,23,0.24)] transition hover:-translate-y-0.5 hover:border-sky-500/70" data-live-card="heating_valve" data-live-status="{{ project_view.live_conditions.statuses.heating_valve }}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Heating Valve</p>
+                                <p class="mt-1 text-[11px] text-slate-500">Valve position</p>
+                            </div>
+                            <span class="rounded-full border border-rose-900/80 bg-rose-950/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-300">HTG</span>
+                        </div>
+                        <p class="mt-4 font-mono text-[1.72rem] font-bold tracking-[0.08em] text-rose-300" data-live-condition="heating_valve">{{ project_view.live_conditions.heating_valve }}</p>
+                        <div class="mt-3 h-10" data-live-trend="heating_valve"></div>
+                        <p class="mt-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">Open point</p>
+                    </a>
+                </div>
+
+                <div class="grid gap-4">
+                    <div class="rounded-2xl border border-slate-700 bg-slate-950/80 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Active Alarms</p>
+                            <span class="text-xs font-semibold text-slate-500" data-live-station="alarm_badge">{{ project_view.live_conditions.station.alarm_count }} active</span>
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2" id="live-alarm-list">
+                            {% for alarm in project_view.live_conditions.station.active_alarms[:8] %}
+                            <span class="rounded-full border border-rose-800 bg-rose-950/60 px-3 py-1 text-xs font-semibold text-rose-200">{{ alarm }}</span>
+                            {% else %}
+                            <span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">No active alarms</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-slate-700 bg-slate-950/80 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Controller States</p>
+                            <span class="text-xs font-semibold text-slate-500">Live summary</span>
+                        </div>
+                        <div class="mt-3 grid gap-2" id="live-controller-list">
+                            {% for controller in project_view.live_conditions.station.controllers[:4] %}
+                            <div class="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-slate-100">{{ controller.display_name or controller.controller_id }}</p>
+                                        <p class="mt-1 text-[11px] uppercase tracking-[0.14em] text-slate-500">{{ controller.protocol or '' }}{% if controller.address %} · {{ controller.address }}{% endif %}</p>
+                                    </div>
+                                    <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] {% if controller.state == 'online' %}bg-emerald-950/60 text-emerald-200 border border-emerald-800{% elif controller.state == 'degraded' %}bg-amber-950/60 text-amber-200 border border-amber-800{% else %}bg-rose-950/60 text-rose-200 border border-rose-800{% endif %}">{{ controller.state }}</span>
+                                </div>
+                                <p class="mt-3 text-xs text-slate-400">{{ controller.health_pct }}% health · {{ controller.point_count }} points</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -889,9 +979,10 @@
         }
 
         function updateText(selector, value) {
-            const node = panel.querySelector(selector);
-            if (!node || value === undefined || value === null) return;
-            node.textContent = String(value);
+            if (value === undefined || value === null) return;
+            panel.querySelectorAll(selector).forEach((node) => {
+                node.textContent = String(value);
+            });
         }
 
         function parseNumericValue(value) {
@@ -964,10 +1055,9 @@
             const container = document.getElementById("live-alarm-list");
             if (!container) return;
             const alarms = station.active_alarms || [];
-            const badge = panel.querySelector('[data-live-station="alarm_badge"]');
-            if (badge) {
+            panel.querySelectorAll('[data-live-station="alarm_badge"]').forEach((badge) => {
                 badge.textContent = `${station.alarm_count ?? alarms.length ?? 0} active`;
-            }
+            });
             if (!alarms.length) {
                 container.innerHTML = '<span class="rounded-full border border-emerald-800 bg-emerald-950/40 px-3 py-1 text-xs font-semibold text-emerald-200">No active alarms</span>';
                 return;

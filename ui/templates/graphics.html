@@ -222,8 +222,12 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}" class="btn-primary text-sm">Inspect</a>
+                                {% if record.json_url_active %}
                                 <a href="{{ record.json_url }}" target="_blank" class="btn-secondary text-sm">JSON</a>
-                                {% if record.svg_path %}
+                                {% else %}
+                                <span class="btn-secondary cursor-default text-sm opacity-60">JSON Missing</span>
+                                {% endif %}
+                                {% if record.svg_url_active %}
                                 <a href="{{ record.svg_url }}" target="_blank" class="btn-secondary text-sm">SVG</a>
                                 {% endif %}
                                 <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}/fullscreen" class="btn-secondary text-sm">Sim</a>
@@ -248,7 +252,7 @@
                             <p class="mt-2 text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
                             {% endif %}
                         </div>
-                        {% if record.svg_url %}
+                        {% if record.svg_url_active %}
                         <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_name }}" class="block border-b border-gray-200 bg-[radial-gradient(circle_at_top,#f8fafc_0%,#eef2f7_65%,#dce4ee_100%)] p-4 dark:border-gray-700 dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_65%,#0b1220_100%)]">
                             <div class="overflow-hidden rounded-[18px] border border-gray-300 bg-white p-3 shadow-inner dark:border-gray-700 dark:bg-slate-50">
                                 <img src="{{ record.svg_url }}" alt="{{ record.payload_title }}" class="mx-auto block h-56 w-full object-contain" />

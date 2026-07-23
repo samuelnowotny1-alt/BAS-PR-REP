@@ -295,8 +295,12 @@
             <div class="flex flex-wrap gap-3">
                 <a href="/project/{{ project.metadata.project_id }}/graphics" class="btn-secondary">Back To Graphics</a>
                 <a href="/project/{{ project.metadata.project_id }}/graphics/{{ graphic_detail.graphic_name }}/fullscreen" class="btn-secondary">Fullscreen</a>
+                {% if graphic_detail.json_url_active %}
                 <a href="{{ graphic_detail.json_url }}" target="_blank" class="btn-secondary">Open JSON</a>
-                {% if graphic_detail.svg_url %}
+                {% else %}
+                <span class="btn-secondary cursor-default opacity-60">JSON Missing</span>
+                {% endif %}
+                {% if graphic_detail.svg_url_active %}
                 <a href="{{ graphic_detail.svg_url }}" target="_blank" class="btn-primary">Open SVG</a>
                 {% endif %}
             </div>
@@ -311,7 +315,7 @@
                     <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Operator-style station page with on-canvas point callouts and station chrome.</p>
                 </div>
                 <div class="p-6 bg-[radial-gradient(circle_at_top,#f8fafc_0%,#eef2f7_65%,#dce4ee_100%)] dark:bg-[radial-gradient(circle_at_top,#1f2937_0%,#111827_65%,#0b1220_100%)]">
-                    {% if graphic_detail.svg_url %}
+                    {% if graphic_detail.svg_url_active %}
                     <div class="station-page-shell">
                         <div class="station-toolbar">
                             <div class="station-toolbar-main">
@@ -422,7 +426,7 @@
                         </div>
                     </div>
                     {% else %}
-                    <div class="rounded-[20px] border border-dashed border-gray-300 px-6 py-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">No SVG preview is available for this graphic.</div>
+                    <div class="rounded-[20px] border border-dashed border-gray-300 px-6 py-12 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">The generated SVG preview is no longer available on disk.</div>
                     {% endif %}
                 </div>
             </article>

@@ -39,7 +39,7 @@
             </div>
             <div class="card bg-gray-50 dark:bg-gray-700 p-4 border border-gray-200 dark:border-gray-700">
                 <p class="text-sm text-gray-700 dark:text-gray-300">Output Dir</p>
-                <p class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400">{{ logic_result.combined }}</p>
+                <p class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400">{{ logic_result.combined_link.path }}</p>
             </div>
         </div>
     </div>
@@ -49,8 +49,8 @@
         <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Equipment Logic</h2>
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {% for summary in logic_result.summaries %}
-            {% set json_file = logic_result.json[loop.index0] %}
-            {% set equip_name = json_file.stem.replace('logic_', '') %}
+            {% set json_file = summary.json_link.path %}
+            {% set equip_name = json_file.stem.replace('logic_', '') if json_file else summary.equipment_id|lower %}
             <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div class="min-w-0">
@@ -60,14 +60,22 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <a href="/output/{{ project.metadata.project_id }}/logic/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
+                        {% if summary.json_link.url_active %}
+                        <a href="{{ summary.json_link.url }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-code mr-1"></i>
                             JSON
                         </a>
-                        <a href="/output/{{ project.metadata.project_id }}/logic/{{ equip_name }}_niagara.json" target="_blank" class="btn-secondary text-sm">
+                        {% else %}
+                        <span class="btn-secondary cursor-default text-sm opacity-60">JSON Missing</span>
+                        {% endif %}
+                        {% if summary.niagara_link.url_active %}
+                        <a href="{{ summary.niagara_link.url }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-download mr-1"></i>
                             Niagara
                         </a>
+                        {% else %}
+                        <span class="btn-secondary cursor-default text-sm opacity-60">Niagara Missing</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="p-6">
@@ -80,10 +88,14 @@
                     {% if summary.sequence_missing_families %}
                     <p class="ui-wrap-tight mb-3 text-sm text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
                     {% endif %}
+                    {% if json_file and summary.json_link.file_exists %}
                     {% set json_content = json_file.read_text() %}
                     <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-auto text-sm font-mono text-gray-700 dark:text-gray-300">
                         <span class="ui-wrap-tight">{{ json_content[:2000] }}{% if json_content|length > 2000 %}...{% endif %}</span>
                     </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 dark:text-gray-400">The generated JSON file is no longer available on disk.</p>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -94,10 +106,14 @@
         <div class="mt-8 card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
             <h2 class="text-xl font-semibold text-gray-800 dark:text-white mb-4">Niagara Sequence Export</h2>
             <p class="text-gray-500 dark:text-gray-400 mb-4">Import these JSON files into Niagara Workbench as sequence modules.</p>
-            <a href="/output/{{ project.metadata.project_id }}/logic/all_logic_diagrams.json" class="btn-primary" download>
+            {% if logic_result.combined_link.url_active %}
+            <a href="{{ logic_result.combined_link.url }}" class="btn-primary" download>
                 <i class="fas fa-download mr-2"></i>
                 Download All Niagara Sequences
             </a>
+            {% else %}
+            <span class="btn-primary cursor-default opacity-60">Combined Export Missing</span>
+            {% endif %}
         </div>
         {% endif %}
 

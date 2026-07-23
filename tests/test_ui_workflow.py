@@ -223,6 +223,10 @@ def test_project_detail_page_renders_engineering_status_summary() -> None:
     assert response.status_code == 200
     assert "Engineering Status" in text
     assert "Project Live Conditions" in text
+    assert "Active Emulation Dashboard" in text
+    assert "Station Snapshot" in text
+    assert 'data-live-trend="supply_air_temp"' in text
+    assert "panel.querySelectorAll(selector)" in text
     assert "Supply Air" in text
     assert "Outdoor Humidity" in text
     assert "Development Status" in text
@@ -410,6 +414,61 @@ def test_document_detail_page_renders_structured_coverage_links() -> None:
     assert response.status_code == 200
     assert "Structured Coverage" in text
     assert f"/project/{project_id}/equipment/AHU-1" in text
+
+
+def test_document_pages_degrade_missing_download_and_deleted_object_links() -> None:
+    project_id = create_project("document-stale-links-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 supply fan status sequence")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=stored_upload,
+        links=[
+            main.ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key="AHU-1",
+                parser_name="sequence_import",
+                metadata={"source_name": "sequence.txt"},
+            )
+        ],
+        parser_name="sequence_import",
+    )
+    project.equipment = []
+    main.save_project(project)
+    Path(stored_upload.path).unlink()
+
+    documents_response = run_async(main.project_documents_page(request(f"/project/{project_id}/documents"), project_id))
+    detail_response = run_async(
+        main.project_document_detail_page(
+            request(f"/project/{project_id}/documents/{stored_upload.document_record_id}"),
+            project_id,
+            stored_upload.document_record_id,
+        )
+    )
+
+    documents_text = response_text(documents_response)
+    detail_text = response_text(detail_response)
+    assert "File missing" in documents_text
+    assert f"/project/{project_id}/documents/{stored_upload.document_record_id}/download" not in documents_text
+    assert "File Missing" in detail_text
+    assert f"/project/{project_id}/equipment/AHU-1" not in detail_text
+    assert "AHU-1" in detail_text
 
 
 def test_documents_page_filters_by_mode_and_linked_entity_type() -> None:
@@ -899,6 +958,60 @@ def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
     assert api_response["source_hits"][0]["source_name"] == "sequence.txt"
     assert api_response["results"][0]["linked_objects"][0]["entity_key"] == "AHU-1"
     assert api_response["source_hits"][0]["linked_objects"][0]["object_url"] == f"/project/{project_id}/equipment/AHU-1"
+
+
+def test_project_knowledge_search_degrades_stale_document_and_object_links() -> None:
+    project_id = create_project("knowledge-stale-links-project")
+    project = main.get_project(project_id)
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+    stored_upload = run_async(
+        main.container.uploads.save_project_upload(
+            project=project,
+            upload=UploadFile(filename="sequence.txt", file=BytesIO(b"AHU-1 supply fan status sequence")),
+            category="documents",
+            document_type="text_document",
+        )
+    )
+    main.container.knowledge.ingest_document(
+        project=project,
+        file_path=stored_upload.path,
+        source_name=stored_upload.source_document.name,
+        source_type=stored_upload.document_type,
+        metadata={**stored_upload.metadata, "category": stored_upload.category},
+    )
+    main.persist_artifact_links(
+        project=project,
+        stored_upload=stored_upload,
+        links=[
+            main.ArtifactEntityLink(
+                entity_type="equipment",
+                entity_key="AHU-1",
+                parser_name="sequence_import",
+                metadata={"source_name": "sequence.txt"},
+            )
+        ],
+        parser_name="sequence_import",
+    )
+    project.equipment = []
+    main.save_project(project)
+    Path(stored_upload.path).unlink()
+
+    page_response = run_async(
+        main.project_knowledge_page(
+            request(f"/project/{project_id}/knowledge?q=supply+fan"),
+            project_id,
+            q="supply fan",
+        )
+    )
+    api_response = run_async(main.api_project_knowledge_search(project_id, q="supply fan"))
+
+    page_text = response_text(page_response)
+    assert "sequence.txt" in page_text
+    assert f"/project/{project_id}/equipment/AHU-1" not in page_text
+    assert f"/project/{project_id}/documents/{stored_upload.document_record_id}/download" not in page_text
+    assert api_response["results"][0]["document_download_url_active"] is False
+    assert api_response["results"][0]["linked_objects"][0]["object_url_active"] is False
 
 
 def test_project_knowledge_page_filters_by_source_type_and_linked_entity() -> None:
@@ -3795,6 +3908,30 @@ def test_equipment_graphic_sections_update_route_persists_to_equipment() -> None
     assert main.equipment_graphic_sections(project.get_equipment("AHU-1")) == (
         "outside_air,filter,cooling_coil,supply_fan,discharge"
     )
+
+
+def test_project_detail_tolerates_missing_equipment_records_in_project_view(monkeypatch) -> None:
+    project_id = create_project("stale-project-view")
+    project = main.projects[project_id]
+    project.add_equipment(Equipment(id="AHU-1", type=EquipmentType.AHU))
+    main.save_project(project)
+
+    original_detail_view = main.container.project_queries.detail_view
+
+    def stale_detail_view(target_project_id: str):
+        view = original_detail_view(target_project_id)
+        assert view is not None
+        stale_row = dict(view["equipment"][0])
+        stale_row["id"] = "AHU-MISSING"
+        view["equipment"] = [stale_row]
+        return view
+
+    monkeypatch.setattr(main.container.project_queries, "detail_view", stale_detail_view)
+
+    response = run_async(main.project_detail(request(f"/project/{project_id}"), project_id))
+
+    assert response.status_code == 200
+    assert "AHU-MISSING" in response_text(response)
 
 
 def test_csv_importer_reads_equipment_graphic_sections(tmp_path: Path) -> None:

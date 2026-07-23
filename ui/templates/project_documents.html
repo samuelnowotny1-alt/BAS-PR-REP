@@ -117,7 +117,11 @@
                     {% for document in documents_view.documents %}
                     <tr class="bg-white dark:bg-gray-900">
                         <td class="px-6 py-4">
-                            <a href="/project/{{ project.metadata.project_id }}/documents/{{ document.id }}" class="ui-wrap-tight text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-300">{{ document.name }}</a>
+                            {% if document.document_detail_url_active %}
+                            <a href="{{ document.document_detail_url }}" class="ui-wrap-tight text-sm font-medium text-gray-900 hover:text-primary-600 dark:text-white dark:hover:text-primary-300">{{ document.name }}</a>
+                            {% else %}
+                            <span class="ui-wrap-tight text-sm font-medium text-gray-900 dark:text-white">{{ document.name }}</span>
+                            {% endif %}
                             {% if document.category %}
                             <div class="ui-wrap-tight mt-1 text-xs text-gray-500 dark:text-gray-400">{{ document.category }}</div>
                             {% endif %}
@@ -150,8 +154,16 @@
                         <td class="px-6 py-4 text-sm text-gray-500"><span class="ui-wrap-tight">{{ document.created_at }}</span></td>
                         <td class="px-6 py-4 text-sm">
                             <div class="flex flex-wrap gap-3">
-                                <a href="/project/{{ project.metadata.project_id }}/documents/{{ document.id }}" class="text-primary-600 hover:text-primary-700 dark:text-primary-300">Details</a>
-                                <a href="/project/{{ project.metadata.project_id }}/documents/{{ document.id }}/download" class="text-primary-600 hover:text-primary-700 dark:text-primary-300">Download</a>
+                                {% if document.document_detail_url_active %}
+                                <a href="{{ document.document_detail_url }}" class="text-primary-600 hover:text-primary-700 dark:text-primary-300">Details</a>
+                                {% else %}
+                                <span class="text-gray-400 dark:text-gray-500">Details unavailable</span>
+                                {% endif %}
+                                {% if document.document_download_url_active %}
+                                <a href="{{ document.document_download_url }}" class="text-primary-600 hover:text-primary-700 dark:text-primary-300">Download</a>
+                                {% else %}
+                                <span class="text-gray-400 dark:text-gray-500">File missing</span>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

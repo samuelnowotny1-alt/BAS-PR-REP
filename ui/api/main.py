@@ -583,6 +583,96 @@ def register_generation_outputs_if_missing(
     )
 
 
+def build_output_file_link(project_id: str, path: Path | None) -> dict[str, object]:
+    """Describe a first-party output file and whether the link is still valid."""
+    file_exists = isinstance(path, Path) and path.exists()
+    url = None
+    if isinstance(path, Path):
+        try:
+            relative_path = path.relative_to(OUTPUT_DIR / project_id)
+            url = f"/output/{project_id}/{relative_path.as_posix()}"
+        except ValueError:
+            url = None
+    return {
+        "path": path,
+        "name": path.name if isinstance(path, Path) else "",
+        "url": url,
+        "url_active": bool(url and file_exists),
+        "file_exists": file_exists,
+    }
+
+
+def describe_report_outputs(project_id: str, report_paths: dict[str, Path] | None) -> list[dict[str, object]]:
+    if not report_paths:
+        return []
+    return [
+        {
+            "key": key,
+            "label": key.replace("_", " ").title(),
+            **build_output_file_link(project_id, path if isinstance(path, Path) else None),
+        }
+        for key, path in report_paths.items()
+        if isinstance(path, Path)
+    ]
+
+
+def enrich_checkout_result(project_id: str, result: dict[str, object] | None) -> dict[str, object] | None:
+    if not result:
+        return result
+    enriched = dict(result)
+    markdown_paths = {
+        path.stem.removeprefix("checkout_").upper(): path
+        for path in result.get("markdown") or []
+        if isinstance(path, Path)
+    }
+    summaries = []
+    for summary in result.get("summaries") or []:
+        summary_view = dict(summary)
+        equipment_id = str(summary.get("equipment_id") or "")
+        summary_view["markdown_link"] = build_output_file_link(project_id, markdown_paths.get(equipment_id))
+        summary_view["excel_link"] = build_output_file_link(
+            project_id,
+            OUTPUT_DIR / project_id / "checkout" / f"{equipment_id.lower()}.xlsx" if equipment_id else None,
+        )
+        summaries.append(summary_view)
+    enriched["summaries"] = summaries
+    enriched["excel_link"] = build_output_file_link(
+        project_id,
+        result.get("excel") if isinstance(result.get("excel"), Path) else None,
+    )
+    enriched["master_index_link"] = build_output_file_link(
+        project_id,
+        OUTPUT_DIR / project_id / "checkout" / "checkout_md" / "checkout_INDEX.md",
+    )
+    return enriched
+
+
+def enrich_logic_result(project_id: str, result: dict[str, object] | None) -> dict[str, object] | None:
+    if not result:
+        return result
+    enriched = dict(result)
+    json_paths = [path for path in result.get("json") or [] if isinstance(path, Path)]
+    niagara_paths = {
+        path.stem.replace("_", "-").upper(): path
+        for path in result.get("niagara") or []
+        if isinstance(path, Path)
+    }
+    summaries = []
+    for index, summary in enumerate(result.get("summaries") or []):
+        summary_view = dict(summary)
+        json_path = json_paths[index] if index < len(json_paths) else None
+        equipment_id = str(summary.get("equipment_id") or "")
+        summary_view["json_link"] = build_output_file_link(project_id, json_path)
+        summary_view["niagara_link"] = build_output_file_link(project_id, niagara_paths.get(equipment_id))
+        summaries.append(summary_view)
+    enriched["summaries"] = summaries
+    enriched["combined_link"] = build_output_file_link(
+        project_id,
+        result.get("combined") if isinstance(result.get("combined"), Path) else None,
+    )
+    return enriched
+
+
 def build_checkout_output_descriptors(project: Project, result: dict[str, object]) -> list[dict[str, object]]:
     outputs: list[dict[str, object]] = []
     markdown_paths = result.get("markdown") or []
@@ -1808,39 +1898,45 @@ def update_station_connection(
     return project.station_connection
 
 
-def equipment_graphic_sections(equipment: Equipment) -> str:
+def equipment_graphic_sections(equipment: Equipment | None) -> str:
+    if equipment is None:
+        return ""
     if equipment.template and equipment.template.parameters:
         return (equipment.template.parameters.get("graphic_sections") or "").strip()
     return ""
 
 
-def equipment_graphic_parameter(equipment: Equipment, key: str) -> str:
+def equipment_graphic_parameter(equipment: Equipment | None, key: str) -> str:
+    if equipment is None:
+        return ""
     if equipment.template and equipment.template.parameters:
         return str(equipment.template.parameters.get(key) or "").strip()
     return ""
 
 
-def equipment_graphic_duct_profile(equipment: Equipment) -> str:
+def equipment_graphic_duct_profile(equipment: Equipment | None) -> str:
     return equipment_graphic_parameter(equipment, "duct_profile")
 
 
-def equipment_graphic_manual_source(equipment: Equipment) -> str:
+def equipment_graphic_manual_source(equipment: Equipment | None) -> str:
     return equipment_graphic_parameter(equipment, "duct_source")
 
 
-def equipment_graphic_manufacturer(equipment: Equipment) -> str:
+def equipment_graphic_manufacturer(equipment: Equipment | None) -> str:
     return equipment_graphic_parameter(equipment, "graphics_manufacturer")
 
 
-def equipment_graphic_model_family(equipment: Equipment) -> str:
+def equipment_graphic_model_family(equipment: Equipment | None) -> str:
     return equipment_graphic_parameter(equipment, "graphics_model_family")
 
 
-def equipment_graphic_public_reference(equipment: Equipment) -> str:
+def equipment_graphic_public_reference(equipment: Equipment | None) -> str:
     return equipment_graphic_parameter(equipment, "public_reference")
 
 
-def available_duct_profiles(equipment: Equipment) -> list[dict[str, str]]:
+def available_duct_profiles(equipment: Equipment | None) -> list[dict[str, str]]:
+    if equipment is None:
+        return [{"value": "", "label": "Auto / inferred"}]
     if equipment.type in {EquipmentType.AHU, EquipmentType.RTU}:
         return [
             {"value": "", "label": "Auto / inferred"},
@@ -1854,15 +1950,17 @@ def available_duct_profiles(equipment: Equipment) -> list[dict[str, str]]:
     return [{"value": "", "label": "Auto / inferred"}]
 
 
-def equipment_graphic_section_errors(equipment: Equipment) -> list[str]:
+def equipment_graphic_section_errors(equipment: Equipment | None) -> list[str]:
     sections = equipment_graphic_sections(equipment)
-    if not sections or equipment.type != EquipmentType.AHU:
+    if not sections or equipment is None or equipment.type != EquipmentType.AHU:
         return []
     _, invalid = GraphicsGenerator.parse_ahu_graphic_sections(sections)
     return invalid
 
 
-def equipment_graphic_presets(equipment: Equipment) -> dict[str, str]:
+def equipment_graphic_presets(equipment: Equipment | None) -> dict[str, str]:
+    if equipment is None:
+        return {}
     if equipment.type == EquipmentType.AHU:
         return GraphicsGenerator.ahu_section_presets()
     return {}
@@ -3173,8 +3271,10 @@ def build_graphic_detail_records(project: Project, graphics_result: dict[str, ob
                 "graphic_name": graphic_name,
                 "json_path": json_path,
                 "json_url": json_url,
+                "json_url_active": json_path.exists(),
                 "svg_path": svg_path,
                 "svg_url": svg_url,
+                "svg_url_active": bool(svg_path is not None and svg_path.exists()),
                 "summary": summary,
                 "equipment": equipment,
                 "controller": project.get_controller(controller_id) if controller_id else None,
@@ -5254,7 +5354,7 @@ async def checkout_page(request: Request, project_id: str):
     container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     return templates.TemplateResponse(request=request, name="checkout.html", context={
         "project": project,
-        "checkout_result": result,
+        "checkout_result": enrich_checkout_result(project_id, result),
         "readiness": readiness,
     })
 
@@ -5268,12 +5368,14 @@ async def reports_page(request: Request, project_id: str):
         return templates.TemplateResponse(request=request, name="reports.html", context={
             "project": project,
             "report_paths": None,
+            "report_entries": [],
             "readiness": readiness,
         })
     if request.method == "POST" and not readiness["can_generate"]:
         return templates.TemplateResponse(request=request, name="reports.html", context={
             "project": project,
             "report_paths": None,
+            "report_entries": [],
             "readiness": readiness,
         })
     output_dir = OUTPUT_DIR / project_id / "reports"
@@ -5289,6 +5391,7 @@ async def reports_page(request: Request, project_id: str):
     return templates.TemplateResponse(request=request, name="reports.html", context={
         "project": project,
         "report_paths": paths,
+        "report_entries": describe_report_outputs(project_id, paths),
         "readiness": readiness,
     })
 
@@ -5438,7 +5541,7 @@ async def logic_page(request: Request, project_id: str):
     container.tasks.complete_task(task_id, result={"generated_documents": generated_documents})
     return templates.TemplateResponse(request=request, name="logic.html", context={
         "project": project,
-        "logic_result": result,
+        "logic_result": enrich_logic_result(project_id, result),
         "readiness": readiness,
     })
 
@@ -5499,6 +5602,7 @@ async def export_project(
                     "path": str(path),
                     "name": path.name,
                     "url": url,
+                    "url_active": bool(url and path.exists()),
                 })
             results[vendor] = {
                 "success": result.success,

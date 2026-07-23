@@ -18,7 +18,7 @@
                 <ul class="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                     {% for file in result.file_entries %}
                     <li class="ui-wrap font-mono">
-                        {% if file.url %}
+                        {% if file.url and file.url_active %}
                         <a href="{{ file.url }}" target="_blank" class="text-blue-600 hover:underline dark:text-blue-300">{{ file.path }}</a>
                         {% else %}
                         {{ file.path }}

@@ -48,7 +48,7 @@
             </div>
             <div class="card bg-gray-50 dark:bg-gray-700 p-4 border border-gray-200 dark:border-gray-700">
                 <p class="text-sm text-gray-700 dark:text-gray-300">Output Directory</p>
-                <p class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400">{{ checkout_result.excel }}</p>
+                <p class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400">{{ checkout_result.excel_link.path }}</p>
             </div>
         </div>
     </div>
@@ -68,14 +68,22 @@
                         </p>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <a href="/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.md" target="_blank" class="btn-secondary text-sm">
+                        {% if summary.markdown_link.url_active %}
+                        <a href="{{ summary.markdown_link.url }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-file-alt mr-1"></i>
                             MD
                         </a>
-                        <a href="/output/{{ project.metadata.project_id }}/checkout/{{ equip_id|lower }}.xlsx" class="btn-secondary text-sm" download>
+                        {% else %}
+                        <span class="btn-secondary cursor-default text-sm opacity-60">MD Missing</span>
+                        {% endif %}
+                        {% if summary.excel_link.url_active %}
+                        <a href="{{ summary.excel_link.url }}" class="btn-secondary text-sm" download>
                             <i class="fas fa-file-excel mr-1"></i>
                             XLSX
                         </a>
+                        {% else %}
+                        <span class="btn-secondary cursor-default text-sm opacity-60">XLSX Missing</span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="p-6 text-center">
@@ -99,10 +107,14 @@
         <!-- Index File -->
         <div class="card bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mt-6">
             <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">Master Index</h3>
-            <a href="/output/{{ project.metadata.project_id }}/checkout/checkout_md/checkout_INDEX.md" target="_blank" class="btn-primary inline-flex">
+            {% if checkout_result.master_index_link.url_active %}
+            <a href="{{ checkout_result.master_index_link.url }}" target="_blank" class="btn-primary inline-flex">
                 <i class="fas fa-list mr-2"></i>
                 View Master Index
             </a>
+            {% else %}
+            <span class="btn-primary inline-flex cursor-default opacity-60">Master Index Missing</span>
+            {% endif %}
         </div>
     </div>
 

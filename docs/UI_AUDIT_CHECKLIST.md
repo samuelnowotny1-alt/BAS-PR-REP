@@ -13,6 +13,8 @@ Provide one pass/fail checklist for cleaning the BAS Assistant UI and reducing l
 - Dense stat grids must collapse cleanly from desktop to tablet to mobile.
 - Buttons and links should not overlap adjacent content.
 - Hero/header sections should keep actions readable without collisions.
+- Data-backed links must degrade to plain text when the underlying project, object, document, or generated file no longer exists.
+- First-party output links should only render as anchors when the file still exists on disk.
 
 ## Page Sweep
 
@@ -85,3 +87,4 @@ Provide one pass/fail checklist for cleaning the BAS Assistant UI and reducing l
 3. Chips, badges, and stat values remain readable with long data.
 4. The project dashboard, validation, import, object lists, and graphics pages all pass a manual visual sweep.
 5. Focused UI regression tests still pass after cleanup.
+6. Rendered-link probing reports no broken first-party app routes on the seeded demo workspace.

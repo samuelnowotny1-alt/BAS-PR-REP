@@ -245,7 +245,7 @@
                 {% for link in detail.artifact_links %}
                 <div class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-700 dark:bg-gray-900">
                     <div class="flex items-center justify-between gap-3">
-                        {% if link.document_detail_url %}
+                        {% if link.document_detail_url and link.document_detail_url_active %}
                         <a href="{{ link.document_detail_url }}" class="ui-wrap-tight text-sm font-semibold text-gray-900 hover:text-blue-700 dark:text-white dark:hover:text-blue-200">{{ link.document_name }}</a>
                         {% else %}
                         <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ link.document_name }}</p>

@@ -83,7 +83,7 @@
                 <div class="rounded-2xl border border-gray-200 bg-white px-4 py-4 dark:border-gray-700 dark:bg-gray-900/60">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
-                            {% if source.document_detail_url %}
+                            {% if source.document_detail_url and source.document_detail_url_active %}
                             <a href="{{ source.document_detail_url }}" class="ui-wrap-tight text-sm font-semibold text-gray-900 hover:text-orange-600 dark:text-white dark:hover:text-orange-300">{{ source.source_name }}</a>
                             {% else %}
                             <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ source.source_name }}</p>
@@ -96,7 +96,11 @@
                     {% if source.linked_objects %}
                     <div class="mt-3 flex flex-wrap gap-2">
                         {% for linked in source.linked_objects[:4] %}
+                        {% if linked.object_url_active %}
                         <a href="{{ linked.object_url }}" class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300">{{ linked.entity_type }} · {{ linked.entity_key }}</a>
+                        {% else %}
+                        <span class="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400">{{ linked.entity_type }} · {{ linked.entity_key }}</span>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -109,7 +113,7 @@
                 <article class="rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/60">
                     <div class="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                         <div class="min-w-0">
-                            {% if result.document_detail_url %}
+                            {% if result.document_detail_url and result.document_detail_url_active %}
                             <a href="{{ result.document_detail_url }}" class="ui-wrap-tight text-sm font-semibold text-gray-900 hover:text-orange-600 dark:text-white dark:hover:text-orange-300">{{ result.source_name }}</a>
                             {% else %}
                             <p class="ui-wrap-tight text-sm font-semibold text-gray-900 dark:text-white">{{ result.source_name }}</p>
@@ -134,12 +138,16 @@
                     {% if result.linked_objects %}
                     <div class="mt-3 flex flex-wrap gap-2">
                         {% for linked in result.linked_objects[:5] %}
+                        {% if linked.object_url_active %}
                         <a href="{{ linked.object_url }}" class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[11px] text-sky-700 dark:border-sky-900 dark:bg-sky-900/20 dark:text-sky-300">{{ linked.entity_type }} · {{ linked.entity_key }}</a>
+                        {% else %}
+                        <span class="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[11px] text-gray-500 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-400">{{ linked.entity_type }} · {{ linked.entity_key }}</span>
+                        {% endif %}
                         {% endfor %}
                     </div>
                     {% endif %}
                     <p class="ui-wrap-tight mt-3 text-sm leading-6 text-gray-700 dark:text-gray-300">{{ result.excerpt }}</p>
-                    {% if result.document_download_url %}
+                    {% if result.document_download_url and result.document_download_url_active %}
                     <div class="mt-3">
                         <a href="{{ result.document_download_url }}" class="text-xs font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-300 dark:hover:text-orange-200">Open source document</a>
                     </div>

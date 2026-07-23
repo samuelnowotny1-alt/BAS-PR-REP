@@ -91,6 +91,41 @@ def test_ahu_sections_can_be_declared_from_equipment_template() -> None:
     assert bindings["AHU-2 SAT"].x > 0.82
 
 
+def test_blow_through_ahu_renders_supply_fan_ahead_of_coils() -> None:
+    equip = Equipment(
+        id="AHU-2B",
+        type=EquipmentType.AHU,
+        controller_id="MPC-2B",
+        template=EquipmentTemplateRef(
+            template_name="ahu_blowthrough",
+            parameters={
+                "duct_profile": "blow_through_horizontal",
+                "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge",
+            },
+        ),
+    )
+    points = [
+        Point(name="AHU-2B SF STATUS", equipment_id="AHU-2B", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="AHU-2B CCV CMD", equipment_id="AHU-2B", kind=PointKind.ACTUATOR, direction=PointDirection.OUTPUT, units="%"),
+    ]
+    generator = GraphicsGenerator(_project_with([equip], points))
+
+    generator.generate_all()
+    graphic = generator.graphics["graphic_ahu-2b"]
+    bindings = _binding_map(generator, "graphic_ahu-2b")
+
+    assert graphic.metadata["duct_profile"] == "blow_through_horizontal"
+    assert graphic.metadata["rendered_graphic_sections"] == [
+        "outside_air",
+        "filter",
+        "supply_fan",
+        "cooling_coil",
+        "heating_coil",
+        "discharge",
+    ]
+    assert bindings["AHU-2B SF STATUS"].x < bindings["AHU-2B CCV CMD"].x
+
+
 def test_ahu_configured_layout_uses_weighted_section_spacing_and_detail_shapes() -> None:
     equip = Equipment(
         id="AHU-3",
@@ -576,6 +611,28 @@ def test_graphics_confidence_records_explicit_and_inferred_decisions() -> None:
     assert inferences["duct_profile"]["source"] == "subtype_or_tag_inference"
     assert confidence["score"] >= 0.8
     assert confidence["unclassified_points"] == 0
+
+
+def test_blow_through_duct_profile_is_inferred_from_subtype_text() -> None:
+    equip = Equipment(
+        id="AHU-10B",
+        type=EquipmentType.AHU,
+        subtype="Blow-through air handler",
+        controller_id="MPC-10B",
+        template=EquipmentTemplateRef(
+            template_name="ahu_blowthrough_inferred",
+            parameters={
+                "graphic_sections": "outside_air,filter,cooling_coil,heating_coil,supply_fan,discharge",
+            },
+        ),
+    )
+    generator = GraphicsGenerator(_project_with([equip], []))
+
+    generator.generate_all()
+    graphic = generator.graphics["graphic_ahu-10b"]
+
+    assert graphic.metadata["duct_profile"] == "blow_through_horizontal"
+    assert graphic.metadata["rendered_graphic_sections"][2] == "supply_fan"
 
 
 def test_graphics_confidence_flags_unclassified_noisy_points() -> None:
