@@ -4,14 +4,14 @@ Last updated: 2026-07-23
 
 ## Release Candidate
 
-- Branch: `codex/demo-ready-consolidation`
+- Branch: `codex/integration-release`
 - Base commit: `cd2c6fd`
 - Accepted commit: the commit containing this handoff (`git rev-parse HEAD`)
-- Full regression: `203 passed in 248.11s`
+- Full regression: `208 passed in 268.88s`
 - Local smoke: 9 release routes and 5 rendered links passed
 - Public reachability: 9 release routes passed through Nginx
 - Authenticated smoke: 9 protected release routes and 179 rendered links passed through Nginx
-- Release ID: `20260723T162926Z`
+- Release ID: `20260723T165010Z`
 - Target: `http://155.138.193.113/`
 - Runtime: `bas-assistant.service` behind Nginx
 - Service migration: stale unmanaged listener removed; systemd owns port `8000`
@@ -23,6 +23,10 @@ Last updated: 2026-07-23
 - Rendered dead-link safeguards across project and output review surfaces
 - Niagara graphics binding regression coverage
 - Common contractor CSV heading mapping and inline correction workflow
+- CSV header preflight and structured import rollback snapshots
+- Full-building airside, cooling-plant, and heating-plant graphics
+- Niagara system pages with live bindings and equipment navigation
+- Daily runtime backup and five-minute health monitoring timer assets
 - Worktree-safe VPS deployment with systemd, health checks, and automatic code rollback
 - Local/public release route and rendered-link smoke checks
 - Explicit graphics/library product scope and lab/emulator support boundary

@@ -7,7 +7,7 @@ Last updated: 2026-07-23
 - Branch: `graphics-library-preview`
 - Deployment target: VPS at `http://155.138.193.113/`
 - Runtime status: deployed and responding through Nginx
-- Full regression suite: `203 passed`
+- Full regression suite: `208 passed`
 - Current state: release-candidate demo-to-deliverable pipeline with consolidated dashboard, link handling, import ergonomics, and VPS operations
 
 ## Done
@@ -28,6 +28,8 @@ Last updated: 2026-07-23
 - VPS deployment path with live app verification
 - Project live-conditions operator dashboard with retained trend graphs
 - Common contractor CSV heading mapping and inline post-import correction
+- CSV header preflight and structured import rollback snapshots
+- Full-building plant graphics and Niagara system overview pages
 - Rendered-link release smoke checks
 
 ## Partial
