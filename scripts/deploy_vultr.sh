@@ -44,13 +44,27 @@ service_name="$3"
 
 cd "${remote_dir}"
 mkdir -p logs data output uploads
+if [ -f config/bas-assistant.env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source config/bas-assistant.env
+    set +a
+fi
 if [ ! -x .venv/bin/python ]; then
     python3 -m venv .venv
     .venv/bin/pip install --upgrade pip
 fi
 .venv/bin/pip install -e .
 if [ -x .venv/bin/alembic ]; then
-    .venv/bin/alembic upgrade head
+    migration_state="$(
+        .venv/bin/python -c \
+          'from sqlalchemy import create_engine, inspect; from bas_assistant.config import get_settings; tables=set(inspect(create_engine(get_settings().database_url)).get_table_names()); print("versioned" if "alembic_version" in tables else "populated" if tables else "empty")'
+    )"
+    if [ "${migration_state}" = "populated" ]; then
+        .venv/bin/alembic stamp head
+    else
+        .venv/bin/alembic upgrade head
+    fi
 fi
 
 can_sudo=0
@@ -111,6 +125,11 @@ systemctl is-active "${service_name}"
 curl -fsS http://127.0.0.1:8000/healthz
 REMOTE
 then
+    echo "Remote deployment stage failed; restoring ${REMOTE_BACKUP_DIR}." >&2
+    "${SCRIPT_DIR}/rollback_vultr.sh" "${RELEASE_ID}" || {
+        echo "Automatic rollback also failed; inspect ${REMOTE_HOST} immediately." >&2
+        exit 2
+    }
     exit 1
 fi
 

@@ -168,6 +168,7 @@ The deployer:
 - installs and restarts `bas-assistant.service`
 - reuses an installed supervised service when the deploy account cannot run sudo
 - runs migrations and health verification
+- stamps the Alembic baseline when upgrading a populated pre-migration database
 - restores the prior code snapshot automatically if health verification fails
 
 Manual rollback:

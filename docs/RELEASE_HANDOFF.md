@@ -9,7 +9,7 @@ Last updated: 2026-07-23
 - Accepted commit: the commit containing this handoff (`git rev-parse HEAD`)
 - Full regression: `203 passed in 248.11s`
 - Local smoke: 9 release routes and 5 rendered links passed
-- Release ID: `20260723T161607Z`
+- Release ID: `20260723T162003Z`
 - Target: `http://155.138.193.113/`
 - Runtime: `bas-assistant.service` behind Nginx
 - Service migration: stale unmanaged listener removed; systemd owns port `8000`
