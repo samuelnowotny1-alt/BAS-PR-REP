@@ -46,7 +46,7 @@ class NiagaraStationGraph:
 class NiagaraArtifactParser:
     """Parse PX pages and Niagara station archives into structured BAS objects."""
 
-    SUPPORTED_SUFFIXES = {".px", ".zip"}
+    SUPPORTED_SUFFIXES = {".bog", ".px", ".zip"}
 
     def can_parse(self, file_path: Path) -> bool:
         return file_path.suffix.lower() in self.SUPPORTED_SUFFIXES
@@ -55,7 +55,7 @@ class NiagaraArtifactParser:
         suffix = file_path.suffix.lower()
         if suffix == ".px":
             return self._parse_px_file(project=project, file_path=file_path)
-        if suffix == ".zip":
+        if suffix in {".bog", ".zip"}:
             return self._parse_station_archive(project=project, file_path=file_path)
         return ArtifactParseResult(parsed=False, parser_name="niagara", warnings=["Unsupported artifact type"])
 
@@ -67,30 +67,38 @@ class NiagaraArtifactParser:
         links: list[ArtifactEntityLink] = []
         warnings: list[str] = []
         manifest_hits = 0
-        with zipfile.ZipFile(file_path) as archive, TemporaryDirectory() as temp_dir:
-            for member in archive.namelist():
-                target_path = Path(temp_dir) / Path(member).name
-                target_path.parent.mkdir(parents=True, exist_ok=True)
-                target_path.write_bytes(archive.read(member))
-                lower_member = member.lower()
-                if lower_member.endswith(".px"):
-                    parsed_pages += 1
-                    result = self._parse_px_file(project=project, file_path=target_path)
-                    equipment_added += result.equipment_added
-                    points_added += result.points_added
-                    controllers_added += result.controllers_added
-                    links.extend(result.links)
-                    warnings.extend(result.warnings)
-                    continue
-                if lower_member.endswith((".json", ".txt", ".csv", ".xml")):
-                    result = self._parse_station_metadata_file(project=project, file_path=target_path)
-                    if result.parsed:
-                        manifest_hits += 1
-                    equipment_added += result.equipment_added
-                    points_added += result.points_added
-                    controllers_added += result.controllers_added
-                    links.extend(result.links)
-                    warnings.extend(result.warnings)
+        try:
+            with zipfile.ZipFile(file_path) as archive, TemporaryDirectory() as temp_dir:
+                for member in archive.namelist():
+                    target_path = Path(temp_dir) / Path(member).name
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    target_path.write_bytes(archive.read(member))
+                    lower_member = member.lower()
+                    if lower_member.endswith(".px"):
+                        parsed_pages += 1
+                        result = self._parse_px_file(project=project, file_path=target_path)
+                        equipment_added += result.equipment_added
+                        points_added += result.points_added
+                        controllers_added += result.controllers_added
+                        links.extend(result.links)
+                        warnings.extend(result.warnings)
+                        continue
+                    if lower_member.endswith((".json", ".txt", ".csv", ".xml")):
+                        result = self._parse_station_metadata_file(project=project, file_path=target_path)
+                        if result.parsed:
+                            manifest_hits += 1
+                        equipment_added += result.equipment_added
+                        points_added += result.points_added
+                        controllers_added += result.controllers_added
+                        links.extend(result.links)
+                        warnings.extend(result.warnings)
+        except (zipfile.BadZipFile, RuntimeError) as exc:
+            archive_type = file_path.suffix.lower().lstrip(".").upper()
+            return ArtifactParseResult(
+                parsed=False,
+                parser_name="niagara_station_archive",
+                warnings=[f"{archive_type} archive could not be opened: {exc}"],
+            )
         return ArtifactParseResult(
             parsed=parsed_pages > 0 or manifest_hits > 0,
             parser_name="niagara_station_archive",

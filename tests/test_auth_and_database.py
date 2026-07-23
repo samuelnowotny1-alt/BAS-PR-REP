@@ -582,6 +582,58 @@ def test_niagara_station_zip_parses_manifest_content(tmp_path: Path) -> None:
     assert any(point.name.startswith("AHU-1_") for point in project.points)
 
 
+def test_niagara_station_bog_parses_manifest_content(tmp_path: Path) -> None:
+    main.configure_runtime_paths(
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+        uploads_dir=tmp_path / "uploads",
+        database_url=f"sqlite:///{tmp_path / 'bog_uploads.db'}",
+    )
+
+    project_id = "bog-station-project"
+    asyncio.run(
+        main.api_create_project(
+            project_id=project_id,
+            name="BOG Station Project",
+            client="Client",
+            location="Site",
+            unit_system="IP",
+            design_phase="DD",
+            engineer="Engineer",
+            programmer="Programmer",
+            cx_agent="Cx",
+            naming_standard="ASHRAE-135",
+        )
+    )
+
+    bog_buffer = BytesIO()
+    with zipfile.ZipFile(bog_buffer, "w") as archive:
+        archive.writestr(
+            "station_tree.txt",
+            "station:|slot:/Drivers/BacnetNetwork/JACE-01/Points/AHU-1_SAT\n"
+            "station:|slot:/Config/Equipment/AHU-1\n",
+        )
+    bog_buffer.seek(0)
+    bog_upload = UploadFile(filename="station.bog", file=bog_buffer)
+
+    response = asyncio.run(
+        main.import_data(
+            request(f"/project/{project_id}/import", method="POST"),
+            project_id=project_id,
+            equipment_file=None,
+            points_file=None,
+            controllers_file=None,
+            supporting_files=[bog_upload],
+        )
+    )
+
+    assert response.status_code == 303
+    project = main.get_project(project_id)
+    assert project.get_controller("JACE-01") is not None
+    assert project.get_equipment("AHU-1") is not None
+    assert project.get_point("AHU-1_SAT") is not None
+
+
 def test_niagara_station_tree_zip_parses_slot_paths(tmp_path: Path) -> None:
     main.configure_runtime_paths(
         data_dir=tmp_path / "data",
