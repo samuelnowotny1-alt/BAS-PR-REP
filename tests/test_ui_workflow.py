@@ -596,6 +596,7 @@ def test_checkout_and_logic_pages_surface_sequence_review_context_after_generati
     assert "Sequence Review: attention" in logic_text
     assert "AHU-1 SF-STS" in logic_text
     assert "Status/proof point" in logic_text
+    assert 'class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400"' in logic_text
 
 
 def test_generation_readiness_surfaces_sequence_coverage_debt() -> None:
@@ -671,6 +672,7 @@ def test_export_page_blocks_submission_when_project_not_ready() -> None:
     assert get_response.status_code == 200
     assert "Export Readiness" in get_text
     assert "validation errors must be resolved before generation" in get_text
+    assert "ui-wrap-tight" in get_text
     assert post_response.status_code == 200
     assert "Export Readiness" in post_text
     assert "validation errors must be resolved before generation" in post_text
@@ -1261,6 +1263,7 @@ def test_sequence_page_and_parse_show_structured_coverage_review(tmp_path: Path)
     assert "Control Intent Checks" in page_text
     assert "Missing Intent Families" in page_text
     assert "AHU-1 SF-STS" in page_text
+    assert "ui-wrap-tight" in page_text
     assert parse_response.status_code == 200
     assert "Structured Coverage Review" in parse_text
     assert "Missing References" in parse_text
@@ -1365,6 +1368,7 @@ def test_project_activity_page_renders_task_outcome_summaries() -> None:
     assert "Warnings" in text
     assert "Change Ledger" in text
     assert "equipment_import completed" in text
+    assert "ui-wrap-tight" in text
 
 
 def test_system_ledger_page_renders_project_and_remediation_history() -> None:

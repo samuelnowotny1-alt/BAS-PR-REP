@@ -10,6 +10,7 @@ This script:
 """
 
 import asyncio
+import os
 import sys
 import time
 import subprocess
@@ -20,7 +21,9 @@ from urllib.parse import urljoin, urlparse
 import httpx
 from bs4 import BeautifulSoup
 
-BASE_URL = "http://localhost:8000"
+VERIFY_PORT = int(os.environ.get("BAS_UI_VERIFY_PORT", "8000"))
+BASE_URL = os.environ.get("BAS_UI_VERIFY_BASE_URL", f"http://127.0.0.1:{VERIFY_PORT}")
+VERIFY_INPROCESS = os.environ.get("BAS_UI_VERIFY_INPROCESS", "0") == "1"
 PROJECT_ID = "demo-hvac-project"
 
 
@@ -35,9 +38,12 @@ class UIVerifier:
         
     def start_server(self):
         """Start the FastAPI server in background."""
+        if VERIFY_INPROCESS:
+            print("🧪 Using in-process ASGI transport, no local server bind needed")
+            return
         print("🚀 Starting FastAPI server...")
         self.server_process = subprocess.Popen(
-            [".venv/bin/uvicorn", "ui.api.main:app", "--host", "0.0.0.0", "--port", "8000"],
+            [".venv/bin/uvicorn", "ui.api.main:app", "--host", "127.0.0.1", "--port", str(VERIFY_PORT)],
             cwd="/home/oem/.openclaw/workspace/bas-assistant",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -63,7 +69,21 @@ class UIVerifier:
     
     async def __aenter__(self):
         self.start_server()
-        self.client = httpx.AsyncClient(base_url=BASE_URL, follow_redirects=True, timeout=30)
+        if VERIFY_INPROCESS:
+            from ui.api import main as ui_main
+
+            ui_main.container.settings = ui_main.container.settings.model_copy(update={"auth_required": False})
+            app = ui_main.app
+
+            transport = httpx.ASGITransport(app=app)
+            self.client = httpx.AsyncClient(
+                transport=transport,
+                base_url="http://testserver",
+                follow_redirects=True,
+                timeout=30,
+            )
+        else:
+            self.client = httpx.AsyncClient(base_url=BASE_URL, follow_redirects=True, timeout=30)
         return self
     
     async def __aexit__(self, exc_type, exc_val, exc_tb):

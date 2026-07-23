@@ -6,7 +6,7 @@
 <div class="max-w-7xl mx-auto">
     <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-800 dark:text-white">Control Logic Diagrams</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
+        <p class="ui-wrap-tight text-gray-500 dark:text-gray-400 mt-1">{{ project.metadata.name }} ({{ project.metadata.project_id }})</p>
     </div>
 
     {% if readiness %}
@@ -39,7 +39,7 @@
             </div>
             <div class="card bg-gray-50 dark:bg-gray-700 p-4 border border-gray-200 dark:border-gray-700">
                 <p class="text-sm text-gray-700 dark:text-gray-300">Output Dir</p>
-                <p class="text-sm font-mono text-gray-500 dark:text-gray-400 truncate">{{ logic_result.combined }}</p>
+                <p class="ui-wrap-tight text-sm font-mono text-gray-500 dark:text-gray-400">{{ logic_result.combined }}</p>
             </div>
         </div>
     </div>
@@ -52,14 +52,14 @@
             {% set json_file = logic_result.json[loop.index0] %}
             {% set equip_name = json_file.stem.replace('logic_', '') %}
             <div class="card bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
-                        <p class="mt-1 text-xs uppercase tracking-[0.16em] {% if summary.sequence_review_status == 'covered' %}text-emerald-600 dark:text-emerald-300{% elif summary.sequence_review_status == 'attention' %}text-amber-600 dark:text-amber-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0">
+                        <h3 class="ui-wrap-tight text-lg font-semibold text-gray-800 dark:text-white">{{ equip_name }}</h3>
+                        <p class="ui-wrap-tight mt-1 text-xs uppercase tracking-[0.16em] {% if summary.sequence_review_status == 'covered' %}text-emerald-600 dark:text-emerald-300{% elif summary.sequence_review_status == 'attention' %}text-amber-600 dark:text-amber-300{% else %}text-gray-500 dark:text-gray-400{% endif %}">
                             Sequence Review: {{ summary.sequence_review_status }}
                         </p>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <a href="/output/{{ project.metadata.project_id }}/logic/{{ json_file.name }}" target="_blank" class="btn-secondary text-sm">
                             <i class="fas fa-code mr-1"></i>
                             JSON
@@ -72,17 +72,17 @@
                 </div>
                 <div class="p-6">
                     {% if summary.sequence_reference %}
-                    <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Sequence: {{ summary.sequence_reference }}</p>
+                    <p class="ui-wrap-tight mb-3 text-sm text-gray-500 dark:text-gray-400">Sequence: {{ summary.sequence_reference }}</p>
                     {% endif %}
                     {% if summary.sequence_missing_refs %}
-                    <p class="mb-2 text-sm text-amber-700 dark:text-amber-300">Missing refs: {{ summary.sequence_missing_refs|join(', ') }}</p>
+                    <p class="ui-wrap-tight mb-2 text-sm text-amber-700 dark:text-amber-300">Missing refs: {{ summary.sequence_missing_refs|join(', ') }}</p>
                     {% endif %}
                     {% if summary.sequence_missing_families %}
-                    <p class="mb-3 text-sm text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
+                    <p class="ui-wrap-tight mb-3 text-sm text-amber-700 dark:text-amber-300">Missing control families: {{ summary.sequence_missing_families|join(', ') }}</p>
                     {% endif %}
                     {% set json_content = json_file.read_text() %}
                     <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-auto text-sm font-mono text-gray-700 dark:text-gray-300">
-                        {{ json_content[:2000] }}{% if json_content|length > 2000 %}...{% endif %}
+                        <span class="ui-wrap-tight">{{ json_content[:2000] }}{% if json_content|length > 2000 %}...{% endif %}</span>
                     </div>
                 </div>
             </div>
