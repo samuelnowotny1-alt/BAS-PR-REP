@@ -3,7 +3,7 @@
 import json
 import math
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from enum import Enum
 from html import escape
@@ -4799,11 +4799,9 @@ class GraphicsGenerator:
 
     def _generate_system_graphics(self) -> None:
         """Generate system-level graphics (AHU systems, plant, etc.)."""
-        # Group equipment by type for system graphics
         ahu_systems = {}
         for equip in self.project.equipment:
             if equip.type == EquipmentType.AHU:
-                # Find children (VAVs, etc.)
                 children = [e for e in self.project.equipment
                             if e.parent_equipment_id == equip.id]
                 ahu_systems[equip.id] = {
@@ -4813,6 +4811,349 @@ class GraphicsGenerator:
 
         for ahu_id, system in ahu_systems.items():
             self._generate_ahu_system_graphic(system)
+
+        cooling_equipment = [
+            equip for equip in self.project.equipment
+            if equip.type in {
+                EquipmentType.CHILLER,
+                EquipmentType.PUMP_CHW,
+                EquipmentType.PUMP_CW,
+                EquipmentType.COOLING_TOWER,
+            }
+        ]
+        if any(equip.type == EquipmentType.CHILLER for equip in cooling_equipment):
+            self._generate_plant_system_graphic("cooling", cooling_equipment)
+
+        heating_equipment = [
+            equip for equip in self.project.equipment
+            if equip.type in {
+                EquipmentType.BOILER,
+                EquipmentType.PUMP_HW,
+                EquipmentType.HEAT_EXCHANGER,
+            }
+        ]
+        if any(equip.type == EquipmentType.BOILER for equip in heating_equipment):
+            self._generate_plant_system_graphic("heating", heating_equipment)
+
+    def _generate_plant_system_graphic(
+        self,
+        system_kind: str,
+        equipment: list[Equipment],
+    ) -> GraphicDefinition:
+        """Build a connected cooling- or heating-plant overview."""
+        is_cooling = system_kind == "cooling"
+        root_type = EquipmentType.CHILLER if is_cooling else EquipmentType.BOILER
+        root_equipment = next(equip for equip in equipment if equip.type == root_type)
+        graphic = GraphicDefinition(
+            graphic_id=f"graphic_system_{system_kind}_plant",
+            name=f"{system_kind.title()} Plant System",
+            graphic_type=GraphicType.SYSTEM,
+            equipment_id=root_equipment.id,
+            width=1600,
+            height=1000,
+            metadata={
+                "system_type": f"{system_kind}_plant",
+                "equipment_ids": [equip.id for equip in equipment],
+            },
+        )
+
+        if is_cooling:
+            self._append_system_pipe(
+                graphic, x=0.07, y=0.62, width=0.78, height=0,
+                color="#2563eb", css_class="water-path chilled-water-supply",
+            )
+            self._append_system_pipe(
+                graphic, x=0.07, y=0.76, width=0.78, height=0,
+                color="#60a5fa", css_class="water-path chilled-water-return",
+            )
+            self._append_system_pipe(
+                graphic, x=0.42, y=0.32, width=0.44, height=0,
+                color="#0f766e", css_class="water-path condenser-water-supply",
+            )
+            self._append_system_pipe(
+                graphic, x=0.42, y=0.44, width=0.44, height=0,
+                color="#2dd4bf", css_class="water-path condenser-water-return",
+            )
+            pipe_labels = [
+                (0.08, 0.60, "CHWS", "#1d4ed8"),
+                (0.08, 0.74, "CHWR", "#2563eb"),
+                (0.61, 0.30, "CWS", "#0f766e"),
+                (0.61, 0.42, "CWR", "#0f766e"),
+            ]
+        else:
+            self._append_system_pipe(
+                graphic, x=0.07, y=0.58, width=0.79, height=0,
+                color="#ea580c", css_class="water-path heating-water-supply",
+            )
+            self._append_system_pipe(
+                graphic, x=0.07, y=0.75, width=0.79, height=0,
+                color="#fb923c", css_class="water-path heating-water-return",
+            )
+            pipe_labels = [
+                (0.08, 0.56, "HWS", "#c2410c"),
+                (0.08, 0.73, "HWR", "#ea580c"),
+            ]
+
+        for x, y, text, color in pipe_labels:
+            graphic.elements.append(GraphicElement(
+                element_type="text",
+                x=x,
+                y=y,
+                text=text,
+                font_size=10,
+                font_family="Arial",
+                fill=color,
+                layer="labels",
+            ))
+
+        positions = self._plant_system_positions(system_kind, equipment)
+        for equip in equipment:
+            x, y, width, height = positions[equip.id]
+            points = self.project.get_points_for_equipment(equip.id)
+            if equip.type == EquipmentType.HEAT_EXCHANGER:
+                asset_id = "heat_exchanger_plate_frame"
+                self._append_heat_exchanger_system_asset(
+                    graphic, x=x, y=y, width=width, height=height,
+                )
+            else:
+                asset_id, _source, _confidence, _evidence = self._plant_asset_id(equip, points)
+                self._append_asset_instance(
+                    graphic,
+                    asset_id=asset_id,
+                    x=x,
+                    y=y,
+                    width=width,
+                    height=height,
+                )
+            self._record_asset_placement(
+                graphic,
+                asset_id=asset_id,
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                role=f"{system_kind}_plant_equipment",
+                equipment_id=equip.id,
+            )
+            graphic.elements.append(GraphicElement(
+                element_type="text",
+                x=x + (width / 2),
+                y=y + height + 0.025,
+                text=equip.id,
+                font_size=10,
+                font_family="Arial",
+                layer="labels",
+            ))
+            self._add_system_summary_bindings(
+                graphic,
+                equip,
+                points,
+                x=x + (width / 2),
+                y=min(y + height + 0.055, 0.94),
+            )
+
+        loads = [
+            equip for equip in self.project.equipment
+            if equip.type in {EquipmentType.AHU, EquipmentType.RTU, EquipmentType.FAN_COIL}
+        ]
+        self._append_plant_loads(graphic, loads, system_kind=system_kind)
+        self.graphics[graphic.graphic_id] = graphic
+        return graphic
+
+    def _plant_system_positions(
+        self,
+        system_kind: str,
+        equipment: list[Equipment],
+    ) -> dict[str, tuple[float, float, float, float]]:
+        """Return stable positions for plant equipment by hydraulic role."""
+        grouped: dict[EquipmentType, list[Equipment]] = defaultdict(list)
+        for equip in equipment:
+            grouped[equip.type].append(equip)
+
+        positions: dict[str, tuple[float, float, float, float]] = {}
+        if system_kind == "cooling":
+            layout = {
+                EquipmentType.CHILLER: (0.17, 0.35, 0.2, 0.2, 0.23),
+                EquipmentType.PUMP_CHW: (0.09, 0.62, 0.11, 0.13, 0.13),
+                EquipmentType.PUMP_CW: (0.46, 0.44, 0.11, 0.13, 0.13),
+                EquipmentType.COOLING_TOWER: (0.76, 0.08, 0.17, 0.22, 0.18),
+            }
+        else:
+            layout = {
+                EquipmentType.BOILER: (0.12, 0.28, 0.19, 0.23, 0.22),
+                EquipmentType.PUMP_HW: (0.4, 0.58, 0.11, 0.13, 0.13),
+                EquipmentType.HEAT_EXCHANGER: (0.68, 0.29, 0.16, 0.2, 0.18),
+            }
+
+        for equipment_type, items in grouped.items():
+            start_x, y, width, height, step = layout[equipment_type]
+            for index, equip in enumerate(items):
+                positions[equip.id] = (start_x + (index * step), y, width, height)
+        return positions
+
+    def _append_system_pipe(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: str,
+        css_class: str,
+    ) -> None:
+        graphic.elements.append(GraphicElement(
+            element_type="line",
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            stroke=color,
+            stroke_width=5,
+            layer="piping",
+            css_class=css_class,
+        ))
+
+    def _append_heat_exchanger_system_asset(
+        self,
+        graphic: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ) -> None:
+        graphic.elements.append(GraphicElement(
+            element_type="rect",
+            x=x,
+            y=y,
+            width=width,
+            height=height,
+            fill="#f8fafc",
+            stroke="#64748b",
+            stroke_width=1.8,
+            layer="symbol",
+            css_class="equipment-shell",
+        ))
+        for index in range(4):
+            offset = (index + 1) / 5
+            graphic.elements.append(GraphicElement(
+                element_type="line",
+                x=x + (width * 0.12),
+                y=y + (height * offset),
+                width=width * 0.76,
+                height=height * (0.12 if index % 2 == 0 else -0.12),
+                stroke="#ea580c" if index % 2 == 0 else "#2563eb",
+                stroke_width=2,
+                layer="symbol",
+            ))
+
+    def _add_system_summary_bindings(
+        self,
+        graphic: GraphicDefinition,
+        equip: Equipment,
+        points: list[Point],
+        *,
+        x: float,
+        y: float,
+    ) -> None:
+        preferred_terms = (
+            "status", "alarm", "supply", "return", "chwst", "chwrt",
+            "hws", "hwr", "flow", "speed", "firing", "fan",
+        )
+        ranked = sorted(
+            points,
+            key=lambda point: (
+                0 if any(term in point.name.lower() for term in preferred_terms) else 1,
+                self._binding_type_priority(self._binding_type_for_point(point)),
+                point.name,
+            ),
+        )
+        for index, point in enumerate(ranked[:2]):
+            binding_type = self._binding_type_for_point(point)
+            binding = GraphicBinding(
+                point_name=point.name,
+                binding_type=binding_type,
+                x=self._clamp(x + ((index * 2 - 1) * 0.025)),
+                y=self._clamp(y),
+                label=self._label_for_point(point),
+                format=self._binding_format_for_point(point, binding_type),
+                color_map=self._color_map_for_point(point, binding_type),
+            )
+            graphic.bindings.append(binding)
+            self._record_asset_point_relation(
+                graphic,
+                point=point,
+                binding=binding,
+                component=None,
+                equipment_id=equip.id,
+            )
+
+    def _append_plant_loads(
+        self,
+        graphic: GraphicDefinition,
+        loads: list[Equipment],
+        *,
+        system_kind: str,
+    ) -> None:
+        relevant = [
+            equip for equip in loads
+            if system_kind == "cooling"
+            or equip.type in {EquipmentType.AHU, EquipmentType.FAN_COIL}
+        ][:4]
+        for index, equip in enumerate(relevant):
+            y = 0.55 + (index * 0.095)
+            graphic.elements.append(GraphicElement(
+                element_type="rect",
+                x=0.87,
+                y=y,
+                width=0.1,
+                height=0.065,
+                fill="#e2e8f0",
+                stroke="#475569",
+                stroke_width=1.2,
+                layer="equipment",
+                css_class="equipment-shell",
+            ))
+            graphic.elements.append(GraphicElement(
+                element_type="text",
+                x=0.92,
+                y=y + 0.04,
+                text=equip.id,
+                font_size=8,
+                font_family="Arial",
+                layer="labels",
+            ))
+            self._record_asset_placement(
+                graphic,
+                asset_id="ahu_drawthrough_doubledeck",
+                x=0.87,
+                y=y,
+                width=0.1,
+                height=0.065,
+                role=f"{system_kind}_load",
+                equipment_id=equip.id,
+            )
+
+    def _append_scaled_graphic_elements(
+        self,
+        target: GraphicDefinition,
+        source: GraphicDefinition,
+        *,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+    ) -> None:
+        """Embed one generated graphic inside another normalized canvas."""
+        for element in source.elements:
+            scaled = replace(element)
+            scaled.x = x + (element.x * width)
+            scaled.y = y + (element.y * height)
+            scaled.width = element.width * width
+            scaled.height = element.height * height
+            scaled.font_size = max(6, int(element.font_size * 0.78))
+            target.elements.append(scaled)
 
     def _generate_ahu_system_graphic(self, system: dict) -> GraphicDefinition:
         """Generate AHU system graphic with VAVs."""
@@ -4838,16 +5179,16 @@ class GraphicsGenerator:
             role="primary_equipment",
             equipment_id=ahu.id,
         )
-        graphic.elements.append(GraphicElement(
-            element_type="rect", x=0.05, y=0.16, width=0.44, height=0.56,
-            fill="url(#equipment-shell-gradient)", stroke="#5b5b57", stroke_width=2.2, layer="equipment",
-            css_class="equipment-shell",
-        ))
-        graphic.elements.append(GraphicElement(
-            element_type="rect", x=0.06, y=0.18, width=0.42, height=0.52,
-            fill="url(#equipment-face-gradient)", stroke="#9aa0a6", stroke_width=1, layer="equipment",
-            css_class="equipment-face",
-        ))
+        source_graphic = self.graphics.get(f"graphic_{ahu.id.lower()}")
+        if source_graphic is not None:
+            self._append_scaled_graphic_elements(
+                graphic,
+                source_graphic,
+                x=0.04,
+                y=0.12,
+                width=0.46,
+                height=0.62,
+            )
         graphic.elements.append(GraphicElement(
             element_type="rect", x=0.49, y=0.405, width=0.17, height=0.07,
             fill="url(#duct-body-gradient)", stroke="#6b7280", stroke_width=1.2, layer="piping",
@@ -4868,11 +5209,6 @@ class GraphicsGenerator:
             fill="url(#duct-liner-gradient)", stroke="#a1a1aa", stroke_width=0.7, layer="piping",
             css_class="duct-liner",
         ))
-        self._append_ahu_duct_stub(graphic, x=0.015, y=0.37, width=0.035, height=0.14, louver=True)
-        self._append_filter_symbol(graphic, x=0.12, y=0.28, width=0.05, height=0.28, stroke="#64748b")
-        self._append_coil_symbol(graphic, x=0.21, y=0.26, width=0.07, height=0.32, stroke="#1976d2")
-        self._append_coil_symbol(graphic, x=0.29, y=0.26, width=0.06, height=0.32, stroke="#ef6c00")
-        self._append_fan_symbol(graphic, x=0.40, y=0.44, size=0.12, stroke="#6b7280")
         graphic.elements.append(GraphicElement(
             element_type="text", x=0.27, y=0.77, text=ahu.id,
             font_size=16, layer="labels",
@@ -4882,6 +5218,13 @@ class GraphicsGenerator:
             stroke="#1976d2", stroke_width=4, layer="piping",
             css_class="airflow-path airflow-supply",
         ))
+        self._add_system_summary_bindings(
+            graphic,
+            ahu,
+            self.project.get_points_for_equipment(ahu.id),
+            x=0.28,
+            y=0.78,
+        )
 
         # VAV boxes along duct
         for i, vav in enumerate(children):
@@ -5035,9 +5378,11 @@ class GraphicsGenerator:
 
     def _graphic_to_svg(self, graphic: GraphicDefinition) -> str:
         """Generate basic SVG representation."""
+        margin_x = 200
+        margin_y = 90
         lines = [
             f'<svg width="{graphic.width}" height="{graphic.height}" '
-            f'viewBox="0 0 {graphic.width} {graphic.height}" '
+            f'viewBox="{-margin_x} {-margin_y} {graphic.width + (margin_x * 2)} {graphic.height + (margin_y * 2)}" '
             f'xmlns="http://www.w3.org/2000/svg">',
             "  <defs>",
             self._svg_visual_defs(),
@@ -5045,7 +5390,11 @@ class GraphicsGenerator:
             self._svg_animation_styles(),
             "    </style>",
             "  </defs>",
-            f'  <rect width="100%" height="100%" fill="{graphic.background}"/>',
+            (
+                f'  <rect x="{-margin_x}" y="{-margin_y}" '
+                f'width="{graphic.width + (margin_x * 2)}" '
+                f'height="{graphic.height + (margin_y * 2)}" fill="{graphic.background}"/>'
+            ),
         ]
 
         # Group by layer

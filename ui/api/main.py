@@ -2051,13 +2051,16 @@ def graphics_preview_pages(
         for record in (detail_records or [])
         if record.get("equipment") is not None
     }
-    equipment_pages = [
+    preview_pages = [
         page for page in pages
-        if str(page.get("slotPath", "")).startswith("/Px/Equipment/")
+        if str(page.get("slotPath", "")).startswith(("/Px/Equipment/", "/Px/Systems/"))
     ]
-    enriched = equipment_pages or pages
+    enriched = preview_pages or pages
     for page in enriched:
-        equipment_id = str(page.get("slotPath", "")).split("/")[-1]
+        slot_path = str(page.get("slotPath", ""))
+        if not slot_path.startswith("/Px/Equipment/"):
+            continue
+        equipment_id = slot_path.split("/")[-1]
         scene = scene_by_equipment.get(equipment_id)
         if scene is not None:
             page["scene"] = scene

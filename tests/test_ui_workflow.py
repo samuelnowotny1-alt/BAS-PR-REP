@@ -1563,7 +1563,7 @@ def test_system_ledger_page_renders_project_and_remediation_history() -> None:
     assert "AHU-1" in text
 
 
-def test_graphics_preview_pages_prefers_equipment_pages() -> None:
+def test_graphics_preview_pages_include_system_and_equipment_pages() -> None:
     project = Project(
         metadata=ProjectMetadata(project_id="preview-test", name="Preview Test"),
         equipment=[
@@ -1582,9 +1582,15 @@ def test_graphics_preview_pages_prefers_equipment_pages() -> None:
     )
 
     pages = main.graphics_preview_pages(project)
+    slot_paths = {str(page.get("slotPath", "")) for page in pages}
 
     assert pages
-    assert all(str(page.get("slotPath", "")).startswith("/Px/Equipment/") for page in pages)
+    assert "/Px/Equipment/AHU-1" in slot_paths
+    assert "/Px/Systems/graphic_system_ahu-1" in slot_paths
+    assert all(
+        path.startswith(("/Px/Equipment/", "/Px/Systems/"))
+        for path in slot_paths
+    )
 
 
 def test_graphics_library_page_defaults_to_isometric_library() -> None:
