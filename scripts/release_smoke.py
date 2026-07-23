@@ -8,7 +8,7 @@ import json
 import sys
 from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import quote, urldefrag, urljoin, urlparse, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 
@@ -27,7 +27,17 @@ class LinkParser(HTMLParser):
 
 
 def fetch(url: str) -> tuple[int, bytes, str]:
-    request = Request(url, headers={"User-Agent": "bas-assistant-release-smoke/1.0"})
+    parts = urlsplit(url)
+    encoded_url = urlunsplit(
+        (
+            parts.scheme,
+            parts.netloc,
+            quote(parts.path, safe="/%:@"),
+            quote(parts.query, safe="=&%:+,"),
+            parts.fragment,
+        )
+    )
+    request = Request(encoded_url, headers={"User-Agent": "bas-assistant-release-smoke/1.0"})
     try:
         with urlopen(request, timeout=15) as response:
             return response.status, response.read(), response.headers.get("Content-Type", "")
