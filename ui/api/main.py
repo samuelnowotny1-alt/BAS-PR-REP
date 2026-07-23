@@ -118,10 +118,8 @@ async def lifespan_factory(_container):
     try:
         from bas_assistant.runtime import seed_codex_demo_project
         seed_codex_demo_project(container.projects, OUTPUT_DIR, logger)
-        seeded_project = container.projects.get("codex-test-project")
-        if seeded_project is not None:
-            register_persisted_generated_outputs(seeded_project)
         refresh_projects_cache()
+        register_loaded_project_outputs()
     except Exception:
         logger.exception("Failed to seed Codex demo project")
     
@@ -969,6 +967,20 @@ def register_persisted_generated_outputs(project: Project) -> list[dict[str, obj
             )
         )
     return generated_documents
+
+
+def register_loaded_project_outputs() -> dict[str, int]:
+    """Backfill persisted outputs for every project loaded at application startup."""
+    registered_counts: dict[str, int] = {}
+    for project_id, project in projects.items():
+        try:
+            registered_counts[project_id] = len(register_persisted_generated_outputs(project))
+        except Exception:
+            logger.exception(
+                "Failed to register persisted generated outputs",
+                extra={"project_id": project_id},
+            )
+    return registered_counts
 
 
 def _utc_datetime(value: datetime | None) -> datetime | None:

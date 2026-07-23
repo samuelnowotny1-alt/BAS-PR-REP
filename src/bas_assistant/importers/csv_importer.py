@@ -381,7 +381,7 @@ class CSVImporter:
                     },
                 )
 
-                ip = str(row.get("IP Address", "")).strip()
+                ip = self._parse_str(row.get("IP Address"))
                 if ip:
                     from ..models.controller import ControllerNetworkAddress
                     controller.network_addresses.append(ControllerNetworkAddress(

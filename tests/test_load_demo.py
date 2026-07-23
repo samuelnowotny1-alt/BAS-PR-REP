@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from bas_assistant.validation import ValidationEngine
 from scripts import load_demo, load_full_system
 
 
@@ -53,6 +54,9 @@ def test_load_demo_project_writes_project_and_example_csvs(tmp_path: Path) -> No
     assert equipment_types["MAU-1"] == "MAU"
     assert equipment_types["EF-1"] == "EF"
     assert equipment_types["UH-1"] == "TU"
+    validation_report = ValidationEngine().validate(project)
+    assert validation_report.errors == []
+    assert validation_report.warnings == []
     assert (data_dir / "projects" / load_demo.DEMO_PROJECT_ID / "project.json").exists()
     assert (examples_dir / "equipment_schedule.csv").exists()
     assert (examples_dir / "point_list.csv").exists()

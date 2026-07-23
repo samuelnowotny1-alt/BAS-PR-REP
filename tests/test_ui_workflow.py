@@ -894,6 +894,29 @@ def test_generated_documents_page_surfaces_stale_missing_and_unregistered_output
     assert "Generated outputs look stale against the current project data" in page_text
 
 
+def test_loaded_project_output_backfill_populates_generated_document_library() -> None:
+    project_id = create_project("generated-backfill-project")
+    project = main.get_project(project_id)
+    reports_dir = main.OUTPUT_DIR / project_id / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = reports_dir / "00_Project_Summary.md"
+    summary_path.write_text("summary", encoding="utf-8")
+
+    registered = main.register_loaded_project_outputs()
+    review = main.build_generated_output_review(project)
+
+    assert registered[project_id] == 1
+    assert review["documents_count"] == 1
+    assert not any(
+        finding["title"] == "Generated files exist but are not registered in the library"
+        for finding in review["findings"]
+    )
+    assert not any(
+        finding["title"] == "Generated outputs are present but the library view is empty"
+        for finding in review["findings"]
+    )
+
+
 def test_project_knowledge_search_page_and_api_return_matching_chunks() -> None:
     project_id = create_project("knowledge-search-project")
     project = main.get_project(project_id)
@@ -4051,6 +4074,25 @@ def test_csv_importer_reads_controller_network_addresses(tmp_path: Path) -> None
     assert {(address.protocol.value, address.address, address.network_number) for address in controller.network_addresses} == {
         ("BACnet/IP", "192.168.10.10", None),
         ("BACnet/MSTP", "11", 2001),
+    }
+
+
+def test_csv_importer_ignores_blank_controller_ip_cells(tmp_path: Path) -> None:
+    project = Project(metadata=ProjectMetadata(project_id="CSV-MSTP", name="CSV MSTP Project"))
+    importer = CSVImporter(project)
+    csv_path = tmp_path / "controller_schedule.csv"
+    csv_path.write_text(
+        "Controller ID,Protocols,IP Address,MS/TP MAC,Network Number\n"
+        "VAV-101,BACnet/MSTP,,11,2001\n"
+    )
+
+    result = importer.import_controller_schedule(csv_path, "controller_csv")
+
+    assert result.success
+    controller = project.get_controller("VAV-101")
+    assert controller is not None
+    assert {(address.protocol.value, address.address) for address in controller.network_addresses} == {
+        ("BACnet/MSTP", "11")
     }
 
 

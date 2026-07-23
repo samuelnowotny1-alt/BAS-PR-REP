@@ -35,6 +35,37 @@ def find_result(report, rule_id: str, object_id: str):
     return next(result for result in report.results if result.rule_id == rule_id and result.object_id == object_id)
 
 
+def test_point_naming_accepts_documented_space_and_hyphen_suffixes() -> None:
+    project = build_project("point-naming-project")
+    project.controllers.append(Controller(id="MPC-1", type="MPC"))
+    project.equipment.append(
+        Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1")
+    )
+    project.points.extend(
+        [
+            Point(
+                name="AHU-1 SUPPLY FAN STATUS",
+                equipment_id="AHU-1",
+                controller_id="MPC-1",
+                kind=PointKind.STATUS,
+                direction=PointDirection.INPUT,
+            ),
+            Point(
+                name="AHU-1 SF-CMD",
+                equipment_id="AHU-1",
+                controller_id="MPC-1",
+                kind=PointKind.ACTUATOR,
+                direction=PointDirection.OUTPUT,
+            ),
+        ]
+    )
+
+    report = ValidationEngine().validate(project)
+
+    assert find_result(report, "NAMING-002", "AHU-1 SUPPLY FAN STATUS").passed is True
+    assert find_result(report, "NAMING-002", "AHU-1 SF-CMD").passed is True
+
+
 def test_validation_uses_effective_mappings_for_equipment_and_points() -> None:
     project = build_project("mapped-project")
     project.controllers.append(

@@ -20,7 +20,7 @@ from ..models import (
 
 EQUIPMENT_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+$")
 CONTROLLER_ID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*$")
-POINT_CODE_PATTERN = re.compile(r"^[A-Z0-9]+(?:-[A-Z0-9]+)*$")
+POINT_CODE_PATTERN = re.compile(r"^[A-Z0-9]+(?:[ -][A-Z0-9]+)*$")
 TEMPERATURE_TOKENS = {"temp", "sat", "mat", "rat", "oat", "eat", "lat", "dat", "zt"}
 PRESSURE_TOKENS = {"press", "pressure", "static", "dp"}
 FLOW_TOKENS = {"flow", "cfm", "gpm", "lps", "cfh", "m3h", "m3s"}
