@@ -80,11 +80,16 @@ class CSVImporter:
                     warnings.append(f"Row {count+1}: Missing Equipment ID or Type")
                     continue
 
+                type_value = equip_type_str.upper()
+                type_name = type_value.replace("-", "_").replace(" ", "_")
                 try:
-                    equip_type = EquipmentType(equip_type_str.upper())
+                    equip_type = EquipmentType(type_value)
                 except ValueError:
-                    equip_type = EquipmentType.CUSTOM
-                    warnings.append(f"Equipment '{equip_id}': Unknown type '{equip_type_str}', using CUSTOM")
+                    try:
+                        equip_type = EquipmentType[type_name]
+                    except KeyError:
+                        equip_type = EquipmentType.CUSTOM
+                        warnings.append(f"Equipment '{equip_id}': Unknown type '{equip_type_str}', using CUSTOM")
 
                 equipment = Equipment(
                     id=equip_id,

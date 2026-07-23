@@ -267,9 +267,9 @@ def test_niagara_export_uses_section_based_ahu_layout(tmp_path: Path) -> None:
         if component["slotType"] == "px:BoundLabel" and component["annotations"].get("fullPointName") == "AHU-1_CCV_CMD"
     )
 
-    assert bindings["CCV_CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
-    assert bindings["CCV_CMD"]["fullLabel"] == "AHU-1_CCV_CMD"
-    assert cooling_valve_widget["displayName"] == "CCV_CMD"
+    assert bindings["CCV CMD"]["sourceOrd"].endswith("/AHU-1_CCV_CMD")
+    assert bindings["CCV CMD"]["fullLabel"] == "AHU-1_CCV_CMD"
+    assert cooling_valve_widget["displayName"] == "CCV CMD"
     assert cooling_valve_widget["position"]["width"] < 240
     assert 460 <= cooling_valve_widget["position"]["x"] <= 560
     assert cooling_valve_widget["position"]["y"] < 180
@@ -320,3 +320,65 @@ def test_dashboard_preview_cards_clear_header_band() -> None:
 
     assert dashboard_page["displayName"] == "Dashboard"
     assert first_card["position"]["y"] >= 100
+
+
+def test_niagara_exports_connected_system_pages_with_live_bindings(tmp_path: Path) -> None:
+    project = build_project()
+    plant_equipment = [
+        Equipment(id="CHLR-1", type=EquipmentType.CHILLER, subtype="Centrifugal", controller_id="MPC-1"),
+        Equipment(id="CHWP-1", type=EquipmentType.PUMP_CHW, controller_id="MPC-1"),
+        Equipment(id="CWP-1", type=EquipmentType.PUMP_CW, controller_id="MPC-1"),
+        Equipment(id="CT-1", type=EquipmentType.COOLING_TOWER, controller_id="MPC-1"),
+        Equipment(id="BLR-1", type=EquipmentType.BOILER, subtype="Condensing", controller_id="MPC-1"),
+        Equipment(id="HWP-1", type=EquipmentType.PUMP_HW, controller_id="MPC-1"),
+        Equipment(id="HX-1", type=EquipmentType.HEAT_EXCHANGER, controller_id="MPC-1"),
+    ]
+    for equipment in plant_equipment:
+        project.add_equipment(equipment)
+        project.add_point(
+            Point(
+                name=f"{equipment.id} STATUS",
+                equipment_id=equipment.id,
+                controller_id="MPC-1",
+                kind=PointKind.STATUS,
+                direction=PointDirection.INPUT,
+                bacnet_object_type="BI",
+            )
+        )
+
+    exporter = NiagaraExporter(project)
+    pages = exporter.preview_pages()
+    slot_paths = {str(page["slotPath"]) for page in pages}
+
+    assert "/Px/Systems/graphic_system_ahu-1" in slot_paths
+    assert "/Px/Systems/graphic_system_cooling_plant" in slot_paths
+    assert "/Px/Systems/graphic_system_heating_plant" in slot_paths
+
+    cooling_page = next(
+        page for page in pages
+        if page["slotPath"] == "/Px/Systems/graphic_system_cooling_plant"
+    )
+    assert any(
+        binding.get("fullLabel") == "CHLR-1 STATUS"
+        for binding in cooling_page["bindings"]
+    )
+    assert any(
+        component["slotType"] == "px:LinkButton"
+        and component["displayName"] == "CHLR-1"
+        for component in cooling_page["components"]["root"]["children"]
+    )
+
+    result = exporter.export(tmp_path)
+    assert result.success
+    graphics_dir = tmp_path / "niagara-test_wxf" / "graphics"
+    assert (graphics_dir / "graphic_system_ahu-1.px").exists()
+    assert (graphics_dir / "graphic_system_cooling_plant.px").exists()
+    assert (graphics_dir / "graphic_system_heating_plant.px").exists()
+
+    cooling_xml = ET.parse(graphics_dir / "graphic_system_cooling_plant.px").getroot()
+    assert cooling_xml.find("./bindings/binding/sourceOrd") is not None
+
+    with zipfile.ZipFile(tmp_path / "niagara-test.bog") as archive:
+        names = set(archive.namelist())
+    assert "graphics/graphic_system_cooling_plant.px" in names
+    assert "graphics/graphic_system_heating_plant.px" in names

@@ -195,6 +195,18 @@ class NiagaraExporter(BaseExporter):
     def _equipment_page_ord(self, equip: Equipment) -> str:
         return self._ord("Px", "Equipment", equip.id)
 
+    def _system_page_ord(self, graphic: GraphicDefinition) -> str:
+        return self._ord("Px", "Systems", graphic.graphic_id)
+
+    def _system_graphic_definitions(self) -> list[GraphicDefinition]:
+        if self._graphic_cache is None:
+            self._graphics_generator = GraphicsGenerator(self.project)
+            self._graphic_cache = self._graphics_generator.generate_all()
+        return [
+            graphic for graphic in self._graphic_cache.values()
+            if graphic.graphic_type.value == "system"
+        ]
+
     def export(self, output_dir: Path, **kwargs) -> ExportResult:
         self._ensure_output_dir(output_dir)
         errors: list[str] = []
@@ -238,6 +250,7 @@ class NiagaraExporter(BaseExporter):
     def preview_pages(self) -> list[dict[str, object]]:
         """Return PX page payloads for browser preview."""
         pages = [self._dashboard_page()["pxPage"]]
+        pages.extend(self._system_page(graphic)["pxPage"] for graphic in self._system_graphic_definitions())
         for equip in self.project.equipment:
             points = self.project.get_points_for_equipment(equip.id)
             if not points:
@@ -590,6 +603,18 @@ class NiagaraExporter(BaseExporter):
         self._write_xml_payload(dashboard, graphics_dir / "dashboard_main.px", artifact_name="dashboard_main")
         files.append(dashboard_path)
 
+        for graphic in self._system_graphic_definitions():
+            system_page = self._system_page(graphic)
+            graphic_name = self._sanitize_name(graphic.graphic_id)
+            graphic_path = graphics_dir / f"{graphic_name}.json"
+            graphic_path.write_text(json.dumps(system_page, indent=2))
+            self._write_xml_payload(
+                system_page,
+                graphics_dir / f"{graphic_name}.px",
+                artifact_name=graphic_name,
+            )
+            files.append(graphic_path)
+
         for equip in self.project.equipment:
             points = self.project.get_points_for_equipment(equip.id)
             if not points:
@@ -608,28 +633,41 @@ class NiagaraExporter(BaseExporter):
         bindings = []
         x = 40
         y = 110
-        for index, equip in enumerate(self.project.equipment):
+        navigation_items: list[tuple[str, str, str]] = [
+            (
+                graphic.name,
+                self._system_page_ord(graphic),
+                f"system:{graphic.graphic_id}",
+            )
+            for graphic in self._system_graphic_definitions()
+        ]
+        navigation_items.extend(
+            (equip.id, self._equipment_page_ord(equip), f"equipment:{equip.id}")
+            for equip in self.project.equipment
+        )
+        for index, (display_name, target_ord, item_key) in enumerate(navigation_items):
             if index and index % 3 == 0:
                 x = 40
                 y += 140
+            card_id = self._uid("px:widget", f"dashboard:{item_key}:card")
             children.append(
                 {
-                    "id": self._uid("px:widget", f"dashboard:{equip.id}:card"),
-                    "name": f"{self._sanitize_name(equip.id)}_card",
+                    "id": card_id,
+                    "name": f"{self._sanitize_name(item_key)}_card",
                     "parentId": "root",
                     "slotType": "px:LinkButton",
-                    "displayName": equip.id,
+                    "displayName": display_name,
                     "position": {"x": x, "y": y, "width": 220, "height": 90},
-                    "facets": self._facet_block(summary=f"Navigation card for {equip.id}"),
-                    "navigation": {"targetOrd": self._equipment_page_ord(equip), "displayName": equip.id},
+                    "facets": self._facet_block(summary=f"Navigation card for {display_name}"),
+                    "navigation": {"targetOrd": target_ord, "displayName": display_name},
                 }
             )
             bindings.append(
                 {
-                    "id": self._uid("binding", f"dashboard:{equip.id}"),
-                    "widgetId": self._uid("px:widget", f"dashboard:{equip.id}:card"),
+                    "id": self._uid("binding", f"dashboard:{item_key}"),
+                    "widgetId": card_id,
                     "bindingType": "navigation",
-                    "targetOrd": self._equipment_page_ord(equip),
+                    "targetOrd": target_ord,
                 }
             )
             x += 250
@@ -644,7 +682,10 @@ class NiagaraExporter(BaseExporter):
                 "ord": self._ord("Px", "Dashboard", "dashboard_main"),
                 "navigationOrd": self._ord("Config", "Navigation"),
                 "facets": self._facet_block(summary="Main station dashboard"),
-                "navigation": {"home": True, "children": [self._equipment_page_ord(equip) for equip in self.project.equipment]},
+                "navigation": {
+                    "home": True,
+                    "children": [target_ord for _display_name, target_ord, _item_key in navigation_items],
+                },
                 "components": {
                     "root": {
                         "id": "root",
@@ -653,6 +694,175 @@ class NiagaraExporter(BaseExporter):
                     }
                 },
                 "bindings": bindings,
+            }
+        }
+
+    def _system_page(self, graphic: GraphicDefinition) -> dict[str, object]:
+        page_id = self._uid("px", graphic.graphic_id)
+        representative = self.project.get_equipment(graphic.equipment_id or "")
+        if representative is None:
+            representative = self.project.equipment[0]
+
+        components = [
+            self._px_component_from_graphic_element(
+                element,
+                representative,
+                page_id,
+                index,
+                graphic,
+            )
+            for index, element in enumerate(graphic.elements)
+        ]
+        bindings: list[dict[str, object]] = []
+
+        seen_links: set[str] = set()
+        for index, placement in enumerate(graphic.metadata.get("asset_placements") or []):
+            equipment_id = str(placement.get("equipment_id") or "")
+            equip = self.project.get_equipment(equipment_id)
+            if equip is None or equipment_id in seen_links:
+                continue
+            seen_links.add(equipment_id)
+            widget_id = self._uid(
+                "px:widget",
+                f"{graphic.graphic_id}:{equipment_id}:link:{index}",
+            )
+            components.append(
+                {
+                    "id": widget_id,
+                    "name": self._sanitize_name(f"{equipment_id}_link"),
+                    "parentId": "root",
+                    "slotType": "px:LinkButton",
+                    "displayName": equipment_id,
+                    "position": {
+                        "x": int(float(placement.get("x") or 0) * graphic.width),
+                        "y": int(
+                            (
+                                float(placement.get("y") or 0)
+                                + float(placement.get("height") or 0)
+                            )
+                            * graphic.height
+                        ),
+                        "width": 110,
+                        "height": 24,
+                    },
+                    "facets": self._facet_block(summary=f"Open {equipment_id} equipment graphic"),
+                    "navigation": {
+                        "targetOrd": self._equipment_page_ord(equip),
+                        "displayName": equipment_id,
+                    },
+                }
+            )
+            bindings.append(
+                {
+                    "id": self._uid(
+                        "binding",
+                        f"{graphic.graphic_id}:{equipment_id}:navigation",
+                    ),
+                    "widgetId": widget_id,
+                    "bindingType": "navigation",
+                    "targetOrd": self._equipment_page_ord(equip),
+                }
+            )
+
+        for binding in graphic.bindings:
+            point = self.project.get_point(binding.point_name)
+            if point is None:
+                continue
+            point_label = self._binding_label_for_point(point)
+            widget_id = self._uid(
+                "px:widget",
+                f"{graphic.graphic_id}:{point.name}:widget",
+            )
+            components.append(
+                {
+                    "id": widget_id,
+                    "name": self._sanitize_name(point.name),
+                    "parentId": "root",
+                    "slotType": "px:BoundLabel",
+                    "displayName": point_label,
+                    "position": {
+                        "x": int(binding.x * graphic.width),
+                        "y": int(binding.y * graphic.height),
+                        "width": self._binding_widget_width(point_label),
+                        "height": 28,
+                    },
+                    "facets": self._facet_block(
+                        units=point.units,
+                        precision=self._display_precision(point),
+                        writable=point.direction.value in ("output", "bidirectional"),
+                        summary=point.description or point.name,
+                    ),
+                    "annotations": {
+                        "equipmentId": point.equipment_id or "",
+                        "pointOrd": self._point_ord(point),
+                        "fullPointName": point.name,
+                    },
+                }
+            )
+            bindings.append(
+                {
+                    "id": self._uid(
+                        "binding",
+                        f"{graphic.graphic_id}:{point.name}",
+                    ),
+                    "widgetId": widget_id,
+                    "bindingType": self._binding_family(point),
+                    "label": point_label,
+                    "fullLabel": point.name,
+                    "sourceOrd": self._point_ord(point),
+                    "slotPath": self._point_slot_path(point),
+                    "format": self._display_format(point),
+                    "actions": self._action_block(self._point_ord(point)),
+                }
+            )
+
+        components.append(
+            {
+                "id": self._uid("px:widget", f"{graphic.graphic_id}:title"),
+                "name": "title",
+                "parentId": "root",
+                "slotType": "px:Label",
+                "displayName": graphic.name,
+                "position": {"x": 40, "y": 30, "width": 620, "height": 34},
+                "facets": self._facet_block(summary=f"System title for {graphic.name}"),
+            }
+        )
+        linked_equipment = [
+            self.project.get_equipment(equipment_id)
+            for equipment_id in seen_links
+        ]
+        return {
+            "pxPage": {
+                "id": page_id,
+                "name": self._sanitize_name(graphic.graphic_id),
+                "displayName": graphic.name,
+                "slotType": "px:PxPage",
+                "slotPath": self._slot_path("Px", "Systems", graphic.graphic_id),
+                "ord": self._system_page_ord(graphic),
+                "navigationOrd": self._ord("Config", "Navigation"),
+                "navigation": {
+                    "back": self._ord("Px", "Dashboard", "dashboard_main"),
+                    "children": [
+                        self._equipment_page_ord(equip)
+                        for equip in linked_equipment
+                        if equip is not None
+                    ],
+                },
+                "facets": self._facet_block(
+                    summary=f"Connected system page for {graphic.name}",
+                ),
+                "components": {
+                    "root": {
+                        "id": "root",
+                        "slotType": "px:CanvasPane",
+                        "children": components,
+                    }
+                },
+                "bindings": bindings,
+                "annotations": {
+                    "systemType": str(graphic.metadata.get("system_type") or ""),
+                    "equipmentIds": list(graphic.metadata.get("equipment_ids") or []),
+                },
             }
         }
 

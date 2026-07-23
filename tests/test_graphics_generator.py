@@ -788,3 +788,53 @@ def test_generate_graphics_fixture_output_contains_station_widget_markup(tmp_pat
     assert 'class="station-widget station-widget-status"' in svg_text
     assert ">SAT<" in svg_text
     assert ">SF STATUS<" in svg_text
+
+
+def test_full_system_generation_includes_airside_and_plant_overviews() -> None:
+    equipment = [
+        Equipment(id="CHLR-1", type=EquipmentType.CHILLER, subtype="Centrifugal", controller_id="CPC-1"),
+        Equipment(id="CHWP-1", type=EquipmentType.PUMP_CHW, controller_id="CPC-1"),
+        Equipment(id="CWP-1", type=EquipmentType.PUMP_CW, controller_id="CPC-1"),
+        Equipment(id="CT-1", type=EquipmentType.COOLING_TOWER, controller_id="CPC-1"),
+        Equipment(id="BLR-1", type=EquipmentType.BOILER, subtype="Condensing", controller_id="CPC-1"),
+        Equipment(id="HWP-1", type=EquipmentType.PUMP_HW, controller_id="CPC-1"),
+        Equipment(id="HX-1", type=EquipmentType.HEAT_EXCHANGER, controller_id="CPC-1"),
+        Equipment(id="AHU-1", type=EquipmentType.AHU, controller_id="MPC-1", child_equipment_ids=["VAV-101"]),
+        Equipment(id="VAV-101", type=EquipmentType.VAV, controller_id="VAV-101", parent_equipment_id="AHU-1"),
+    ]
+    points = [
+        Point(name="CHLR-1 STATUS", equipment_id="CHLR-1", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="CHLR-1 CHWST", equipment_id="CHLR-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="degF"),
+        Point(name="CHWP-1 FLOW", equipment_id="CHWP-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="GPM"),
+        Point(name="CWP-1 STATUS", equipment_id="CWP-1", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="CT-1 FAN STATUS", equipment_id="CT-1", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="BLR-1 STATUS", equipment_id="BLR-1", kind=PointKind.STATUS, direction=PointDirection.INPUT),
+        Point(name="BLR-1 HWS", equipment_id="BLR-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="degF"),
+        Point(name="HWP-1 FLOW", equipment_id="HWP-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="GPM"),
+        Point(name="HX-1 PRI LWT", equipment_id="HX-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="degF"),
+        Point(name="AHU-1 SAT", equipment_id="AHU-1", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="degF"),
+        Point(name="VAV-101 FLOW", equipment_id="VAV-101", kind=PointKind.SENSOR, direction=PointDirection.INPUT, units="CFM"),
+    ]
+    generator = GraphicsGenerator(_project_with(equipment, points))
+
+    generator.generate_all()
+
+    assert "graphic_system_ahu-1" in generator.graphics
+    assert "graphic_system_cooling_plant" in generator.graphics
+    assert "graphic_system_heating_plant" in generator.graphics
+
+    cooling = generator.graphics["graphic_system_cooling_plant"]
+    heating = generator.graphics["graphic_system_heating_plant"]
+    cooling_ids = {
+        placement["equipment_id"]
+        for placement in cooling.metadata["asset_placements"]
+    }
+    heating_ids = {
+        placement["equipment_id"]
+        for placement in heating.metadata["asset_placements"]
+    }
+
+    assert {"CHLR-1", "CHWP-1", "CWP-1", "CT-1", "AHU-1"} <= cooling_ids
+    assert {"BLR-1", "HWP-1", "HX-1", "AHU-1"} <= heating_ids
+    assert {binding.point_name for binding in cooling.bindings} >= {"CHLR-1 STATUS", "CHLR-1 CHWST"}
+    assert {binding.point_name for binding in heating.bindings} >= {"BLR-1 STATUS", "BLR-1 HWS"}

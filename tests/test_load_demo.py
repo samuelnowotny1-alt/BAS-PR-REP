@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts import load_demo
+from scripts import load_demo, load_full_system
 
 
 def test_build_demo_seed_rows_are_rich_and_consistent() -> None:
@@ -45,7 +45,38 @@ def test_load_demo_project_writes_project_and_example_csvs(tmp_path: Path) -> No
         for controller in project.controllers
         for address in controller.network_addresses
     )
+    equipment_types = {equipment.id: equipment.type.value for equipment in project.equipment}
+    assert equipment_types["CT-1"] == "CT"
+    assert equipment_types["HX-1"] == "HX"
+    assert equipment_types["ERU-1"] == "ERU"
+    assert equipment_types["FCU-1"] == "FCU"
+    assert equipment_types["MAU-1"] == "MAU"
+    assert equipment_types["EF-1"] == "EF"
+    assert equipment_types["UH-1"] == "TU"
     assert (data_dir / "projects" / load_demo.DEMO_PROJECT_ID / "project.json").exists()
     assert (examples_dir / "equipment_schedule.csv").exists()
     assert (examples_dir / "point_list.csv").exists()
     assert (examples_dir / "controller_schedule.csv").exists()
+
+
+def test_full_system_provisioner_generates_scenarios_and_niagara_pages(tmp_path: Path) -> None:
+    report = load_full_system.provision_full_system(
+        project_id="full-system-test",
+        project_name="Full System Test",
+        data_dir=tmp_path / "data",
+        output_dir=tmp_path / "output",
+    )
+
+    assert report["equipment_count"] == 24
+    assert report["point_count"] == 236
+    assert report["controller_count"] == 5
+    assert set(report["scenarios"]) == set(load_full_system.REQUIRED_SCENARIOS)
+    assert report["graphics_count"] >= 28
+    assert (
+        tmp_path
+        / "output"
+        / "full-system-test"
+        / "exports"
+        / "niagara"
+        / "full-system-test.bog"
+    ).exists()
