@@ -9,6 +9,13 @@ REMOTE_RELEASES_DIR="${REMOTE_RELEASES_DIR:-/home/bas/bas-assistant-releases}"
 SERVICE_NAME="${SERVICE_NAME:-bas-assistant.service}"
 RELEASE_ID="${RELEASE_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
 REMOTE_BACKUP_DIR="${REMOTE_RELEASES_DIR}/${RELEASE_ID}"
+DEPLOY_LOCK_FILE="${DEPLOY_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/bas-assistant-deploy.lock}"
+
+exec 9>"${DEPLOY_LOCK_FILE}"
+if ! flock -n 9; then
+    echo "Another BAS Assistant deployment is already running on this machine." >&2
+    exit 1
+fi
 
 echo "Deploying ${PROJECT_ROOT} to ${REMOTE_HOST}:${REMOTE_DIR}"
 
@@ -94,7 +101,13 @@ restart_service() {
     for _ in $(seq 1 30); do
         main_pid="$(systemctl show "${service_name}" -p MainPID --value 2>/dev/null || true)"
         main_pid="${main_pid:-0}"
+        listener_pid="$(
+            ss -H -ltnp '( sport = :8000 )' 2>/dev/null \
+              | sed -n 's/.*pid=\([0-9]*\).*/\1/p' \
+              | head -n 1
+        )"
         if [ "${main_pid}" != "0" ] && [ "${main_pid}" != "${old_pid}" ] \
+          && [ "${listener_pid}" = "${main_pid}" ] \
           && systemctl is-active --quiet "${service_name}" \
           && curl -fsS http://127.0.0.1:8000/healthz >/dev/null; then
             return 0
